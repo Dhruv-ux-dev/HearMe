@@ -1,0 +1,8 @@
+node_modules/
+dist/
+.expo/
+web-build/
+apps/ife/public/mobile/
+*.tsbuildinfo
+.DS_Store
+coverage/

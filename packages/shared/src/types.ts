@@ -1,0 +1,143 @@
+/**
+ * Core domain types shared by the mobile app, the IFE seatback app and the
+ * crew console simulator.
+ */
+
+/** Passenger-facing languages in the prototype (the PDF targets 6 for the hackathon prototype). */
+export type LangCode = 'hi' | 'en' | 'ja' | 'th' | 'id' | 'vi';
+
+/** Text available in every supported language. */
+export type Localized = Record<LangCode, string>;
+
+export type NeedCategory = 'drinks' | 'comfort' | 'food' | 'help' | 'private';
+
+/** Names of pictograms. Each app maps these to its own icon renderer (lucide-react / lucide-react-native). */
+export type IconName =
+  | 'glass-water'
+  | 'coffee'
+  | 'cup-soda'
+  | 'bed'
+  | 'snowflake'
+  | 'sun'
+  | 'utensils'
+  | 'leaf'
+  | 'cookie'
+  | 'toilet'
+  | 'pill'
+  | 'thermometer'
+  | 'hand-helping'
+  | 'luggage'
+  | 'accessibility'
+  | 'bell-ring'
+  | 'lock'
+  | 'headphones'
+  | 'heart-pulse'
+  | 'baby'
+  | 'shield'
+  | 'help-circle'
+  | 'shopping-bag'
+  | 'armchair';
+
+export interface NeedPurpose {
+  id: 'for_medicine' | 'vegetarian' | 'for_child' | 'urgent';
+  label: Localized;
+}
+
+export interface Need {
+  id: string;
+  category: NeedCategory;
+  icon: IconName;
+  label: Localized;
+  /** Optional purposes the passenger can attach (e.g. hot water "for medicine"). */
+  purposes?: NeedPurpose['id'][];
+  /** Shown on the home grid (the most common needs). */
+  common?: boolean;
+  /** Private needs show a neutral confirmation on screen and are flagged to crew as discreet. */
+  private?: boolean;
+  /** Speech/typed matching vocabulary. `phrases` are strong matches, `hints` are weak ones. */
+  phrases: Partial<Record<LangCode, string[]>>;
+  hints?: Partial<Record<LangCode, string[]>>;
+}
+
+export type RequestSource = 'tap' | 'speech' | 'typed';
+
+/**
+ * Request lifecycle. Delivery is only claimed when the crew tablet confirms it:
+ *  pending      – created locally, not yet confirmed by the crew tablet (queued / sending / retrying)
+ *  sent         – the crew tablet confirmed it received the request
+ *  acknowledged – a crew member replied
+ *  failed       – could not be delivered; passenger can retry or show the card instead
+ *  cancelled    – passenger withdrew it
+ *  closed       – passenger said thank you / it is done
+ */
+export type RequestStatus = 'pending' | 'sent' | 'acknowledged' | 'failed' | 'cancelled' | 'closed';
+
+export type ReplyId =
+  | 'bringing_now'
+  | 'one_moment'
+  | 'coming_to_seat'
+  | 'after_seatbelt'
+  | 'not_available'
+  | 'ground_informed';
+
+export interface CrewReply {
+  replyId: ReplyId;
+  /** Crew first name only, no surname. */
+  crewName?: string;
+  at: number;
+}
+
+export interface PassengerRequest {
+  id: string;
+  needId: string;
+  purposeId?: NeedPurpose['id'];
+  source: RequestSource;
+  /** Transcript is kept only in memory for this request; audio is never stored. */
+  createdAt: number;
+  updatedAt: number;
+  status: RequestStatus;
+  /** Delivery attempts made for the current pending period. */
+  attempts: number;
+  /** True while waiting for a connection rather than actively sending. */
+  waitingForConnection: boolean;
+  failureReason?: 'no_connection' | 'no_confirmation';
+  sentAt?: number;
+  reply?: CrewReply;
+}
+
+/** Profile tags the passenger may choose to share with crew. */
+export type ProfileTag = 'senior' | 'hard_of_hearing' | 'low_vision' | 'wheelchair' | 'medical' | 'travelling_with_child';
+
+export interface PassengerProfile {
+  lang: LangCode;
+  seat: string;
+  /** Optional, mobile only. Never shown on the shared IFE screen. */
+  name?: string;
+  tags: ProfileTag[];
+  /** Passenger consent to send profile tags with requests. */
+  shareTagsWithCrew: boolean;
+}
+
+export type ReplyChannel = 'text' | 'voice' | 'buzz';
+
+export interface AccessibilityPrefs {
+  textScale: 1 | 1.25 | 1.5;
+  highContrast: boolean;
+  /** How crew replies are delivered. Text is always shown. */
+  replyChannels: ReplyChannel[];
+  reduceMotion: boolean;
+}
+
+export interface Announcement {
+  id: string;
+  templateId: string;
+  at: number;
+}
+
+/**
+ * Connection to the crew tablet as the passenger device sees it.
+ *  online   – on the cabin network and the crew tablet is answering
+ *  no_crew  – on the cabin network, but the crew tablet has not been heard from recently
+ *  offline  – not connected to the cabin network
+ */
+export type LinkStatus = 'online' | 'no_crew' | 'offline';

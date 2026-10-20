@@ -1,0 +1,20 @@
+{
+  "name": "hearme",
+  "private": true,
+  "version": "0.1.0",
+  "description": "HearMe prototype: passenger ↔ cabin crew communication (mobile + IFE seatback)",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev -w @hearme/ife",
+    "mobile": "npm run start -w @hearme/mobile",
+    "mobile:web": "npm run web -w @hearme/mobile",
+    "build:mobile-web": "npm run export:web -w @hearme/mobile",
+    "build": "npm run build:mobile-web && npm run build -w @hearme/ife",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "preview": "npm run preview -w @hearme/ife"
+  }
+}
