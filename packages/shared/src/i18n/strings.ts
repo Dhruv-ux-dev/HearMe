@@ -79,6 +79,14 @@ const S = {
     vi: 'Yêu cầu của bạn',
   },
   'speech.listening': { en: 'Listening…', hi: 'सुन रहे हैं…', ja: '聞いています…', th: 'กำลังฟัง…', id: 'Mendengarkan…', vi: 'Đang nghe…' },
+  'speech.tapToFinish': {
+    en: 'Listening… tap to finish',
+    hi: 'सुन रहे हैं… ख़त्म करने के लिए छुएँ',
+    ja: '聞いています…タップで終了',
+    th: 'กำลังฟัง… แตะเพื่อจบ',
+    id: 'Mendengarkan… sentuh untuk selesai',
+    vi: 'Đang nghe… chạm để kết thúc',
+  },
   'speech.processing': {
     en: 'Understanding…',
     hi: 'समझ रहे हैं…',
