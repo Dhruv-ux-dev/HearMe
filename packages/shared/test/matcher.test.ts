@@ -51,3 +51,28 @@ describe('keyword intent matcher (stand-in for multilingual-e5)', () => {
     expect(normalize('Hot, WATER!')).toBe(' hot water ');
   });
 });
+
+describe('sound-alike tier (Whisper spellings, from the speech eval)', () => {
+  it('finds needs Whisper spelled the way they sound, but asks with pictures', () => {
+    for (const [text, need] of [
+      ['मुझे मेरी डवा चाही', 'medicine'], // डवा = दवा
+      ['बहुत ठन्द है, कमबल दे देदेजे', 'blanket'], // कमबल = कंबल
+      ['นาวจัง ขอภาพฮมหน่อย', 'blanket'], // ภาพฮม ≈ ผ้าห่ม
+      ['Tôi cần xe lăng khi hạ cánh.', 'wheelchair_arrival'], // lăng ≈ lăn
+    ] as const) {
+      const r = m(text);
+      expect(r.candidates[0]?.needId, text).toBe(need);
+      expect(r.confidence, text).toBeLessThan(CONFIDENCE_THRESHOLD);
+    }
+  });
+
+  it('does not read Vietnamese "ở đâu" (where) as "đau" (pain)', () => {
+    const r = m('Nhà Vệ Xinh ở đâu?');
+    expect(r.candidates[0]?.needId).toBe('toilet');
+    expect(r.candidates.some((c) => c.needId === 'unwell')).toBe(false);
+  });
+
+  it('leaves exact matches alone', () => {
+    expect(m('मुझे दवाई के लिए गरम पानी चाहिए').confidence).toBeGreaterThanOrEqual(CONFIDENCE_THRESHOLD);
+  });
+});

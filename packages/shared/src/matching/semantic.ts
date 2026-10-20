@@ -124,6 +124,10 @@ export function combineMatches(kw: MatchResult, sem: { ranked: { id: string; sco
     const confidence = Math.min(0.99, Math.max(kw.confidence, sem.confidence) + 0.1);
     return { candidates: mergeCandidates(kw.candidates, semCandidates), confidence: round(confidence), purposeId: kw.purposeId };
   }
+  // They disagree: the more certain of the two leads the options.
+  if (kwTop && kw.confidence > sem.confidence) {
+    return { candidates: mergeCandidates(kw.candidates, semCandidates), confidence: kw.confidence, purposeId: kw.purposeId };
+  }
   const merged = mergeCandidates(semCandidates, kw.candidates);
   return { candidates: merged, confidence: sem.confidence, purposeId: kw.purposeId };
 }

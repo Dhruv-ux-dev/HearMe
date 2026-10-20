@@ -10,7 +10,8 @@
     "models": "tsx src/scripts/download-models.ts",
     "eval": "tsx src/scripts/eval.ts",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "rescore": "tsx src/scripts/rescore.ts"
   },
   "dependencies": {
     "@hearme/shared": "*",

@@ -1208,3 +1208,18 @@
   border-radius: 0.6em;
   padding: 0.6em 0.9em;
 }
+
+/* The seat label sits in the corner, out of the centred column (".ife-attract > *" would make it relative). */
+.ife-attract > .ife-attract__seat {
+  position: absolute;
+}
+
+/* Crew console inside the demo stage's narrow frame: requests and the selected request side by side. */
+@media (max-width: 760px) {
+  .crew2--embedded .crew2-body {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr);
+  }
+  .crew2--embedded .crew2-map {
+    display: none;
+  }
+}

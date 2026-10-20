@@ -1,5 +1,6 @@
 import { NEEDS, PURPOSE_PHRASES } from '../catalog/needs';
-import type { Need, NeedPurpose } from '../types';
+import type { LangCode, Need, NeedPurpose } from '../types';
+import { allowedEdits, fuzzyFind, soundAlike } from './phonetic';
 
 /**
  * Intent matcher: turns a transcript (or typed text) into one of the known needs.
@@ -82,10 +83,47 @@ function allKeywords(map: Partial<Record<string, string[]>> | undefined): string
   return map ? Object.values(map).flatMap((v) => v ?? []) : [];
 }
 
+/**
+ * Vietnamese written with tone marks keeps words apart that fold to the same
+ * letters: "ở đâu" (where) is not "đau" (pain). Drop these before folding.
+ */
+function dropFalseFriends(input: string): string {
+  return input.toLowerCase().normalize('NFC').replace(/đâu/g, ' ');
+}
+
+/** Languages whose speech transcripts get the sound-alike tier (English and Indonesian come out of Whisper clean). */
+const SOUND_ALIKE_LANGS: LangCode[] = ['hi', 'th', 'vi', 'ja'];
+
+interface AlikeKeyword {
+  needId: string;
+  kind: 'phrase' | 'hint';
+  lang: LangCode;
+  keyword: string;
+  edits: number;
+}
+
+function alikeKeywords(needs: Need[]): AlikeKeyword[] {
+  const out: AlikeKeyword[] = [];
+  for (const need of needs) {
+    for (const kind of ['phrase', 'hint'] as const) {
+      const map = kind === 'phrase' ? need.phrases : need.hints;
+      for (const lang of SOUND_ALIKE_LANGS) {
+        for (const w of map?.[lang] ?? []) {
+          const keyword = soundAlike(normalize(w).trim(), lang);
+          const edits = allowedEdits(keyword, lang);
+          if (keyword && edits >= 0) out.push({ needId: need.id, kind, lang, keyword, edits });
+        }
+      }
+    }
+  }
+  return out;
+}
+
 export function createKeywordMatcher(needs: Need[] = NEEDS): IntentMatcher {
+  const alike = alikeKeywords(needs);
   return {
     match(input: string): MatchResult {
-      const text = normalize(input);
+      const text = normalize(dropFalseFriends(input));
       if (!text.trim()) return { candidates: [], confidence: 0 };
 
       const hits: Hit[] = [];
@@ -115,6 +153,35 @@ export function createKeywordMatcher(needs: Need[] = NEEDS): IntentMatcher {
         scores.set(h.needId, Math.min(1.5, (scores.get(h.needId) ?? 0) + add));
       }
 
+      // Sound-alike tier: look for what the exact keywords did not explain, spelled the way it sounds.
+      const exactNeeds = new Set(kept.filter((h) => h.kind === 'phrase').map((h) => h.needId!));
+      const masked = text.split('');
+      for (const h of kept) for (let i = h.start; i < h.end; i++) masked[i] = ' ';
+      const rest = masked.join('');
+      const alikeText = new Map<LangCode, string>();
+      const alikeHits: (AlikeKeyword & { start: number; end: number; found: number })[] = [];
+      for (const k of alike) {
+        if (k.kind === 'phrase' && exactNeeds.has(k.needId)) continue;
+        let t = alikeText.get(k.lang);
+        if (t === undefined) alikeText.set(k.lang, (t = soundAlike(rest, k.lang)));
+        const hit = fuzzyFind(t, k.keyword, k.edits, k.lang !== 'th' && k.lang !== 'ja');
+        if (hit) alikeHits.push({ ...k, start: hit.start, end: hit.end, found: hit.edits });
+      }
+      const alikeBest = new Map<string, number>();
+      for (const h of alikeHits) {
+        // As above, but a hint ("cold") still supports its need inside another need's phrase ("so cold").
+        const inside = (o: (typeof alikeHits)[number]) =>
+          o !== h && o.lang === h.lang && o.start <= h.start && o.end >= h.end && o.end - o.start > h.end - h.start;
+        if (alikeHits.some((o) => inside(o) && (h.kind === 'phrase' || o.needId === h.needId))) continue;
+        const key = `${h.needId}:${h.kind}`;
+        const w = h.kind === 'phrase' ? 0.8 - 0.1 * h.found : 0.25;
+        alikeBest.set(key, Math.max(alikeBest.get(key) ?? 0, w));
+      }
+      for (const [key, w] of alikeBest) {
+        const needId = key.slice(0, key.lastIndexOf(':'));
+        scores.set(needId, Math.min(1.5, (scores.get(needId) ?? 0) + w));
+      }
+
       const purposeHits = kept.filter((h) => h.kind === 'purpose');
       const candidates = [...scores.entries()]
         .map(([needId, score]) => ({ needId, score }))
@@ -127,6 +194,8 @@ export function createKeywordMatcher(needs: Need[] = NEEDS): IntentMatcher {
         const strength = Math.min(1, top.score);
         const margin = (top.score - second) / top.score;
         confidence = Math.min(0.99, 0.6 * strength + 0.4 * margin);
+        // Heard only by sound: show pictures rather than send.
+        if (!kept.some((h) => h.needId === top.needId)) confidence = Math.min(confidence, 0.8);
       }
 
       let purposeId: NeedPurpose['id'] | undefined;
