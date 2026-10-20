@@ -1,0 +1,177 @@
+import { createServer, type Server } from 'node:http';
+import type { AddressInfo } from 'node:net';
+import { mkdtempSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import {
+  DemoCabinLink,
+  PassengerSession,
+  RemoteCrewTablet,
+  floatToPcm16,
+  type Embedder,
+  type WebSocketLike,
+} from '@hearme/shared';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import WebSocket, { WebSocketServer } from 'ws';
+import { AiEngine, hasSpeech } from '../src/ai';
+import { CabinRelay } from '../src/relay';
+import { createHandler } from '../src/server';
+
+const factory = (url: string) => new WebSocket(url) as unknown as WebSocketLike;
+
+/** A tiny deterministic "embedding": bag of characters, normalised. Enough to test the plumbing. */
+const fakeEmbedder: Embedder = {
+  async embed(texts) {
+    return texts.map((t) => {
+      const v = new Float32Array(64);
+      for (const ch of t.toLowerCase()) v[ch.charCodeAt(0) % 64]! += 1;
+      const n = Math.hypot(...v) || 1;
+      return v.map((x) => x / n);
+    });
+  },
+};
+
+const waitFor = async (check: () => boolean, ms = 4000) => {
+  const start = Date.now();
+  while (!check()) {
+    if (Date.now() - start > ms) throw new Error('timed out');
+    await new Promise((r) => setTimeout(r, 20));
+  }
+};
+
+let server: Server;
+let relay: CabinRelay;
+let base: string;
+let ai: AiEngine;
+
+beforeEach(async () => {
+  const staticDir = mkdtempSync(join(tmpdir(), 'hearme-static-'));
+  writeFileSync(join(staticDir, 'index.html'), '<!doctype html><div id="root"></div>');
+  ai = new AiEngine({
+    asrSize: 'base',
+    threads: 1,
+    loadEmbedder: async () => fakeEmbedder,
+    loadAsr: async () => ({ transcribe: async (_s, lang) => (lang === 'hi' ? 'मुझे गरम पानी चाहिए' : 'hot water please') }),
+  });
+  await ai.start();
+  relay = new CabinRelay({ heartbeatMs: 200, pingMs: 60_000 });
+  const handler = createHandler({ staticDir, ai, relay, urls: () => ({ base: 'http://localhost', lan: [] }), version: 'test' });
+  const wss = new WebSocketServer({ noServer: true });
+  relay.attach(wss);
+  server = createServer((req, res) => void handler(req, res));
+  server.on('upgrade', (req, socket, head) => wss.handleUpgrade(req, socket, head, (ws) => wss.emit('connection', ws, req)));
+  await new Promise<void>((r) => server.listen(0, '127.0.0.1', () => r()));
+  base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+});
+
+afterEach(async () => {
+  relay.close();
+  await new Promise((r) => server.close(r));
+});
+
+describe('cabin hub', () => {
+  it('reports its status and models', async () => {
+    const s = await (await fetch(`${base}/api/status`)).json();
+    expect(s.name).toBe('hearme-hub');
+    expect(s.asr.state).toBe('ready');
+    expect(s.embed.state).toBe('ready');
+  });
+
+  it('delivers a phone request to the shared crew tablet and the reply back to that seat only', async () => {
+    const crew = new RemoteCrewTablet(base, { factory });
+    const link = new DemoCabinLink('hub', { hubUrl: base, wsFactory: factory });
+    const other = new DemoCabinLink('hub', { hubUrl: base, wsFactory: factory });
+    const session = new PassengerSession({ link, device: 'phone' });
+    const neighbour = new PassengerSession({ link: other, device: 'phone' });
+    try {
+      session.setProfile({ lang: 'hi', seat: '23C', tags: ['senior'], shareTagsWithCrew: true });
+      neighbour.setProfile({ lang: 'th', seat: '21A', tags: [], shareTagsWithCrew: false });
+      await waitFor(() => session.getState().link === 'online');
+      const res = session.submit({ needId: 'hot_water', purposeId: 'for_medicine', source: 'speech', understanding: { confidence: 0.62, viaPictures: true } });
+      expect(res.ok).toBe(true);
+      await waitFor(() => crew.getState().requests.length === 1);
+      const req = crew.getState().requests[0]!;
+      expect(req).toMatchObject({ seat: '23C', needId: 'hot_water', purposeId: 'for_medicine', lang: 'hi', understanding: { viaPictures: true } });
+      await waitFor(() => session.getState().requests[0]!.status === 'sent');
+
+      crew.reply(req.requestId, 'bringing_now');
+      await waitFor(() => session.getState().requests[0]!.status === 'acknowledged');
+      expect(session.getState().replyToShow).toBe(res.ok && res.request.id);
+      expect(neighbour.getState().requests).toHaveLength(0);
+      expect(neighbour.getState().replyToShow).toBeNull();
+    } finally {
+      session.dispose();
+      neighbour.dispose();
+      link.dispose();
+      other.dispose();
+      crew.dispose();
+    }
+  });
+
+  it('broadcasts announcements to every passenger device', async () => {
+    const crew = new RemoteCrewTablet(base, { factory });
+    const link = new DemoCabinLink('hub', { hubUrl: base, wsFactory: factory });
+    const session = new PassengerSession({ link, device: 'ife' });
+    try {
+      session.setProfile({ lang: 'vi', seat: '31A', tags: [], shareTagsWithCrew: false });
+      await waitFor(() => session.getState().link === 'online' && crew.isConnected());
+      crew.announce('seatbelt_on');
+      await waitFor(() => session.getState().announcements.length === 1);
+      expect(session.getState().announcements[0]!.templateId).toBe('seatbelt_on');
+    } finally {
+      session.dispose();
+      link.dispose();
+      crew.dispose();
+    }
+  });
+
+  it('drops malformed frames and requests for a seat the device did not register', async () => {
+    const crew = new RemoteCrewTablet(base, { factory });
+    const ws = new WebSocket(base.replace('http', 'ws') + '/ws');
+    await new Promise((r) => ws.once('open', r));
+    ws.send('not json');
+    ws.send(JSON.stringify({ kind: 'hello', role: 'passenger', seat: '23C' }));
+    ws.send(JSON.stringify({ kind: 'cabin', msg: { type: 'request.create', requestId: 'x1', seat: '23C', device: 'phone', lang: 'xx', needId: 'water', source: 'tap', tags: [], createdAt: 1 } }));
+    ws.send(JSON.stringify({ kind: 'cabin', msg: { type: 'request.create', requestId: 'x2', seat: '24A', device: 'phone', lang: 'en', needId: 'water', source: 'tap', tags: [], createdAt: 1 } }));
+    ws.send(JSON.stringify({ kind: 'crew', cmd: { type: 'reset' } }));
+    ws.send(JSON.stringify({ kind: 'cabin', msg: { type: 'request.create', requestId: 'ok1', seat: '23C', device: 'phone', lang: 'en', needId: 'water', source: 'tap', tags: [], createdAt: 1 } }));
+    try {
+      await waitFor(() => crew.getState().requests.length === 1);
+      await new Promise((r) => setTimeout(r, 150));
+      expect(crew.getState().requests.map((r) => r.requestId)).toEqual(['ok1']);
+    } finally {
+      ws.close();
+      crew.dispose();
+    }
+  });
+
+  it('understands speech (PCM) and emits a matched need', async () => {
+    const tone = new Float32Array(16000).map((_, i) => 0.3 * Math.sin(i / 5));
+    const res = await fetch(`${base}/api/understand?lang=hi`, { method: 'POST', headers: { 'Content-Type': 'audio/L16;rate=16000;channels=1' }, body: Buffer.from(floatToPcm16(tone)) });
+    const body = await res.json();
+    expect(res.status).toBe(200);
+    expect(body.transcript).toBe('मुझे गरम पानी चाहिए');
+    expect(body.match.candidates[0].needId).toBe('hot_water');
+  });
+
+  it('matches typed text and looks up bookings', async () => {
+    const m = await (await fetch(`${base}/api/match`, { method: 'POST', body: JSON.stringify({ text: 'blanket please', lang: 'en' }) })).json();
+    expect(m.match.candidates[0].needId).toBe('blanket');
+    const b = await (await fetch(`${base}/api/booking?seat=23C`)).json();
+    expect(b.profile).toMatchObject({ lang: 'hi', seat: '23C' });
+    expect((await fetch(`${base}/api/booking?seat=99Z`)).status).toBe(404);
+    expect((await fetch(`${base}/api/understand?lang=zz`, { method: 'POST', body: 'x' })).status).toBe(400);
+  });
+
+  it('serves static files without leaving the static folder', async () => {
+    expect((await fetch(`${base}/`)).status).toBe(200);
+    expect((await fetch(`${base}/..%2f..%2fetc%2fpasswd`)).status).not.toBe(200);
+  });
+});
+
+describe('speech gate', () => {
+  it('ignores silence (Whisper would invent words)', () => {
+    expect(hasSpeech(new Float32Array(16000))).toBe(false);
+    expect(hasSpeech(new Float32Array(16000).map((_, i) => 0.2 * Math.sin(i / 4)))).toBe(true);
+  });
+});

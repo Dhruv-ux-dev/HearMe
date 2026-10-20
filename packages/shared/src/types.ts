@@ -36,7 +36,21 @@ export type IconName =
   | 'shield'
   | 'help-circle'
   | 'shopping-bag'
-  | 'armchair';
+  | 'armchair'
+  | 'milk'
+  | 'eye-off'
+  | 'monitor-play'
+  | 'battery-charging'
+  | 'file-text'
+  | 'plane-takeoff'
+  | 'clock'
+  | 'search'
+  | 'shield-alert'
+  | 'heart'
+  | 'salad'
+  | 'user-x'
+  | 'droplets'
+  | 'stethoscope';
 
 export interface NeedPurpose {
   id: 'for_medicine' | 'vegetarian' | 'for_child' | 'urgent';
@@ -62,6 +76,30 @@ export interface Need {
 export type RequestSource = 'tap' | 'speech' | 'typed';
 
 /**
+ * How a spoken or typed request was understood (sent to crew for the live
+ * "understood first time" numbers). Taps have no understanding step.
+ */
+export interface Understanding {
+  /** Matcher confidence 0..1 for the need that was finally sent. */
+  confidence: number;
+  /** True when the passenger had to pick from the "Did you mean?" pictures. */
+  viaPictures: boolean;
+}
+
+/** Care Mode: where it hurts, how much, what else. Shown to crew in Japanese + English. */
+export type BodyArea = 'head' | 'eyes_ears' | 'throat' | 'chest' | 'stomach' | 'back' | 'arms' | 'legs';
+export type SymptomId = 'dizzy' | 'nausea' | 'breathing' | 'fever' | 'allergy' | 'bleeding' | 'faint' | 'numb';
+export type ConditionId = 'diabetes' | 'heart' | 'asthma' | 'blood_pressure' | 'pregnant' | 'epilepsy';
+
+export interface MedicalReport {
+  areas: BodyArea[];
+  /** 0 (no pain) … 10 (worst pain). */
+  pain: number;
+  symptoms: SymptomId[];
+  conditions: ConditionId[];
+}
+
+/**
  * Request lifecycle. Delivery is only claimed when the crew tablet confirms it:
  *  pending      – created locally, not yet confirmed by the crew tablet (queued / sending / retrying)
  *  sent         – the crew tablet confirmed it received the request
@@ -78,7 +116,12 @@ export type ReplyId =
   | 'coming_to_seat'
   | 'after_seatbelt'
   | 'not_available'
-  | 'ground_informed';
+  | 'ground_informed'
+  | 'here_you_go'
+  | 'doctor_coming'
+  | 'stay_seated'
+  | 'meal_soon'
+  | 'staff_on_arrival';
 
 export interface CrewReply {
   replyId: ReplyId;
@@ -103,6 +146,9 @@ export interface PassengerRequest {
   failureReason?: 'no_connection' | 'no_confirmation';
   sentAt?: number;
   reply?: CrewReply;
+  understanding?: Understanding;
+  /** Care Mode details (only for the "I feel unwell" need). */
+  medical?: MedicalReport;
 }
 
 /** Profile tags the passenger may choose to share with crew. */

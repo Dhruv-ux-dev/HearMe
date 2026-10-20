@@ -94,6 +94,19 @@ export const ANNOUNCEMENTS: AnnouncementTemplate[] = [
       'Chào mừng đến Tokyo. Vui lòng ngồi yên đến khi đèn thắt dây an toàn tắt.',
     ),
   },
+  {
+    id: 'doctor_call',
+    icon: 'stethoscope',
+    safety: true,
+    text: L(
+      'Is there a doctor or nurse on board? If so, please tell the cabin crew.',
+      'क्या विमान में कोई डॉक्टर या नर्स हैं? कृपया केबिन क्रू को बताएँ।',
+      '機内にお医者様または看護師の方はいらっしゃいませんか。乗務員までお知らせください。',
+      'มีแพทย์หรือพยาบาลบนเครื่องไหม หากมี กรุณาแจ้งลูกเรือ',
+      'Apakah ada dokter atau perawat di pesawat? Jika ada, mohon beri tahu awak kabin.',
+      'Có bác sĩ hoặc y tá nào trên máy bay không? Nếu có, xin báo cho tiếp viên.',
+    ),
+  },
 ];
 
 export function getAnnouncement(id: string): AnnouncementTemplate | undefined {

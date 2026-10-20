@@ -21,7 +21,7 @@ import {
   type PassengerSession,
 } from '@hearme/shared';
 import { useSession } from '@hearme/shared/react';
-import { Check, ChevronLeft, ChevronRight, CircleAlert, Clock, Lock, Plus, RotateCcw, Wifi, WifiOff, X } from 'lucide-react';
+import { Check, ChevronLeft, ChevronRight, CircleAlert, Clock, HeartPulse, Lock, Plus, RotateCcw, Wifi, WifiOff, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { NeedIcon } from '../common/Icon';
 import type { IfeScreen } from './IfeApp';
@@ -71,6 +71,7 @@ export function AttractScreen({ seat, onStart }: { seat: string; onStart: () => 
   const l = LANGUAGES[i]!;
   return (
     <button className="ife-attract" onClick={onStart}>
+      <img className="ife-attract__img" src="/img/cabin-bright.jpg" alt="" />
       <div className="ife-attract__brand">
         Hear<span>Me</span>
       </div>
@@ -275,12 +276,15 @@ export function ReviewScreen({
   initialPurpose,
   onBack,
   onSend,
+  onCare,
 }: {
   lang: LangCode;
   needId: string;
   initialPurpose?: NeedPurpose['id'];
   onBack: () => void;
   onSend: (purposeId?: NeedPurpose['id']) => void;
+  /** "I feel unwell": open Care Mode to show where it hurts. */
+  onCare?: () => void;
 }) {
   const tr = translator(lang);
   const need = getNeed(needId);
@@ -320,6 +324,14 @@ export function ReviewScreen({
             </button>
           ))}
         </fieldset>
+      )}
+      {onCare && (
+        <div className="ife-care-cta">
+          <button className="ife-btn ife-btn--secondary ife-btn--wide" onClick={onCare}>
+            <HeartPulse aria-hidden /> {tr('care.open')}
+          </button>
+          <p className="ife-hint">{tr('care.optional')}</p>
+        </div>
       )}
       <div className="ife-review__actions">
         <button className="ife-btn ife-btn--ghost" onClick={onBack}>

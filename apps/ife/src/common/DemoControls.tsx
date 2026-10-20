@@ -15,8 +15,9 @@ export function DemoControls({ link, onClose }: { link: DemoCabinLink; onClose: 
     { id: 'offline', label: 'No cabin network' },
   ];
   const modes: { id: CrewMode; label: string; disabled?: boolean }[] = [
-    { id: 'simulated', label: 'Simulated crew (auto-replies)' },
-    { id: 'console', label: 'Crew console in another tab', disabled: !DemoCabinLink.consoleSupported() },
+    { id: 'hub', label: link.hubUrl ? 'Cabin hub (real network, every device)' : 'Cabin hub (not running: npm run demo)', disabled: !link.hubUrl },
+    { id: 'simulated', label: 'Simulated crew in this browser (auto-replies)' },
+    { id: 'console', label: 'Crew console tab in this browser', disabled: !DemoCabinLink.consoleSupported() },
   ];
   return (
     <div className="demo-panel" role="dialog" aria-label="Prototype controls">
@@ -26,7 +27,7 @@ export function DemoControls({ link, onClose }: { link: DemoCabinLink; onClose: 
         <button className="demo-close" onClick={onClose} aria-label="Close prototype controls">✕</button>
       </div>
       <fieldset>
-        <legend>Cabin network</legend>
+        <legend>Simulate the cabin network</legend>
         {conditions.map((c) => (
           <label key={c.id} className="demo-radio">
             <input type="radio" name="cond" checked={link.networkCondition === c.id} onChange={() => link.setCondition(c.id)} />

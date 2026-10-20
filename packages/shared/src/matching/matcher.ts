@@ -98,12 +98,10 @@ export function createKeywordMatcher(needs: Need[] = NEEDS): IntentMatcher {
       }
 
       // A hit fully inside a longer hit is part of that longer phrase
-      // ("गरम पानी" is hot water, not water; "दवाई के लिए" is a purpose, not the medicine need).
+      // ("गरम पानी" is hot water, not water; "दवाई के लिए" is a purpose, not the medicine need;
+      // the hint "lanh" inside the phrase "lanh qua" must not count twice).
       const kept = hits.filter(
-        (h) =>
-          !hits.some(
-            (o) => o !== h && o.start <= h.start && o.end >= h.end && o.end - o.start > h.end - h.start && o.needId !== h.needId,
-          ),
+        (h) => !hits.some((o) => o !== h && o.start <= h.start && o.end >= h.end && o.end - o.start > h.end - h.start),
       );
 
       const scores = new Map<string, number>();

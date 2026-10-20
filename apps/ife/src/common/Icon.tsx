@@ -2,6 +2,7 @@ import type { IconName } from '@hearme/shared';
 import {
   Accessibility, Armchair, Cookie, Baby, Bed, BellRing, CircleQuestionMark, Coffee, CupSoda, GlassWater, HandHelping, Headphones,
   HeartPulse, Leaf, Lock, Luggage, Pill, Shield, ShoppingBag, Snowflake, Sun, Thermometer, Toilet, Utensils,
+  BatteryCharging, Clock, Droplets, EyeOff, FileText, Heart, Milk, MonitorPlay, PlaneTakeoff, Salad, Search, ShieldAlert, Stethoscope, UserX,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -30,6 +31,20 @@ const ICONS: Record<IconName, LucideIcon> = {
   'help-circle': CircleQuestionMark,
   'shopping-bag': ShoppingBag,
   armchair: Armchair,
+  milk: Milk,
+  'eye-off': EyeOff,
+  'monitor-play': MonitorPlay,
+  'battery-charging': BatteryCharging,
+  'file-text': FileText,
+  'plane-takeoff': PlaneTakeoff,
+  clock: Clock,
+  search: Search,
+  'shield-alert': ShieldAlert,
+  heart: Heart,
+  salad: Salad,
+  'user-x': UserX,
+  droplets: Droplets,
+  stethoscope: Stethoscope,
 };
 
 /** Pictogram for a shared IconName. Decorative by default: the visible label carries the meaning. */

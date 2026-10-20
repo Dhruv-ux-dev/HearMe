@@ -12,6 +12,10 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@fontsource/noto-sans": "^5.3.0",
+    "@fontsource/noto-sans-devanagari": "^5.3.0",
+    "@fontsource/noto-sans-jp": "^5.3.1",
+    "@fontsource/noto-sans-thai": "^5.3.0",
     "@hearme/shared": "*",
     "lucide-react": "^1.60.0",
     "react": "19.3.0",

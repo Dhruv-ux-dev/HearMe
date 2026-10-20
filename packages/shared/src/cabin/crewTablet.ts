@@ -1,16 +1,16 @@
 import { getNeed } from '../catalog/needs';
-import type { LangCode, NeedPurpose, ProfileTag, ReplyId, RequestSource } from '../types';
+import type { LangCode, MedicalReport, NeedPurpose, ProfileTag, ReplyId, RequestSource, Understanding } from '../types';
 import type { CabinBus } from './bus';
 import type { CabinMessage, DeviceKind } from './protocol';
 
 /**
- * SIMULATED crew tablet.
+ * The crew tablet's request list and one-tap replies.
  *
- * In the PDF the crew tablet runs the speech AI, keeps the request list
- * offline and gives the crew one-tap replies. Here it is a small in-memory
- * model used in two ways:
- *  - inside a passenger app as an auto-responding stand-in ("simulated crew")
- *  - behind the Crew console page, where a person taps the replies
+ * The same model runs in three places:
+ *  - inside the cabin hub (`apps/hub`): the real crew tablet service that every
+ *    phone, seatback screen and crew console on the cabin Wi-Fi shares
+ *  - inside a passenger app as an auto-responding stand-in when there is no hub
+ *  - behind a crew console tab in the same browser (BroadcastChannel)
  */
 
 export interface CrewRequest {
@@ -26,6 +26,8 @@ export interface CrewRequest {
   receivedAt: number;
   status: 'new' | 'replied' | 'cancelled' | 'thanked';
   reply?: { replyId: ReplyId; at: number };
+  understanding?: Understanding;
+  medical?: MedicalReport;
 }
 
 export interface CrewAnnouncementLog {
@@ -49,6 +51,20 @@ export interface CrewTabletOptions {
   idFactory?: () => string;
 }
 
+/** What a crew console needs from a crew tablet, wherever it runs (here, or in the hub). */
+export interface CrewTabletApi {
+  /** True when the state lives in the cabin hub (shared by every crew device). */
+  readonly remote: boolean;
+  getState(): CrewTabletState;
+  subscribe(listener: (s: CrewTabletState) => void): () => void;
+  reply(requestId: string, replyId: ReplyId): void;
+  announce(templateId: string): void;
+  setAutoReply(autoReply: boolean): void;
+  /** Clear all requests and captions (demo reset). */
+  reset(): void;
+  dispose(): void;
+}
+
 /** The reply a crew member would most likely tap for a need. */
 export function defaultReplyFor(needId: string): ReplyId {
   const need = getNeed(needId);
@@ -57,7 +73,8 @@ export function defaultReplyFor(needId: string): ReplyId {
   return 'bringing_now';
 }
 
-export class CrewTablet {
+export class CrewTablet implements CrewTabletApi {
+  readonly remote = false;
   private state: CrewTabletState;
   private listeners = new Set<(s: CrewTabletState) => void>();
   private unsubscribe: () => void;
@@ -103,6 +120,12 @@ export class CrewTablet {
     this.clearAuto(requestId);
     this.patch(requestId, { status: req.status === 'thanked' ? 'thanked' : 'replied', reply: { replyId, at } });
     this.bus.post({ type: 'request.reply', requestId, seat: req.seat, replyId, crewName: this.crewName, at });
+  }
+
+  reset(): void {
+    this.pendingAuto.forEach((t) => clearTimeout(t));
+    this.pendingAuto.clear();
+    this.update({ ...this.state, requests: [], announcements: [] });
   }
 
   announce(templateId: string): void {

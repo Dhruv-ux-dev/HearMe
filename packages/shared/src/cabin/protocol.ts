@@ -1,14 +1,15 @@
-import type { LangCode, NeedPurpose, ProfileTag, ReplyId, RequestSource } from '../types';
+import type { LangCode, MedicalReport, NeedPurpose, ProfileTag, ReplyId, RequestSource, Understanding } from '../types';
 
 /**
  * Messages exchanged between passenger devices (phone web app / seatback IFE)
- * and the crew tablet over the cabin network. In production this is a
- * WebSocket to the crew tablet's local server (PDF: Python + FastAPI +
- * WebSockets, no internet). In this prototype it runs over a `CabinBus`
- * (in-memory or BroadcastChannel) — see `bus.ts`.
+ * and the crew tablet over the cabin network. On the cabin Wi-Fi they travel
+ * as WebSocket frames to the cabin hub (`apps/hub`, the crew tablet service,
+ * no internet). Without a hub they run over an in-memory or BroadcastChannel
+ * `CabinBus` (see `bus.ts` and `ws.ts`).
  *
  * Privacy: messages carry the seat, language, need id and (only with consent)
- * profile tags. No names, no audio, no transcripts.
+ * profile tags. No names, no audio, no transcripts. Care Mode adds only the
+ * body areas, pain level and symptoms the passenger chose to share.
  */
 
 export type DeviceKind = 'phone' | 'ife';
@@ -25,6 +26,8 @@ export type PassengerToCrew =
       source: RequestSource;
       tags: ProfileTag[];
       createdAt: number;
+      understanding?: Understanding;
+      medical?: MedicalReport;
     }
   | { type: 'request.cancel'; requestId: string; seat: string }
   | { type: 'request.thanks'; requestId: string; seat: string };

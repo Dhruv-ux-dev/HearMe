@@ -2,12 +2,14 @@
   "name": "@hearme/shared",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "description": "Shared HearMe product logic: types, catalog, matching, request state machine, cabin adapters, design tokens.",
   "main": "src/index.ts",
   "types": "src/index.ts",
   "exports": {
     ".": "./src/index.ts",
-    "./react": "./src/react.ts"
+    "./react": "./src/react.ts",
+    "./web": "./src/web/micRecorder.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

@@ -6,3 +6,8 @@ apps/ife/public/mobile/
 *.tsbuildinfo
 .DS_Store
 coverage/
+
+# HearMe hub: downloaded AI models, generated certificates, demo recordings
+apps/hub/.models/
+apps/hub/.cert/
+apps/hub/.eval/

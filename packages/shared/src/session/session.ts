@@ -5,10 +5,12 @@ import type {
   AccessibilityPrefs,
   Announcement,
   LinkStatus,
+  MedicalReport,
   NeedPurpose,
   PassengerProfile,
   PassengerRequest,
   RequestSource,
+  Understanding,
 } from '../types';
 
 /**
@@ -124,7 +126,10 @@ export class PassengerSession {
   };
 
   private set(patch: Partial<SessionState>): void {
+    const seatBefore = this.state.profile?.seat;
     this.state = { ...this.state, ...patch };
+    const seatAfter = this.state.profile?.seat;
+    if (seatBefore !== seatAfter) this.deps.link.setSeat?.(seatAfter);
     this.listeners.forEach((l) => l());
   }
 
@@ -153,7 +158,13 @@ export class PassengerSession {
   }
 
   // ── Requests ────────────────────────────────────────────────────────────
-  submit(input: { needId: string; purposeId?: NeedPurpose['id']; source: RequestSource }): SubmitResult {
+  submit(input: {
+    needId: string;
+    purposeId?: NeedPurpose['id'];
+    source: RequestSource;
+    understanding?: Understanding;
+    medical?: MedicalReport;
+  }): SubmitResult {
     if (!this.state.profile) return { ok: false, reason: 'no_profile' };
     const need = getNeed(input.needId);
     if (!need) return { ok: false, reason: 'unknown_need' };
@@ -174,6 +185,8 @@ export class PassengerSession {
       status: 'pending',
       attempts: 0,
       waitingForConnection: false,
+      ...(input.understanding && input.source !== 'tap' ? { understanding: input.understanding } : {}),
+      ...(input.medical ? { medical: input.medical } : {}),
     };
     this.set({ requests: [request, ...this.state.requests] });
     this.attempt(request.id);
@@ -287,6 +300,8 @@ export class PassengerSession {
       source: r.source,
       tags: profile.shareTagsWithCrew ? profile.tags : [],
       createdAt: r.createdAt,
+      ...(r.understanding ? { understanding: r.understanding } : {}),
+      ...(r.medical ? { medical: r.medical } : {}),
     });
     if (!left) {
       // Connection dropped between the status check and sending: wait for it instead.

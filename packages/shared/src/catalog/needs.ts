@@ -9,8 +9,8 @@ export function L(en: string, hi: string, ja: string, th: string, id: string, vi
  * The needs catalogue.
  *
  * The PDF says most cabin requests are "the same 64 things" and that the
- * hackathon prototype targets 40. This prototype ships 22 to keep the demo
- * focused; the structure is the same and adding a need is data only.
+ * hackathon prototype targets 40. This prototype ships those 40; adding a
+ * need is data only (label in 6 languages + matching phrases).
  * Japanese labels are what the crew tablet shows (the demo route is a Japanese carrier).
  */
 export const NEEDS: Need[] = [
@@ -41,7 +41,7 @@ export const NEEDS: Need[] = [
     label: L('Hot water', 'गरम पानी', 'お湯', 'น้ำร้อน', 'Air panas', 'Nước nóng'),
     phrases: {
       en: ['hot water', 'warm water'],
-      hi: ['गरम पानी', 'गर्म पानी', 'garam pani', 'garam paani'],
+      hi: ['गरम पानी', 'गर्म पानी', 'गुनगुना', 'garam pani', 'garam paani'],
       ja: ['お湯', 'おゆ', '白湯'],
       th: ['น้ำร้อน', 'น้ำอุ่น'],
       id: ['air panas', 'air hangat'],
@@ -71,6 +71,28 @@ export const NEEDS: Need[] = [
     icon: 'cup-soda',
     label: L('Juice', 'जूस', 'ジュース', 'น้ำผลไม้', 'Jus', 'Nước ép'),
     phrases: { en: ['juice', 'orange juice', 'apple juice'], hi: ['जूस', 'juice'], ja: ['ジュース'], th: ['น้ำผลไม้', 'น้ำส้ม'], id: ['jus'], vi: ['nuoc ep'] },
+  },
+  {
+    id: 'milk',
+    category: 'drinks',
+    icon: 'milk',
+    purposes: ['for_child'],
+    label: L('Milk', 'दूध', '牛乳', 'นม', 'Susu', 'Sữa'),
+    phrases: { en: ['milk'], hi: ['दूध', 'doodh', 'dudh'], ja: ['牛乳', 'ミルク'], th: ['นม'], id: ['susu'], vi: ['sua'] },
+  },
+  {
+    id: 'soft_drink',
+    category: 'drinks',
+    icon: 'cup-soda',
+    label: L('Soft drink', 'कोल्ड ड्रिंक', 'ソフトドリンク', 'น้ำอัดลม', 'Minuman ringan', 'Nước ngọt'),
+    phrases: { en: ['soft drink', 'coke', 'cola', 'soda'], hi: ['कोल्ड ड्रिंक', 'cold drink', 'कोक'], ja: ['ソフトドリンク', 'コーラ', '炭酸'], th: ['น้ำอัดลม', 'โค้ก'], id: ['minuman ringan', 'soda', 'cola'], vi: ['nuoc ngot', 'coca'] },
+  },
+  {
+    id: 'ice',
+    category: 'drinks',
+    icon: 'snowflake',
+    label: L('Ice', 'बर्फ़', '氷', 'น้ำแข็ง', 'Es batu', 'Đá'),
+    phrases: { en: ['ice', 'ice cubes'], hi: ['बर्फ़', 'बर्फ', 'barf'], ja: ['氷', 'こおり'], th: ['น้ำแข็ง'], id: ['es batu'], vi: ['nuoc da', 'da vien'] },
   },
   // ── Comfort ────────────────────────────────────────────────────────────
   {
@@ -111,6 +133,42 @@ export const NEEDS: Need[] = [
     label: L('Headphones', 'हेडफ़ोन', 'ヘッドホン', 'หูฟัง', 'Headphone', 'Tai nghe'),
     phrases: { en: ['headphones', 'headphone', 'earphones'], hi: ['हेडफ़ोन', 'हेडफोन', 'headphone'], ja: ['ヘッドホン', 'イヤホン'], th: ['หูฟัง'], id: ['headphone', 'earphone'], vi: ['tai nghe'] },
   },
+  {
+    id: 'eye_mask',
+    category: 'comfort',
+    icon: 'eye-off',
+    label: L('Eye mask', 'आँखों का मास्क', 'アイマスク', 'ผ้าปิดตา', 'Penutup mata', 'Bịt mắt'),
+    phrases: { en: ['eye mask', 'sleep mask'], hi: ['आँखों का मास्क', 'आई मास्क', 'eye mask'], ja: ['アイマスク'], th: ['ผ้าปิดตา'], id: ['penutup mata'], vi: ['bit mat'] },
+  },
+  {
+    id: 'tissues',
+    category: 'comfort',
+    icon: 'droplets',
+    label: L('Tissues / wet towel', 'टिशू / गीला तौलिया', 'ティッシュ・おしぼり', 'ทิชชู / ผ้าเย็น', 'Tisu / handuk basah', 'Khăn giấy / khăn ướt'),
+    phrases: { en: ['tissue', 'tissues', 'napkin', 'wet towel', 'wipes'], hi: ['टिशू', 'नैपकिन', 'tissue'], ja: ['ティッシュ', 'おしぼり', 'ナプキン'], th: ['ทิชชู', 'ผ้าเย็น'], id: ['tisu', 'handuk basah'], vi: ['khan giay', 'khan uot'] },
+  },
+  {
+    id: 'seat_help',
+    category: 'comfort',
+    icon: 'armchair',
+    label: L('Help with my seat', 'सीट में मदद', '座席の操作', 'ช่วยเรื่องที่นั่ง', 'Bantuan kursi', 'Giúp chỉnh ghế'),
+    phrases: { en: ['recline', 'seat belt', 'seatbelt', 'adjust my seat'], hi: ['सीट बेल्ट', 'सीट पीछे'], ja: ['リクライニング', 'シートベルト', '座席の操作'], th: ['ปรับเบาะ', 'เข็มขัดนิรภัย'], id: ['sandaran kursi', 'sabuk pengaman'], vi: ['nga ghe', 'day an toan'] },
+    hints: { en: ['seat'], hi: ['सीट'], ja: ['座席'], th: ['ที่นั่ง', 'เบาะ'], id: ['kursi'], vi: ['ghe'] },
+  },
+  {
+    id: 'screen_help',
+    category: 'comfort',
+    icon: 'monitor-play',
+    label: L('Help with the screen', 'स्क्रीन में मदद', '画面の操作', 'ช่วยเรื่องจอ', 'Bantuan layar', 'Giúp dùng màn hình'),
+    phrases: { en: ['screen', 'movie', 'entertainment', 'tv'], hi: ['स्क्रीन', 'फ़िल्म', 'फिल्म', 'screen', 'movie'], ja: ['画面', 'モニター', '映画'], th: ['หน้าจอ', 'ดูหนัง'], id: ['layar', 'film'], vi: ['man hinh', 'phim'] },
+  },
+  {
+    id: 'charger',
+    category: 'comfort',
+    icon: 'battery-charging',
+    label: L('Phone charging', 'फ़ोन चार्ज करना', 'スマホの充電', 'ชาร์จโทรศัพท์', 'Mengisi daya HP', 'Sạc điện thoại'),
+    phrases: { en: ['charge', 'charger', 'charging', 'usb', 'battery'], hi: ['चार्ज', 'चार्जर', 'charger', 'charge'], ja: ['充電', '充電器'], th: ['ชาร์จ', 'ที่ชาร์จ'], id: ['charger', 'mengisi daya', 'cas hp', 'baterai'], vi: ['sac pin', 'sac dien thoai', 'het pin'] },
+  },
   // ── Food ───────────────────────────────────────────────────────────────
   {
     id: 'meal',
@@ -119,7 +177,7 @@ export const NEEDS: Need[] = [
     common: true,
     purposes: ['vegetarian', 'for_child'],
     label: L('Food', 'खाना', '食事', 'อาหาร', 'Makanan', 'Suất ăn'),
-    phrases: { en: ['food', 'meal', 'hungry', 'eat'], hi: ['खाना', 'भूख', 'khana', 'bhookh'], ja: ['食事', 'ご飯', 'お腹が空'], th: ['อาหาร', 'หิวข้าว'], id: ['makanan', 'makan', 'lapar'], vi: ['do an', 'suat an', 'doi'] },
+    phrases: { en: ['food', 'meal', 'hungry', 'eat'], hi: ['खाना', 'खाने', 'भूख', 'khana', 'bhookh'], ja: ['食事', 'ご飯', 'お腹が空'], th: ['อาหาร', 'หิวข้าว'], id: ['makanan', 'makan', 'lapar'], vi: ['do an', 'suat an', 'doi'] },
   },
   {
     id: 'snack',
@@ -128,6 +186,27 @@ export const NEEDS: Need[] = [
     label: L('Snack', 'हल्का नाश्ता', '軽食', 'ของว่าง', 'Camilan', 'Đồ ăn nhẹ'),
     phrases: { en: ['snack', 'biscuit'], hi: ['नाश्ता', 'बिस्कुट', 'nashta'], ja: ['軽食', 'お菓子'], th: ['ของว่าง', 'ขนม'], id: ['camilan', 'snack'], vi: ['do an nhe', 'banh'] },
   },
+  {
+    id: 'veg_meal',
+    category: 'food',
+    icon: 'salad',
+    label: L('Vegetarian meal', 'शाकाहारी खाना', 'ベジタリアン食', 'อาหารมังสวิรัติ', 'Makanan vegetarian', 'Suất ăn chay'),
+    phrases: { en: ['vegetarian meal', 'veg meal', 'no meat', 'vegan'], hi: ['शाकाहारी खाना', 'वेज खाना', 'veg khana', 'shakahari khana'], ja: ['ベジタリアン食', '菜食', '肉なし'], th: ['อาหารมังสวิรัติ', 'อาหารเจ'], id: ['makanan vegetarian', 'tanpa daging'], vi: ['suat an chay', 'do an chay'] },
+  },
+  {
+    id: 'baby_food',
+    category: 'food',
+    icon: 'baby',
+    label: L('Baby food', 'बच्चे का खाना', '離乳食', 'อาหารเด็ก', 'Makanan bayi', 'Đồ ăn cho em bé'),
+    phrases: { en: ['baby food', 'food for my baby'], hi: ['बच्चे का खाना', 'baby food'], ja: ['離乳食', 'ベビーフード'], th: ['อาหารเด็ก'], id: ['makanan bayi'], vi: ['do an cho em be', 'do an tre em'] },
+  },
+  {
+    id: 'allergy',
+    category: 'food',
+    icon: 'shield-alert',
+    label: L('Food allergy question', 'खाने से एलर्जी', '食物アレルギー', 'แพ้อาหาร', 'Alergi makanan', 'Dị ứng thức ăn'),
+    phrases: { en: ['allergy', 'allergic', 'nuts', 'gluten'], hi: ['एलर्जी', 'allergy'], ja: ['アレルギー'], th: ['แพ้อาหาร'], id: ['alergi'], vi: ['di ung'] },
+  },
   // ── Help ───────────────────────────────────────────────────────────────
   {
     id: 'toilet',
@@ -135,7 +214,7 @@ export const NEEDS: Need[] = [
     icon: 'toilet',
     common: true,
     label: L('Toilet', 'टॉयलेट', 'トイレ', 'ห้องน้ำ', 'Toilet', 'Nhà vệ sinh'),
-    phrases: { en: ['toilet', 'bathroom', 'restroom', 'washroom', 'lavatory'], hi: ['टॉयलेट', 'शौचालय', 'बाथरूम', 'toilet'], ja: ['トイレ', 'お手洗い'], th: ['ห้องน้ำ'], id: ['toilet', 'kamar kecil'], vi: ['nha ve sinh', 'toilet'] },
+    phrases: { en: ['toilet', 'bathroom', 'restroom', 'washroom', 'lavatory'], hi: ['टॉयलेट', 'शौचालय', 'बाथरूम', 'toilet'], ja: ['トイレ', 'お手洗い'], th: ['ห้องน้ำ'], id: ['toilet', 'kamar kecil'], vi: ['nha ve sinh', 'di ve sinh', 'toilet'] },
   },
   {
     id: 'medicine',
@@ -176,6 +255,41 @@ export const NEEDS: Need[] = [
     label: L('Wheelchair on arrival', 'पहुँचने पर व्हीलचेयर', '到着時に車いす', 'รถเข็นเมื่อถึงปลายทาง', 'Kursi roda saat tiba', 'Xe lăn khi đến nơi'),
     phrases: { en: ['wheelchair'], hi: ['व्हीलचेयर', 'wheelchair'], ja: ['車いす', '車椅子'], th: ['รถเข็น'], id: ['kursi roda'], vi: ['xe lan'] },
   },
+  {
+    id: 'arrival_form',
+    category: 'help',
+    icon: 'file-text',
+    label: L('Help with arrival forms', 'आगमन फ़ॉर्म में मदद', '入国書類の記入', 'ช่วยกรอกเอกสารขาเข้า', 'Bantuan formulir kedatangan', 'Giúp điền tờ khai nhập cảnh'),
+    phrases: { en: ['form', 'arrival form', 'immigration', 'customs'], hi: ['फ़ॉर्म', 'फॉर्म', 'form', 'इमिग्रेशन'], ja: ['入国カード', '税関', '書類'], th: ['ใบตม', 'เอกสารขาเข้า', 'ศุลกากร'], id: ['formulir', 'imigrasi', 'bea cukai'], vi: ['to khai', 'nhap canh', 'hai quan'] },
+  },
+  {
+    id: 'connection',
+    category: 'help',
+    icon: 'plane-takeoff',
+    label: L('My connecting flight', 'मेरी कनेक्टिंग फ़्लाइट', '乗り継ぎ便', 'เที่ยวบินต่อเครื่อง', 'Penerbangan lanjutan', 'Chuyến bay nối chuyến'),
+    phrases: { en: ['connecting flight', 'connection', 'transfer', 'next flight'], hi: ['कनेक्टिंग फ़्लाइट', 'अगली फ़्लाइट', 'connecting flight'], ja: ['乗り継ぎ', '乗継'], th: ['ต่อเครื่อง'], id: ['transit', 'penerbangan lanjutan'], vi: ['noi chuyen', 'chuyen bay tiep'] },
+  },
+  {
+    id: 'time_left',
+    category: 'help',
+    icon: 'clock',
+    label: L('How long until we land?', 'कितनी देर में उतरेंगे?', '到着までの時間', 'อีกนานแค่ไหนจะถึง', 'Berapa lama lagi mendarat?', 'Bao lâu nữa thì hạ cánh?'),
+    phrases: { en: ['how long', 'when do we land', 'landing time', 'what time'], hi: ['कितनी देर', 'कब पहुँचेंगे', 'kitni der'], ja: ['あとどのくらい', '到着時刻', '何時に着'], th: ['อีกนานไหม', 'ถึงกี่โมง'], id: ['berapa lama', 'kapan mendarat'], vi: ['bao lau', 'khi nao ha canh'] },
+  },
+  {
+    id: 'lost_item',
+    category: 'help',
+    icon: 'search',
+    label: L('I lost something', 'मेरा कुछ खो गया है', '落とし物', 'ของหาย', 'Barang saya hilang', 'Tôi bị mất đồ'),
+    phrases: { en: ['lost', 'dropped', 'cannot find', "can't find"], hi: ['खो गया', 'गिर गया', 'kho gaya'], ja: ['落とし物', 'なくした', '落とした'], th: ['ของหาย', 'ทำตก'], id: ['hilang', 'terjatuh'], vi: ['mat do', 'danh roi'] },
+  },
+  {
+    id: 'diaper',
+    category: 'help',
+    icon: 'baby',
+    label: L('Baby changing / diapers', 'बच्चे का डायपर', 'おむつ交換', 'เปลี่ยนผ้าอ้อม', 'Popok bayi', 'Thay tã cho bé'),
+    phrases: { en: ['diaper', 'nappy', 'changing table'], hi: ['डायपर', 'diaper'], ja: ['おむつ', 'オムツ'], th: ['ผ้าอ้อม'], id: ['popok'], vi: ['thay ta', 'ta em be'] },
+  },
   // ── Private ────────────────────────────────────────────────────────────
   {
     id: 'sanitary',
@@ -191,7 +305,7 @@ export const NEEDS: Need[] = [
     icon: 'shopping-bag',
     private: true,
     label: L('Sick bag', 'उल्टी की थैली', 'エチケット袋', 'ถุงอาเจียน', 'Kantong muntah', 'Túi nôn'),
-    phrases: { en: ['sick bag', 'vomit', 'throw up', 'nausea'], hi: ['उल्टी', 'ulti'], ja: ['吐き気', 'エチケット袋'], th: ['อาเจียน', 'คลื่นไส้'], id: ['muntah', 'mual'], vi: ['buon non', 'muon non'] },
+    phrases: { en: ['sick bag', 'vomit', 'vomiting', 'throw up', 'nausea', 'nauseous'], hi: ['उल्टी', 'ulti'], ja: ['吐き気', 'エチケット袋'], th: ['อาเจียน', 'คลื่นไส้'], id: ['muntah', 'mual'], vi: ['buon non', 'muon non'] },
   },
   {
     id: 'toilet_assist',
@@ -208,6 +322,22 @@ export const NEEDS: Need[] = [
     private: true,
     label: L('Talk to crew privately', 'क्रू से निजी बात', '内密に相談したい', 'ขอคุยเป็นการส่วนตัว', 'Bicara pribadi dengan awak', 'Nói chuyện riêng với tiếp viên'),
     phrases: { en: ['privately', 'private'], hi: ['निजी', 'अकेले में'], ja: ['内密', '内緒'], th: ['ส่วนตัว'], id: ['pribadi'], vi: ['rieng tu'] },
+  },
+  {
+    id: 'anxious',
+    category: 'private',
+    icon: 'heart',
+    private: true,
+    label: L('I feel anxious', 'मुझे घबराहट हो रही है', '不安を感じている', 'รู้สึกกังวล', 'Saya cemas', 'Tôi thấy lo lắng'),
+    phrases: { en: ['anxious', 'scared', 'afraid', 'panic', 'nervous'], hi: ['घबराहट', 'डर लग', 'ghabrahat'], ja: ['不安', '怖い'], th: ['กังวล', 'กลัว'], id: ['cemas', 'takut', 'panik'], vi: ['lo lang', 'so hai', 'hoang so'] },
+  },
+  {
+    id: 'bothered',
+    category: 'private',
+    icon: 'user-x',
+    private: true,
+    label: L('Someone is bothering me', 'कोई मुझे परेशान कर रहा है', '迷惑行為の相談', 'มีคนรบกวนฉัน', 'Ada yang mengganggu saya', 'Có người làm phiền tôi'),
+    phrases: { en: ['bothering me', 'harass', 'harassment', 'touching me'], hi: ['परेशान कर रहा', 'छेड़', 'pareshan'], ja: ['迷惑', '嫌がらせ'], th: ['รบกวน', 'คุกคาม'], id: ['mengganggu', 'pelecehan'], vi: ['lam phien', 'quay roi'] },
   },
 ];
 

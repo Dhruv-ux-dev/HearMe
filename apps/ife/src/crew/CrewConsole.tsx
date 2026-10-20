@@ -1,192 +1,406 @@
 import {
   ANNOUNCEMENTS,
   CrewTablet,
+  RemoteCrewTablet,
+  REPLIES,
+  computeCrewMetrics,
   createBroadcastBus,
+  defaultReplyFor,
+  formatDuration,
   getNeed,
   getPurpose,
+  getReply,
+  isUrgentMedical,
   languageInfo,
-  REPLIES,
+  medicalSummaryLines,
   t,
   ago,
   type CrewRequest,
+  type CrewTabletApi,
+  type HubEvent,
   type LangCode,
   type ProfileTag,
+  type ReplyId,
 } from '@hearme/shared';
 import { useExternal } from '@hearme/shared/react';
-import { Lock, Megaphone } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { MicRecorder, MicUnavailableError, recordAndUnderstand } from '@hearme/shared/web';
+import { Activity, Info, Keyboard, Lock, Megaphone, Mic, MousePointerClick, RotateCcw, Square, Stethoscope, Users, Wifi, WifiOff, X } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { NeedIcon } from '../common/Icon';
-import { themeVars } from '../common/theme';
+import { detectHub, hubBaseUrl } from '../common/hub';
+import { playChime } from '../common/sounds';
 
 /**
- * SIMULATED crew tablet console (third piece of the PDF architecture: "Crew app —
- * requests by seat, with one-tap replies"). It exists so the passenger
- * experiences can be demonstrated end to end; it is not the production crew app.
- * Talks to passenger tabs over BroadcastChannel (same browser, same origin).
+ * Crew console — "Crew app: requests by seat, with one-tap replies" from the
+ * idea deck. With a cabin hub it shows the hub's shared request list (any
+ * number of crew devices); without one it falls back to a crew tablet in this
+ * browser that passenger tabs reach over BroadcastChannel.
  */
+type Conn = { kind: 'hub' | 'local'; tablet: CrewTabletApi } | { kind: 'unsupported' };
+
 export function CrewConsole() {
-  const [tablet, setTablet] = useState<CrewTablet | 'unsupported' | null>(null);
+  const [conn, setConn] = useState<Conn | null>(null);
   useEffect(() => {
-    const bus = createBroadcastBus();
-    if (!bus) {
-      setTablet('unsupported');
-      return;
-    }
-    const t = new CrewTablet(bus, { crewName: 'Aoi', autoReplyDelayMs: 2500 });
-    setTablet(t);
+    let disposed = false;
+    let cleanup = () => undefined as void;
+    detectHub().then((hub) => {
+      if (disposed) return;
+      if (hub) {
+        const tablet = new RemoteCrewTablet(hubBaseUrl());
+        cleanup = () => tablet.dispose();
+        setConn({ kind: 'hub', tablet });
+        return;
+      }
+      const bus = createBroadcastBus();
+      if (!bus) return setConn({ kind: 'unsupported' });
+      const tablet = new CrewTablet(bus, { crewName: 'Aoi', autoReplyDelayMs: 2500 });
+      cleanup = () => {
+        tablet.dispose();
+        bus.close();
+      };
+      setConn({ kind: 'local', tablet });
+    });
     return () => {
-      t.dispose();
-      bus.close();
+      disposed = true;
+      cleanup();
     };
   }, []);
-  if (tablet === null) return null;
-  if (tablet === 'unsupported') {
+  if (conn === null) return <div className="crew2 crew2--loading">Connecting to the crew tablet…</div>;
+  if (conn.kind === 'unsupported') {
     return (
-      <div className="crew" style={themeVars(false)}>
-        <p role="alert">This browser does not support BroadcastChannel, so the crew console simulator cannot connect.</p>
+      <div className="crew2">
+        <p role="alert">No cabin hub found and this browser cannot simulate one. Start the hub with “npm run demo”.</p>
       </div>
     );
   }
-  return <Console tablet={tablet} />;
+  return <Console tablet={conn.tablet} viaHub={conn.kind === 'hub'} />;
 }
 
 const LANG_JA: Record<LangCode, string> = { hi: 'ヒンディー語', en: '英語', ja: '日本語', th: 'タイ語', id: 'インドネシア語', vi: 'ベトナム語' };
 const tagJa = (tag: ProfileTag) => t('ja', `tag.${tag}`);
 const tagEn = (tag: ProfileTag) => t('en', `tag.${tag}`);
+const embedded = new URLSearchParams(window.location.search).has('embed');
 
-function Console({ tablet }: { tablet: CrewTablet }) {
-  const state = useExternal(tablet);
-  const [selected, setSelected] = useState<string | null>(null);
+function priority(r: CrewRequest): number {
+  if (r.status === 'new' && isUrgentMedical(r.medical)) return 0;
+  if (r.status === 'new') return 1;
+  if (r.status === 'replied') return 2;
+  return 3;
+}
+
+function useTick(ms = 1000) {
   const [, tick] = useState(0);
   useEffect(() => {
-    const i = setInterval(() => tick((x) => x + 1), 1000);
+    const i = setInterval(() => tick((x) => x + 1), ms);
     return () => clearInterval(i);
-  }, []);
-  const open = state.requests.filter((r) => r.status === 'new' || r.status === 'replied');
-  const sel = state.requests.find((r) => r.requestId === selected) ?? open[0];
-  const seatsWithRequests = new Set(open.map((r) => r.seat));
-  const newCount = state.requests.filter((r) => r.status === 'new').length;
+  }, [ms]);
+}
+
+function Console({ tablet, viaHub }: { tablet: CrewTabletApi; viaHub: boolean }) {
+  const state = useExternal(tablet);
+  const [selected, setSelected] = useState<string | null>(null);
+  const [info, setInfo] = useState(false);
+  const [heard, setHeard] = useState<HubEvent | null>(null);
+  const [connected, setConnected] = useState(true);
+  useTick();
+
+  // Chime when a new request arrives (an urgent tone for serious medical requests).
+  const seen = useRef<Set<string> | null>(null);
+  useEffect(() => {
+    const ids = new Set(state.requests.map((r) => r.requestId));
+    if (seen.current) {
+      const fresh = state.requests.filter((r) => !seen.current!.has(r.requestId));
+      if (fresh.length) {
+        playChime(fresh.some((r) => isUrgentMedical(r.medical)) ? 'urgent' : 'new');
+        setSelected(fresh[0]!.requestId);
+      }
+    }
+    seen.current = ids;
+  }, [state.requests]);
+
+  useEffect(() => {
+    if (!(tablet instanceof RemoteCrewTablet)) return;
+    setConnected(tablet.isConnected());
+    const a = tablet.onConnection(setConnected);
+    const b = tablet.onEvent((e) => e.target === 'needs' && setHeard(e));
+    return () => {
+      a();
+      b();
+    };
+  }, [tablet]);
+
+  const sorted = useMemo(() => [...state.requests].sort((a, b) => priority(a) - priority(b) || b.receivedAt - a.receivedAt), [state.requests]);
+  const sel = state.requests.find((r) => r.requestId === selected) ?? sorted.find((r) => r.status === 'new') ?? sorted[0];
+  const metrics = computeCrewMetrics(state.requests);
+  const openSeats = new Map(state.requests.filter((r) => r.status === 'new').map((r) => [r.seat, isUrgentMedical(r.medical) ? 'urgent' : 'open']));
+  const doneSeats = new Set(state.requests.filter((r) => r.status === 'replied' || r.status === 'thanked').map((r) => r.seat));
 
   return (
-    <div className="crew" style={themeVars(false)} lang="ja">
-      <header className="crew-top">
-        <strong>HearMe Crew</strong> · 客室リクエスト
-        <span className="crew-count" aria-label={`${newCount} new`}>
-          {newCount}件
+    <div className={`crew2${embedded ? ' crew2--embedded' : ''}`} lang="ja">
+      <header className="crew2-top">
+        <div className="crew2-brand">
+          Hear<span>Me</span> <em>Crew</em>
+        </div>
+        <span className={`crew2-conn${connected ? '' : ' off'}`} lang="en">
+          {connected ? <Wifi aria-hidden /> : <WifiOff aria-hidden />}
+          {viaHub ? (connected ? 'Cabin hub' : 'Reconnecting…') : 'This browser only'}
         </span>
-        <span className="crew-sim" lang="en">
-          SIMULATOR — not the production crew app
-        </span>
-        <label className="crew-auto" lang="en">
-          <input type="checkbox" checked={state.autoReply} onChange={(e) => tablet.setAutoReply(e.target.checked)} /> Auto-reply after 2.5 s
+        <div className="crew2-metrics" lang="en" aria-label="Live numbers">
+          <Metric label="Open" value={String(metrics.open)} alert={metrics.open > 0} />
+          <Metric label="Median answer" value={formatDuration(metrics.medianAnswerMs)} />
+          <Metric label="Understood 1st time" value={metrics.firstTimeRate === null ? '—' : `${Math.round(metrics.firstTimeRate * 100)}%`} />
+          <Metric label="Needed pictures" value={metrics.pictureRate === null ? '—' : `${Math.round(metrics.pictureRate * 100)}%`} />
+          <Metric label="Medical" value={String(metrics.medical)} alert={metrics.medical > 0} />
+          <Metric label="Languages" value={Object.keys(metrics.byLang).length ? Object.keys(metrics.byLang).join(' ') : '—'} />
+        </div>
+        <label className="crew2-auto" lang="en">
+          <input type="checkbox" checked={state.autoReply} onChange={(e) => tablet.setAutoReply(e.target.checked)} /> Auto-reply
         </label>
+        <button className="crew2-icon" onClick={() => tablet.reset()} title="Clear all requests (demo reset)" aria-label="Reset demo">
+          <RotateCcw aria-hidden />
+        </button>
+        <button className="crew2-icon" onClick={() => setInfo(!info)} aria-expanded={info} aria-label="About this console">
+          <Info aria-hidden />
+        </button>
       </header>
-      <div className="crew-body">
-        <section className="crew-map" aria-label="Seat map rows 21–26">
-          <h2 lang="en">ROWS 21–26</h2>
+      {info && (
+        <div className="crew2-info" lang="en" role="dialog" aria-label="About this console">
+          <button className="crew2-icon" onClick={() => setInfo(false)} aria-label="Close">
+            <X aria-hidden />
+          </button>
+          <p>
+            <b>Prototype.</b> {viaHub ? 'Connected to the HearMe cabin hub over the local network: every crew device shares this list.' : 'No cabin hub found: this tab is the crew tablet and only passenger tabs in this browser can reach it.'} Not
+            integrated with any aircraft or airline system.
+          </p>
+          <p>Replies and captions are pre-translated templates (prototype drafts, need native review). Crew speech is matched to the closest verified reply; it is never machine-translated.</p>
+        </div>
+      )}
+
+      <div className="crew2-body">
+        <section className="crew2-map" aria-label="Seat map rows 21–26" lang="en">
+          <h2>Cabin · rows 21–26</h2>
+          <div className="crew2-cols">
+            <span />
+            {['A', 'B', 'C', '', 'D', 'E', 'F'].map((c, i) => (
+              <span key={i}>{c}</span>
+            ))}
+          </div>
           {[21, 22, 23, 24, 25, 26].map((row) => (
-            <div key={row} className="crew-row">
-              <span className="crew-rownum">{row}</span>
-              {['A', 'B', 'C', '', 'D', 'E', 'F'].map((col, i) =>
-                col ? (
-                  <span key={col} className={`crew-seat${seatsWithRequests.has(`${row}${col}`) ? ' on' : ''}`} title={`${row}${col}`} />
-                ) : (
-                  <span key={`gap${i}`} className="crew-aisle" />
-                ),
-              )}
+            <div key={row} className="crew2-row">
+              <span className="crew2-rownum">{row}</span>
+              {['A', 'B', 'C', '', 'D', 'E', 'F'].map((col, i) => {
+                if (!col) return <span key={`a${i}`} className="crew2-aisle" />;
+                const seat = `${row}${col}`;
+                const st = openSeats.get(seat);
+                const req = state.requests.find((r) => r.seat === seat && r.status === 'new') ?? state.requests.find((r) => r.seat === seat);
+                return (
+                  <button
+                    key={col}
+                    className={`crew2-seat${st ? ` ${st}` : doneSeats.has(seat) ? ' done' : ''}`}
+                    title={seat}
+                    aria-label={`${seat}${st ? ', request waiting' : ''}`}
+                    onClick={() => req && setSelected(req.requestId)}
+                  >
+                    {st ? seat : ''}
+                  </button>
+                );
+              })}
             </div>
           ))}
-          <p className="crew-mapnote" lang="en">
-            Requests from other rows appear in the list.
-          </p>
+          <ul className="crew2-legend">
+            <li>
+              <i className="open" /> waiting
+            </li>
+            <li>
+              <i className="urgent" /> medical
+            </li>
+            <li>
+              <i className="done" /> answered
+            </li>
+          </ul>
+          {heard && <Heard e={heard} />}
         </section>
 
-        <section className="crew-list" aria-label="Requests">
-          {state.requests.length === 0 && (
-            <p className="crew-empty">
-              リクエストはまだありません。
-              <br />
-              <span lang="en">No requests yet. Send one from the IFE screen or the phone preview (set Prototype controls → “Crew console in another tab”).</span>
-            </p>
+        <section className="crew2-list" aria-label="Requests" aria-live="polite">
+          {sorted.length === 0 && (
+            <div className="crew2-empty">
+              <Users aria-hidden />
+              <p>
+                リクエストはまだありません
+                <br />
+                <span lang="en">Waiting for passengers. Requests appear here the moment they are sent.</span>
+              </p>
+            </div>
           )}
-          {state.requests.map((r) => (
-            <button key={r.requestId} className={`crew-item${sel?.requestId === r.requestId ? ' active' : ''} crew-item--${r.status}`} onClick={() => setSelected(r.requestId)}>
-              <span className="crew-item__seat">{r.seat}</span>
-              <span className="crew-item__need">{getNeed(r.needId)?.label.ja}</span>
-              <span className="crew-item__status" lang="en">
-                {r.status}
-              </span>
-            </button>
+          {sorted.map((r) => (
+            <RequestCard key={r.requestId} r={r} active={sel?.requestId === r.requestId} onClick={() => setSelected(r.requestId)} />
           ))}
         </section>
 
-        {sel ? <Detail r={sel} tablet={tablet} /> : <section className="crew-detail" />}
+        <section className="crew2-detail">{sel ? <Detail r={sel} tablet={tablet} viaHub={viaHub} /> : <p className="crew2-hint" lang="en">Select a request.</p>}</section>
 
-        <section className="crew-ann" aria-label="Announcements">
+        <section className="crew2-ann" aria-label="Announcement captions">
           <h2>
-            <Megaphone aria-hidden /> アナウンス字幕 <span lang="en">Captions</span>
+            <Megaphone aria-hidden /> アナウンス字幕 <span lang="en">Captions in every language</span>
           </h2>
-          <p className="crew-mapnote" lang="en">
-            Pre-translated, human-checked templates only. No live machine translation for safety.
-          </p>
           {ANNOUNCEMENTS.map((a) => (
-            <button key={a.id} className={`crew-annbtn${a.safety ? ' safety' : ''}`} onClick={() => tablet.announce(a.id)}>
+            <button key={a.id} className={`crew2-annbtn${a.safety ? ' safety' : ''}`} onClick={() => tablet.announce(a.id)}>
               <span>{a.text.ja}</span>
               <small lang="en">{a.text.en}</small>
             </button>
           ))}
+          {state.announcements[0] && (
+            <p className="crew2-hint" lang="en">
+              Last sent {ago(state.announcements[0].at)} ago.
+            </p>
+          )}
         </section>
       </div>
     </div>
   );
 }
 
-function Detail({ r, tablet }: { r: CrewRequest; tablet: CrewTablet }) {
+function Metric({ label, value, alert }: { label: string; value: string; alert?: boolean }) {
+  return (
+    <div className={`crew2-metric${alert ? ' alert' : ''}`}>
+      <b>{value}</b>
+      <span>{label}</span>
+    </div>
+  );
+}
+
+function Heard({ e }: { e: HubEvent }) {
+  const need = e.match ? getNeed(e.match) : undefined;
+  return (
+    <div className="crew2-heard" lang="en">
+      <span className="crew2-heard__label">
+        <Activity aria-hidden /> Last heard ({languageInfo(e.lang).englishName}, {(e.asrMs / 1000).toFixed(1)} s)
+      </span>
+      <q lang={languageInfo(e.lang).bcp47}>{e.transcript}</q>
+      {need && (
+        <span>
+          → {need.label.en} · {Math.round(e.confidence * 100)}%
+        </span>
+      )}
+    </div>
+  );
+}
+
+function SourceBadge({ r }: { r: CrewRequest }) {
+  const Icon = r.source === 'speech' ? Mic : r.source === 'typed' ? Keyboard : MousePointerClick;
+  const label = r.source === 'speech' ? 'spoken' : r.source === 'typed' ? 'typed' : 'tapped';
+  return (
+    <span className="crew2-badge" lang="en">
+      <Icon aria-hidden /> {label}
+      {r.understanding?.viaPictures ? ' · picked from pictures' : ''}
+    </span>
+  );
+}
+
+function RequestCard({ r, active, onClick }: { r: CrewRequest; active: boolean; onClick: () => void }) {
+  const need = getNeed(r.needId);
+  const urgent = r.status === 'new' && isUrgentMedical(r.medical);
+  return (
+    <button className={`crew2-card s-${r.status}${active ? ' active' : ''}${urgent ? ' urgent' : ''}`} onClick={onClick}>
+      <span className="crew2-card__seat">{r.seat}</span>
+      <span className="crew2-card__icon">{need && <NeedIcon name={r.medical ? 'stethoscope' : need.icon} size="100%" />}</span>
+      <span className="crew2-card__text">
+        <b>
+          {need?.private && <Lock aria-label="private" />} {need?.label.ja}
+        </b>
+        <small lang="en">
+          {need?.label.en}
+          {r.purposeId ? ` · ${getPurpose(r.purposeId)?.label.en}` : ''}
+        </small>
+      </span>
+      <span className="crew2-card__meta" lang="en">
+        <span className="crew2-lang">{LANG_JA[r.lang]}</span>
+        <span className={`crew2-age${r.status === 'new' && Date.now() - r.receivedAt > 60_000 ? ' late' : ''}`}>{r.status === 'new' ? ago(r.receivedAt) : r.status === 'replied' ? 'answered' : r.status}</span>
+      </span>
+    </button>
+  );
+}
+
+function Detail({ r, tablet, viaHub }: { r: CrewRequest; tablet: CrewTabletApi; viaHub: boolean }) {
   const need = getNeed(r.needId);
   const purpose = getPurpose(r.purposeId);
+  const suggested = r.medical ? (isUrgentMedical(r.medical) ? 'doctor_coming' : 'coming_to_seat') : defaultReplyFor(r.needId);
   return (
-    <section className="crew-detail" aria-live="polite">
-      <div className="crew-detail__head">
-        <span className="crew-detail__seat">{r.seat}</span>
-        <span className="crew-detail__ago">{ago(r.receivedAt)}前</span>
+    <div className="crew2-d" aria-live="polite">
+      <div className="crew2-d__head">
+        <span className="crew2-d__seat">{r.seat}</span>
+        <span className="crew2-d__ago" lang="en">
+          received {ago(r.receivedAt)} ago
+          {r.reply ? ` · answered in ${formatDuration(r.reply.at - r.receivedAt)}` : ''}
+        </span>
       </div>
-      <div className="crew-detail__need">
+      <div className="crew2-d__need">
         {need && (
-          <span className="crew-detail__icon">
+          <span className="crew2-d__icon">
             <NeedIcon name={need.icon} size="100%" />
           </span>
         )}
         <div>
-          <div className="crew-detail__ja">
-            {need?.private && <Lock aria-label="private" />} {need?.label.ja} <span lang="en">· {need?.label.en}</span>
+          <div className="crew2-d__ja">
+            {need?.private && <Lock aria-label="private" />} {need?.label.ja}
+          </div>
+          <div className="crew2-d__en" lang="en">
+            {need?.label.en}
           </div>
           {purpose && (
-            <div className="crew-detail__purpose">
+            <div className="crew2-d__purpose">
               {purpose.label.ja} <span lang="en">· {purpose.label.en}</span>
             </div>
           )}
         </div>
       </div>
-      <div className="crew-tags">
-        <span className="crew-tag crew-tag--lang">
+
+      {r.medical && (
+        <div className={`crew2-med${isUrgentMedical(r.medical) ? ' urgent' : ''}`}>
+          <div className="crew2-med__title">
+            <Stethoscope aria-hidden /> 体調不良 · Care Mode
+            {isUrgentMedical(r.medical) && <b lang="en">URGENT</b>}
+          </div>
+          <ul>
+            {medicalSummaryLines(r.medical, 'ja').map((l) => (
+              <li key={l}>{l}</li>
+            ))}
+          </ul>
+          <ul lang="en" className="en">
+            {medicalSummaryLines(r.medical, 'en').map((l) => (
+              <li key={l}>{l}</li>
+            ))}
+          </ul>
+          <button className="crew2-btn" onClick={() => tablet.announce('doctor_call')}>
+            <Megaphone aria-hidden /> 医師の呼び出し字幕 <small lang="en">Ask for a doctor (captions, all languages)</small>
+          </button>
+        </div>
+      )}
+
+      <div className="crew2-tags">
+        <span className="crew2-tag lang">
           {LANG_JA[r.lang]} <span lang="en">{languageInfo(r.lang).englishName}</span>
         </span>
         {r.tags.map((tag) => (
-          <span key={tag} className="crew-tag">
+          <span key={tag} className="crew2-tag">
             {tagJa(tag)} <span lang="en">{tagEn(tag)}</span>
           </span>
         ))}
-        <span className="crew-tag" lang="en">
-          via {r.device === 'ife' ? 'seatback screen' : 'phone'} · {r.source}
+        <SourceBadge r={r} />
+        <span className="crew2-badge" lang="en">
+          {r.device === 'ife' ? 'seatback screen' : 'phone'}
         </span>
       </div>
-      {r.status === 'cancelled' && <p className="crew-note">取り消されました · Cancelled by passenger</p>}
-      {r.status === 'thanked' && <p className="crew-note">ありがとう ♥ · Passenger said thank you</p>}
-      <div className="crew-replies">
+      {r.status === 'cancelled' && <p className="crew2-note">取り消されました · Cancelled by passenger</p>}
+      {r.status === 'thanked' && <p className="crew2-note ok">ありがとう ♥ · Passenger said thank you</p>}
+
+      {viaHub && r.status !== 'cancelled' && <VoiceReply r={r} tablet={tablet} />}
+
+      <div className="crew2-replies">
         {REPLIES.map((rep) => (
           <button
             key={rep.id}
-            className={`crew-reply${r.reply?.replyId === rep.id ? ' chosen' : ''} crew-reply--${rep.tone}`}
+            className={`crew2-reply t-${rep.tone}${r.reply?.replyId === rep.id ? ' chosen' : ''}${rep.id === suggested && !r.reply ? ' suggested' : ''}`}
             disabled={r.status === 'cancelled'}
             onClick={() => tablet.reply(r.requestId, rep.id)}
           >
@@ -195,9 +409,74 @@ function Detail({ r, tablet }: { r: CrewRequest; tablet: CrewTablet }) {
           </button>
         ))}
       </div>
-      <p className="crew-mapnote" lang="en">
-        The passenger receives the reply in {languageInfo(r.lang).englishName}: “{REPLIES[0]!.text[r.lang]}” …
+      <p className="crew2-preview" lang="en">
+        Passenger sees ({languageInfo(r.lang).englishName}): <q lang={languageInfo(r.lang).bcp47}>{getReply(r.reply?.replyId ?? suggested).text[r.lang]}</q>
       </p>
-    </section>
+    </div>
+  );
+}
+
+/** Crew speak Japanese; the hub matches it to the closest verified reply, which crew confirm with one tap. */
+function VoiceReply({ r, tablet }: { r: CrewRequest; tablet: CrewTabletApi }) {
+  const rec = useRef(new MicRecorder());
+  const [phase, setPhase] = useState<'idle' | 'listening' | 'thinking'>('idle');
+  const [result, setResult] = useState<{ transcript: string; replyId: ReplyId | null; confidence: number } | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  useEffect(() => {
+    setResult(null);
+    setError(null);
+  }, [r.requestId]);
+  useEffect(() => () => rec.current.cancel(), []);
+
+  const start = async () => {
+    setError(null);
+    setResult(null);
+    try {
+      await rec.current.start(() => undefined, () => void finish());
+      setPhase('listening');
+    } catch (e) {
+      setError(e instanceof MicUnavailableError && e.reason === 'insecure' ? 'Microphone needs HTTPS or localhost.' : 'Microphone not available.');
+    }
+  };
+  const finish = async () => {
+    setPhase('thinking');
+    try {
+      const res = await recordAndUnderstand(rec.current, hubBaseUrl(), 'ja', 'replies');
+      setResult({ transcript: res.transcript, replyId: res.reply?.replyId ?? null, confidence: res.reply?.confidence ?? 0 });
+    } catch {
+      setError('Could not understand. Tap a reply instead.');
+    }
+    setPhase('idle');
+  };
+  const matched = result?.replyId && result.confidence >= 0.5 ? getReply(result.replyId) : null;
+  return (
+    <div className="crew2-voice">
+      <button className={`crew2-mic${phase === 'listening' ? ' on' : ''}`} onClick={phase === 'listening' ? () => void finish() : () => void start()} disabled={phase === 'thinking'}>
+        {phase === 'listening' ? <Square aria-hidden /> : <Mic aria-hidden />}
+        {phase === 'listening' ? '話し終わったらタップ · Tap when done' : phase === 'thinking' ? '認識中… · Understanding…' : '日本語で話して返信 · Reply by voice'}
+      </button>
+      {error && (
+        <p className="crew2-note" lang="en">
+          {error}
+        </p>
+      )}
+      {result && (
+        <div className="crew2-voice__result">
+          <q>{result.transcript || '…'}</q>
+          {matched ? (
+            <button className="crew2-reply t-positive suggested" onClick={() => tablet.reply(r.requestId, matched.id)}>
+              <span>{matched.text.ja}</span>
+              <small lang="en">
+                Send verified reply ({Math.round(result.confidence * 100)}% match) → {matched.text[r.lang]}
+              </small>
+            </button>
+          ) : (
+            <p className="crew2-note" lang="en">
+              No verified reply matched closely enough. Tap one below: passengers only receive checked translations.
+            </p>
+          )}
+        </div>
+      )}
+    </div>
   );
 }

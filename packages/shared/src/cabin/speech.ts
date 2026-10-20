@@ -1,20 +1,24 @@
+import type { MatchResult } from '../matching/matcher';
 import type { LangCode } from '../types';
 
 /**
  * Speech input adapter.
  *
- * Production (per the PDF): audio streams to the crew tablet, which removes
- * engine noise (DeepFilterNet), transcribes offline (Whisper) and matches the
- * text to a need. Voice is never saved.
+ * Real path: the passenger's device records with the browser's noise
+ * suppression on, and sends the audio to the cabin hub (crew tablet), which
+ * transcribes it offline with Whisper and matches it to a need with
+ * multilingual-e5. Nothing is stored. See `apps/mobile/src/speech` and
+ * `apps/hub/src/speech.ts`.
  *
- * This prototype ships `MockSpeechRecognizer`: it records nothing, animates a
- * level meter and returns a scripted transcript so the full journey —
- * including the low-confidence "Did you mean?" path — can be demonstrated.
+ * `MockSpeechRecognizer` remains for runs without a hub or microphone: it
+ * records nothing and returns a scripted transcript (labelled as simulated).
  */
 export interface SpeechRecognizer {
   readonly simulated: boolean;
-  start(lang: LangCode, onLevel: (db: number) => void): void;
-  stop(): Promise<{ transcript: string }>;
+  /** Starts listening. May reject (e.g. microphone permission denied). */
+  start(lang: LangCode, onLevel: (db: number) => void): void | Promise<void>;
+  /** Stops and returns what was said; the hub also returns its match. */
+  stop(): Promise<{ transcript: string; match?: MatchResult }>;
   cancel(): void;
 }
 

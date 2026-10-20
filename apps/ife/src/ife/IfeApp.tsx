@@ -8,9 +8,10 @@ import {
   type PassengerSession,
 } from '@hearme/shared';
 import { useSession } from '@hearme/shared/react';
-import { Captions, Hand, House, LogOut, Monitor, ShieldCheck, SlidersHorizontal } from 'lucide-react';
+import { Captions, Hand, House, LogOut, Monitor, Settings2, ShieldCheck, SlidersHorizontal } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { DemoControls } from '../common/DemoControls';
+import { CareScreen } from './CareScreen';
 import { themeVars } from '../common/theme';
 import { browserSpeaker } from '../common/webAdapters';
 import { CaptionToast, EndSessionDialog, IdleDialog, ReplyDialog } from './overlays';
@@ -38,7 +39,8 @@ export type IfeScreen =
   | { name: 'card'; needId?: string }
   | { name: 'safety' }
   | { name: 'captions' }
-  | { name: 'settings' };
+  | { name: 'settings' }
+  | { name: 'care' };
 
 export interface IfeAppProps {
   session: PassengerSession;
@@ -155,7 +157,7 @@ export function IfeApp({ session, link, seat, idleMs = 180_000, idleGraceSeconds
     { id: 'captions', label: tr('captions.title'), icon: <Captions aria-hidden />, target: { name: 'captions' }, badge: !!unseen },
     { id: 'settings', label: tr('ife.accessibility'), icon: <SlidersHorizontal aria-hidden />, target: { name: 'settings' } },
   ];
-  const activeNav = screen.name === 'review' || screen.name === 'status' ? 'request' : screen.name === 'requests' ? 'home' : screen.name;
+  const activeNav = screen.name === 'review' || screen.name === 'status' || screen.name === 'care' ? 'request' : screen.name === 'requests' ? 'home' : screen.name;
 
   return (
     <div className={rootClass} style={rootStyle} lang={languageInfo(lang).bcp47}>
@@ -206,11 +208,27 @@ export function IfeApp({ session, link, seat, idleMs = 180_000, idleGraceSeconds
             needId={screen.needId}
             initialPurpose={screen.purposeId}
             onBack={() => go({ name: 'home' })}
+            onCare={screen.needId === 'unwell' ? () => go({ name: 'care' }) : undefined}
             onSend={(purposeId) => {
               const res = session.submit({ needId: screen.needId, purposeId, source: 'tap' });
               if (res.ok) go({ name: 'status', requestId: res.request.id });
               else if (res.reason === 'duplicate') {
                 const open = session.getState().requests.find((r) => r.needId === screen.needId && (r.status === 'pending' || r.status === 'sent'));
+                if (open) go({ name: 'status', requestId: open.id });
+                setNotice(tr('requests.limit'));
+              }
+            }}
+          />
+        )}
+        {screen.name === 'care' && (
+          <CareScreen
+            lang={lang}
+            onBack={() => go({ name: 'review', needId: 'unwell' })}
+            onSend={(medical) => {
+              const res = session.submit({ needId: 'unwell', source: 'tap', medical });
+              if (res.ok) go({ name: 'status', requestId: res.request.id });
+              else if (res.reason === 'duplicate') {
+                const open = session.getState().requests.find((r) => r.needId === 'unwell' && (r.status === 'pending' || r.status === 'sent'));
                 if (open) go({ name: 'status', requestId: open.id });
                 setNotice(tr('requests.limit'));
               }
@@ -236,8 +254,8 @@ export function IfeApp({ session, link, seat, idleMs = 180_000, idleGraceSeconds
 function DemoToggle({ open, setOpen, link }: { open: boolean; setOpen: (v: boolean) => void; link: DemoCabinLink }) {
   return (
     <>
-      <button className="demo-toggle" onClick={() => setOpen(!open)} aria-expanded={open}>
-        Prototype controls
+      <button className="demo-toggle" onClick={() => setOpen(!open)} aria-expanded={open} aria-label="Prototype controls" title="Prototype controls">
+        <Settings2 aria-hidden />
       </button>
       {open && <DemoControls link={link} onClose={() => setOpen(false)} />}
     </>
