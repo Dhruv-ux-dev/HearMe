@@ -13,6 +13,12 @@ A runnable prototype of the idea in *HearMe · Idea Submission* (Nidhish Bansal,
 
 > ⚠️ This is a browser and Expo prototype. It is **not** integrated with, or certified for, any aircraft IFE system, crew tablet or airline system. Every integration is behind an adapter, and the simulated ones are labelled in the UI.
 
+## Screenshots
+
+| IFE seatback | Mobile |
+| --- | --- |
+| [IFE 1/2](docs/screenshots/ife-1.png) · [IFE 2/2 + crew console](docs/screenshots/ife-2.png) | [Mobile 1/2](docs/screenshots/mobile-1.png) · [Mobile 2/2](docs/screenshots/mobile-2.png) |
+
 ---
 
 ## Quick start
