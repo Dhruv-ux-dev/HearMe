@@ -1,9 +1,10 @@
-import { decide, defaultMatcher, translator, type LangCode, type RequestSource } from '@hearme/shared';
+import { decide, defaultMatcher, matchOnHub, translator, type LangCode, type MatchResult, type RequestSource } from '@hearme/shared';
+import { MicUnavailableError } from '@hearme/shared/web';
 import { Mic, Square } from 'lucide-react-native';
 import { useEffect, useRef, useState } from 'react';
 import { AccessibilityInfo, ActivityIndicator, Platform, Pressable, Text, View } from 'react-native';
 import { useNav } from '../nav';
-import { speech } from '../runtime';
+import { currentSpeech, getHubUrl } from '../runtime';
 import { useTheme } from '../theme';
 import { T } from './ui';
 
@@ -11,13 +12,23 @@ type Phase = 'idle' | 'listening' | 'processing';
 
 const MIN_HOLD_MS = 400;
 
-/** Route a transcript through the shared matcher: confident → review; unsure → "Did you mean?" pictures. */
+/**
+ * Route what the passenger said or typed: confident → review; unsure →
+ * "Did you mean?" pictures. Uses the hub's meaning-based match when there is
+ * one (speech always comes with it), otherwise the on-device keyword matcher.
+ */
 export function useRouteTranscript() {
   const nav = useNav();
-  return (transcript: string, source: RequestSource) => {
-    const d = decide(defaultMatcher.match(transcript));
-    if (d.kind === 'confident') nav.open({ kind: 'review', needId: d.needId, purposeId: d.purposeId, source });
-    else nav.open({ kind: 'ask', options: d.options, purposeId: d.purposeId, source, transcript });
+  return async (transcript: string, source: RequestSource, lang: LangCode, hubMatch?: MatchResult) => {
+    let match = hubMatch;
+    const hub = getHubUrl();
+    if (!match && hub) match = (await matchOnHub(hub, transcript, { lang }))?.match;
+    const d = decide(match ?? defaultMatcher.match(transcript));
+    if (d.kind === 'confident') {
+      nav.open({ kind: 'review', needId: d.needId, purposeId: d.purposeId, source, understanding: { confidence: d.confidence, viaPictures: false } });
+    } else {
+      nav.open({ kind: 'ask', options: d.options, purposeId: d.purposeId, source, transcript, confidence: d.confidence });
+    }
   };
 }
 
@@ -40,19 +51,25 @@ export function HoldToSpeak({ lang }: { lang: LangCode }) {
   };
   const [db, setDb] = useState(0);
   const [tapMode, setTapMode] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const speech = currentSpeech();
   const startedAt = useRef(0);
   /** True while a pointer gesture is in progress; activations without one come from screen readers or keyboards. */
   const viaPointer = useRef(false);
 
-  useEffect(() => () => speech.cancel(), []);
+  useEffect(() => () => speech.cancel(), [speech]);
 
   const start = () => {
     if (phaseRef.current !== 'idle') return;
     setTapMode(false);
+    setError(null);
     startedAt.current = Date.now();
     setPhase('listening');
-    speech.start(lang, setDb);
     AccessibilityInfo.announceForAccessibility(tr('speech.listening'));
+    Promise.resolve(speech.start(lang, setDb)).catch((e: unknown) => {
+      setPhase('idle');
+      setError(e instanceof MicUnavailableError && e.reason !== 'denied' ? tr('speech.needsHub') : tr('speech.micDenied'));
+    });
   };
 
   const finish = async () => {
@@ -60,11 +77,16 @@ export function HoldToSpeak({ lang }: { lang: LangCode }) {
     viaPointer.current = false;
     setPhase('processing');
     try {
-      const { transcript } = await speech.stop();
+      const { transcript, match } = await speech.stop();
       setPhase('idle');
-      route(transcript, 'speech');
+      if (!transcript.trim()) {
+        setError(tr('speech.tooShort'));
+        return;
+      }
+      await route(transcript, 'speech', lang, match);
     } catch {
       setPhase('idle');
+      setError(tr('speech.error'));
     }
   };
 
@@ -125,7 +147,7 @@ export function HoldToSpeak({ lang }: { lang: LangCode }) {
               {phase === 'processing' ? <ActivityIndicator color={th.p.primary} /> : <Mic color={th.p.primary} size={20} />}
               <T bold>{phase === 'listening' ? tr('speech.listening') : tr('speech.processing')}</T>
             </View>
-            {phase === 'listening' && (
+            {phase === 'listening' && speech.simulated && (
               <View style={{ backgroundColor: th.p.warningSoft, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 2 }}>
                 <Text style={{ color: th.p.warning, fontWeight: '700', fontSize: th.fs(13) }}>{db} dB</Text>
               </View>
@@ -139,9 +161,14 @@ export function HoldToSpeak({ lang }: { lang: LangCode }) {
             </View>
           )}
           <T v="caption" muted>
-            {tr('speech.simulated')}
+            {speech.simulated ? tr('speech.simulated') : tr('speech.private')}
           </T>
         </View>
+      )}
+      {error && phase === 'idle' && (
+        <T v="caption" color={th.p.danger} role="alert" live="assertive">
+          {error}
+        </T>
       )}
       <Pressable
         onPressIn={pressIn}

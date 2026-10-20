@@ -30,7 +30,7 @@ import { Alert, Platform, Pressable, ScrollView, Text, TextInput, View } from 'r
 import { NeedIcon } from '../components/Icon';
 import { Btn, Card, Segmented, StatusChip, T, ToggleRow } from '../components/ui';
 import { useNav } from '../nav';
-import { clearStoredSession, link, session, speech } from '../runtime';
+import { clearStoredSession, connectHub, forgetHub, link, mockSpeech, session, useHubUrl } from '../runtime';
 import { useTheme } from '../theme';
 
 // ── Requests ──────────────────────────────────────────────────────────────
@@ -384,6 +384,7 @@ export function SettingsTab({ lang }: { lang: LangCode }) {
 /** PROTOTYPE-ONLY controls, kept in English and visually separated from passenger settings. */
 function PrototypeControls() {
   const th = useTheme();
+  const hub = useHubUrl();
   const [, force] = useReducer((x: number) => x + 1, 0);
   useEffect(() => link.onChange(force), []);
   const crew = link.simulatedCrew;
@@ -393,8 +394,11 @@ function PrototypeControls() {
         Prototype controls · SIMULATION
       </Text>
       <Text style={{ color: th.p.textMuted, fontSize: 14 }}>
-        The crew tablet, cabin network, speech recognition and booking data are simulated. Nothing here is connected to an aircraft.
+        {hub
+          ? `Connected to the cabin hub (${hub}): real crew console, offline speech recognition and booking lookup. Not connected to any aircraft system.`
+          : 'No cabin hub: the crew tablet, speech recognition and booking data are simulated on this phone. Nothing here is connected to an aircraft.'}
       </Text>
+      <HubAddress />
       <Text style={{ color: th.p.text, fontWeight: '700' }}>Cabin network</Text>
       <Segmented<NetworkCondition>
         label="Cabin network"
@@ -412,6 +416,7 @@ function PrototypeControls() {
         value={link.mode}
         onChange={(v) => link.setMode(v)}
         options={[
+          ...(hub ? [{ value: 'hub' as const, label: 'Cabin hub (real)' }] : []),
           { value: 'simulated', label: 'Simulated (auto-reply)' },
           ...(DemoCabinLink.consoleSupported() ? [{ value: 'console' as const, label: 'Crew console tab' }] : []),
         ]}
@@ -434,13 +439,13 @@ function PrototypeControls() {
 }
 
 function SpeechMode() {
-  const [mode, setMode] = useState<UtteranceMode>(speech.mode);
+  const [mode, setMode] = useState<UtteranceMode>(mockSpeech.mode);
   return (
     <Segmented<UtteranceMode>
       label="Simulated speech result"
       value={mode}
       onChange={(v) => {
-        speech.mode = v;
+        mockSpeech.mode = v;
         setMode(v);
       }}
       options={[
@@ -449,5 +454,37 @@ function SpeechMode() {
         { value: 'clear', label: 'Clear' },
       ]}
     />
+  );
+}
+
+/** Native builds: type the cabin hub address shown by `npm run demo` (web builds use the page origin automatically). */
+function HubAddress() {
+  const th = useTheme();
+  const hub = useHubUrl();
+  const [value, setValue] = useState(hub ?? 'https://');
+  const [state, setState] = useState<'idle' | 'checking' | 'failed'>('idle');
+  const connect = async () => {
+    setState('checking');
+    setState((await connectHub(value.trim())) ? 'idle' : 'failed');
+  };
+  return (
+    <View style={{ gap: 6 }}>
+      <Text style={{ color: th.p.text, fontWeight: '700' }}>Cabin hub address</Text>
+      <TextInput
+        value={value}
+        onChangeText={setValue}
+        autoCapitalize="none"
+        autoCorrect={false}
+        accessibilityLabel="Cabin hub address"
+        placeholder="https://192.168.1.20:8443"
+        placeholderTextColor={th.p.textMuted}
+        style={{ minHeight: 48, borderWidth: 2, borderColor: state === 'failed' ? th.p.danger : th.p.border, borderRadius: th.radius.md, paddingHorizontal: 12, color: th.p.text, backgroundColor: th.p.surface }}
+      />
+      <View style={{ flexDirection: 'row', gap: 8 }}>
+        <Btn style={{ flex: 1 }} variant="secondary" label={state === 'checking' ? 'Connecting…' : 'Connect'} onPress={() => void connect()} disabled={state === 'checking'} />
+        {hub && <Btn style={{ flex: 1 }} variant="ghost" label="Disconnect" onPress={() => void forgetHub()} />}
+      </View>
+      {state === 'failed' && <Text style={{ color: th.p.danger }}>No HearMe hub answered at that address.</Text>}
+    </View>
   );
 }

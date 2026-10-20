@@ -2,12 +2,16 @@
   "name": "hearme",
   "private": true,
   "version": "0.1.0",
-  "description": "HearMe prototype: passenger ↔ cabin crew communication (mobile + IFE seatback)",
+  "description": "HearMe: passenger ↔ cabin crew communication (phone + seatback + crew console + offline cabin hub)",
   "workspaces": [
     "packages/*",
     "apps/*"
   ],
   "scripts": {
+    "demo": "node scripts/demo.mjs",
+    "hub": "npm run start -w @hearme/hub",
+    "models": "npm run models -w @hearme/hub",
+    "eval": "npm run eval -w @hearme/hub",
     "dev": "npm run dev -w @hearme/ife",
     "mobile": "npm run start -w @hearme/mobile",
     "mobile:web": "npm run web -w @hearme/mobile",

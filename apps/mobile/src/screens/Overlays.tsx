@@ -13,7 +13,7 @@ import {
   type NeedPurpose,
 } from '@hearme/shared';
 import { useSession } from '@hearme/shared/react';
-import { Check, Heart, Lock, Search, Type, Vibrate, Volume2, X } from 'lucide-react-native';
+import { Check, Heart, HeartPulse, Lock, Search, Type, Vibrate, Volume2, X } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import { AccessibilityInfo, Modal, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -21,7 +21,8 @@ import { NeedIcon } from '../components/Icon';
 import { Btn, Card, Sheet, T } from '../components/ui';
 import { useRouteTranscript } from '../components/Voice';
 import { useNav, type Overlay } from '../nav';
-import { buzzer, session, speaker } from '../runtime';
+import { buzzer, currentSpeech, session, speaker } from '../runtime';
+import { CareSheet } from './Care';
 import { useTheme } from '../theme';
 
 export function Overlays({ lang, seat }: { lang: LangCode; seat: string }) {
@@ -34,6 +35,7 @@ export function Overlays({ lang, seat }: { lang: LangCode; seat: string }) {
       {o?.kind === 'ask' && <AskSheet lang={lang} o={o} />}
       {o?.kind === 'typed' && <TypedSheet lang={lang} />}
       {o?.kind === 'showCard' && <ShowCard lang={lang} seat={seat} needId={o.needId} />}
+      {o?.kind === 'care' && <CareSheet lang={lang} />}
       <ReplyModal lang={lang} />
     </>
   );
@@ -48,7 +50,7 @@ function ReviewSheet({ lang, o }: { lang: LangCode; o: Extract<Overlay, { kind: 
   const [error, setError] = useState<string | null>(null);
   if (!need) return null;
   const send = () => {
-    const res = session.submit({ needId: need.id, purposeId: purpose, source: o.source });
+    const res = session.submit({ needId: need.id, purposeId: purpose, source: o.source, understanding: o.understanding });
     if (res.ok) {
       nav.close();
       nav.setTab('home');
@@ -77,6 +79,14 @@ function ReviewSheet({ lang, o }: { lang: LangCode; o: Extract<Overlay, { kind: 
           )}
         </View>
       </Card>
+      {need.id === 'unwell' && (
+        <View style={{ gap: 4 }}>
+          <Btn variant="secondary" label={tr('care.open')} onPress={() => nav.open({ kind: 'care' })} icon={(c, z) => <HeartPulse color={c} size={z} />} />
+          <T v="caption" muted>
+            {tr('care.optional')}
+          </T>
+        </View>
+      )}
       {need.private && (
         <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
           <Lock size={20} color={th.p.textMuted} />
@@ -214,7 +224,15 @@ function AskSheet({ lang, o }: { lang: LangCode; o: Extract<Overlay, { kind: 'as
           return (
             <Pressable
               key={id}
-              onPress={() => nav.open({ kind: 'review', needId: id, purposeId: n.purposes?.includes(o.purposeId!) ? o.purposeId : undefined, source: o.source })}
+              onPress={() =>
+                nav.open({
+                  kind: 'review',
+                  needId: id,
+                  purposeId: n.purposes?.includes(o.purposeId!) ? o.purposeId : undefined,
+                  source: o.source,
+                  understanding: { confidence: o.confidence, viaPictures: true },
+                })
+              }
               accessibilityRole="button"
               accessibilityLabel={n.label[lang]}
               style={({ pressed }) => ({
@@ -239,10 +257,16 @@ function AskSheet({ lang, o }: { lang: LangCode; o: Extract<Overlay, { kind: 'as
           );
         })}
       </View>
-      <Btn variant="ghost" label={tr('speech.noneCallCrew')} onPress={() => nav.open({ kind: 'review', needId: 'call_crew', source: o.source })} />
-      <T v="caption" muted>
-        {tr('speech.simulated')}
-      </T>
+      <Btn
+        variant="ghost"
+        label={tr('speech.noneCallCrew')}
+        onPress={() => nav.open({ kind: 'review', needId: 'call_crew', source: o.source, understanding: { confidence: o.confidence, viaPictures: true } })}
+      />
+      {o.source === 'speech' && currentSpeech().simulated && (
+        <T v="caption" muted>
+          {tr('speech.simulated')}
+        </T>
+      )}
     </Sheet>
   );
 }
@@ -259,7 +283,7 @@ function TypedSheet({ lang }: { lang: LangCode }) {
       setError(true);
       return;
     }
-    route(text, 'typed');
+    void route(text, 'typed', lang);
   };
   return (
     <Sheet visible title={tr('home.typeInstead')} onClose={nav.close} closeLabel={tr('common.close')} footer={<Btn big label={tr('speech.findMatch')} onPress={find} icon={(c, s) => <Search color={c} size={s} />} />}>

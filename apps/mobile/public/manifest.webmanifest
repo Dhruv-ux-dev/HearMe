@@ -1,0 +1,11 @@
+{
+  "name": "HearMe",
+  "short_name": "HearMe",
+  "description": "Tell the cabin crew what you need, in your language.",
+  "start_url": "/mobile/",
+  "scope": "/mobile/",
+  "display": "standalone",
+  "background_color": "#FBF7F2",
+  "theme_color": "#15233D",
+  "icons": [{ "src": "/mobile/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }]
+}

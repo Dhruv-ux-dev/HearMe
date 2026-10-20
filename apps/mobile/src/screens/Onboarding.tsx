@@ -2,42 +2,75 @@ import {
   LANGUAGES,
   PROFILE_TAGS,
   isValidSeat,
+  languageInfo,
+  lookupBookingOnHub,
   mockBooking,
   normalizeSeat,
   sanitizeName,
-  simulateSeatQrScan,
   translator,
   type LangCode,
+  type PassengerProfile,
   type ProfileTag,
 } from '@hearme/shared';
 import { Check, ChevronLeft, ScanQrCode, Ticket } from 'lucide-react-native';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Btn, T, ToggleRow } from '../components/ui';
-import { session } from '../runtime';
+import { getHubUrl, session } from '../runtime';
 import { useTheme } from '../theme';
 
-type Step = 'language' | 'seat' | 'needs';
+type Step = 'booking' | 'language' | 'seat' | 'needs';
 
-/** Three short steps: language → seat → optional needs. Or one tap with (simulated) booking data. */
+/** Seat from the QR code on the seat (`?seat=23C` in the URL the phone camera opens). */
+function seatFromUrl(): string | null {
+  const search = (globalThis as { location?: { search?: string } }).location?.search ?? '';
+  const raw = new URLSearchParams(search).get('seat');
+  return raw && isValidSeat(raw) ? normalizeSeat(raw) : null;
+}
+
+/**
+ * Three short steps: language → seat → optional needs. When the seat QR code
+ * opened the app, the seat is already known and the booking (language and
+ * needs saved at check-in) is offered first.
+ */
 export function Onboarding() {
   const th = useTheme();
+  const [qrSeat] = useState(seatFromUrl);
+  const [found, setFound] = useState<PassengerProfile | null>(null);
   const [step, setStep] = useState<Step>('language');
+  const [scanHint, setScanHint] = useState(false);
   const [lang, setLang] = useState<LangCode>('en');
-  const [seat, setSeat] = useState('');
+  const [seat, setSeat] = useState(qrSeat ?? '');
   const [seatError, setSeatError] = useState(false);
-  const [scanning, setScanning] = useState(false);
   const [booking, setBooking] = useState<'idle' | 'loading' | 'error'>('idle');
   const [name, setName] = useState('');
   const [tags, setTags] = useState<ProfileTag[]>([]);
   const [share, setShare] = useState(true);
   const tr = translator(lang);
 
+  // The seat QR opened the app: look up this seat's booking on the cabin hub.
+  useEffect(() => {
+    const hub = getHubUrl();
+    if (!qrSeat || !hub) return;
+    lookupBookingOnHub(hub, qrSeat).then((p) => {
+      if (p) {
+        setFound(p);
+        setLang(p.lang);
+        setStep('booking');
+      }
+    });
+  }, [qrSeat]);
+
   const useBooking = async () => {
     setBooking('loading');
     try {
-      session.setProfile(await mockBooking.lookup());
+      const hub = getHubUrl();
+      const s = isValidSeat(seat) ? normalizeSeat(seat) : qrSeat;
+      // Real lookup on the hub when we know the seat; otherwise the labelled example passenger.
+      const p = hub && s ? await lookupBookingOnHub(hub, s) : await mockBooking.lookup();
+      if (p) session.setProfile(p);
+      else setBooking('error');
     } catch {
       setBooking('error');
     }
@@ -52,13 +85,7 @@ export function Onboarding() {
     setStep('needs');
   };
 
-  const scan = async () => {
-    setScanning(true);
-    const s = await simulateSeatQrScan();
-    setScanning(false);
-    setSeat(s);
-    setSeatError(false);
-  };
+
 
   const finish = () => {
     const clean = sanitizeName(name);
@@ -81,6 +108,30 @@ export function Onboarding() {
     <SafeAreaView style={{ flex: 1, backgroundColor: th.p.bg }}>
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView contentContainerStyle={{ padding: th.space.xl, gap: th.space.lg, flexGrow: 1 }} keyboardShouldPersistTaps="handled">
+          {step === 'booking' && found && (
+            <>
+              <View style={{ gap: th.space.xs, marginTop: th.space.lg }}>
+                <Text accessibilityRole="header" style={{ fontSize: th.fs(40), fontWeight: '800', color: th.p.navy === '#000000' ? th.p.text : th.p.navy }}>
+                  Hear<Text style={{ color: th.p.primary }}>Me</Text>
+                </Text>
+              </View>
+              <View style={{ backgroundColor: th.p.surface, borderRadius: th.radius.lg, borderWidth: 2, borderColor: th.p.primary, padding: th.space.lg, gap: th.space.sm }}>
+                <T v="heading" role="header">
+                  {translator(found.lang)('onboard.bookingFound')}
+                </T>
+                <T v="title">
+                  {found.name ? `${found.name} · ` : ''}
+                  {translator(found.lang)('common.seat')} {found.seat}
+                </T>
+                <T v="bodyLarge">{languageInfo(found.lang).nativeName}</T>
+                {found.tags.length > 0 && <T muted>{found.tags.map((x) => translator(found.lang)(`tag.${x}`)).join(' · ')}</T>}
+              </View>
+              <View style={{ flex: 1 }} />
+              <Btn big label={translator(found.lang)('onboard.useThis')} onPress={() => session.setProfile(found)} />
+              <Btn variant="ghost" label={translator(found.lang)('onboard.chooseLanguage')} onPress={() => setStep('language')} />
+            </>
+          )}
+
           {step === 'language' && (
             <>
               <View style={{ gap: th.space.xs, marginTop: th.space.lg }}>
@@ -89,20 +140,14 @@ export function Onboarding() {
                 </Text>
                 <T muted>{translator('en')('app.tagline')}</T>
               </View>
-              <View accessible accessibilityRole="header">
-                {LANGUAGES.map((l) => (
-                  <T key={l.code} v={l.code === 'hi' ? 'title' : 'bodyLarge'} bold lang={l.bcp47}>
-                    {translator(l.code)('onboard.chooseLanguage')}
-                  </T>
-                ))}
-              </View>
+              <CyclingHeading />
               <View accessibilityRole="radiogroup" style={{ gap: th.space.sm }}>
                 {LANGUAGES.map((l) => (
                   <Pressable
                     key={l.code}
                     onPress={() => {
                       setLang(l.code);
-                      setStep('seat');
+                      setStep(qrSeat ? 'needs' : 'seat');
                     }}
                     accessibilityRole="radio"
                     accessibilityState={{ checked: lang === l.code }}
@@ -132,7 +177,7 @@ export function Onboarding() {
                   disabled={booking === 'loading'}
                   onPress={useBooking}
                   icon={(c, s) => (booking === 'loading' ? <ActivityIndicator color={c} /> : <Ticket color={c} size={s} />)}
-                  hint="Loads the example passenger from the PDF: Hindi, seat 23C, senior, hard of hearing."
+                  hint={getHubUrl() && (qrSeat || isValidSeat(seat)) ? 'Looks up the language and needs saved with this seat’s booking.' : 'No cabin hub: loads the example passenger (Hindi, seat 23C, senior, hard of hearing).'}
                 />
                 {booking === 'error' && (
                   <T color={th.p.danger} role="alert">
@@ -150,14 +195,12 @@ export function Onboarding() {
                 {tr('onboard.seatTitle')}
               </T>
               <T muted>{tr('onboard.seatHint')}</T>
-              <Btn
-                variant="secondary"
-                big
-                label={scanning ? '…' : tr('onboard.scanQr')}
-                onPress={scan}
-                disabled={scanning}
-                icon={(c, s) => (scanning ? <ActivityIndicator color={c} /> : <ScanQrCode color={c} size={s} />)}
-              />
+              <Btn variant="secondary" big label={tr('onboard.scanQr')} onPress={() => setScanHint(true)} icon={(c, s) => <ScanQrCode color={c} size={s} />} />
+              {scanHint && (
+                <T muted live="polite">
+                  {tr('onboard.scanHint')}
+                </T>
+              )}
               <View style={{ gap: th.space.xs }}>
                 <Text nativeID="seatLabel" style={{ color: th.p.text, fontSize: th.fs(th.t.body), fontWeight: '700' }}>
                   {tr('common.seat')}
@@ -202,7 +245,8 @@ export function Onboarding() {
 
           {step === 'needs' && (
             <>
-              {back('seat')}
+              {back(qrSeat ? 'language' : 'seat')}
+              {qrSeat && <T muted>{tr('onboard.seatFromQr', { seat: qrSeat })}</T>}
               <T v="heading" role="header">
                 {tr('settings.needs')}
               </T>
@@ -267,5 +311,24 @@ export function Onboarding() {
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
+  );
+}
+
+/** "Choose your language" cycling through every language, one at a time (less clutter than six headings). */
+function CyclingHeading() {
+  const th = useTheme();
+  const [i, setI] = useState(0);
+  useEffect(() => {
+    if (th.reduceMotion) return;
+    const t = setInterval(() => setI((x) => (x + 1) % LANGUAGES.length), 2200);
+    return () => clearInterval(t);
+  }, [th.reduceMotion]);
+  const l = LANGUAGES[i]!;
+  return (
+    <View accessible accessibilityRole="header" accessibilityLabel={LANGUAGES.map((x) => translator(x.code)('onboard.chooseLanguage')).join('. ')} style={{ minHeight: 44, justifyContent: 'center' }}>
+      <T v="title" bold lang={l.bcp47}>
+        {translator(l.code)('onboard.chooseLanguage')}
+      </T>
+    </View>
   );
 }

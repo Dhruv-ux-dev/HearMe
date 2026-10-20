@@ -1,15 +1,16 @@
-import type { NeedCategory, NeedPurpose, RequestSource } from '@hearme/shared';
+import type { NeedCategory, NeedPurpose, RequestSource, Understanding } from '@hearme/shared';
 import { createContext, useContext } from 'react';
 
 export type Tab = 'home' | 'requests' | 'card' | 'flight' | 'settings';
 
 export type Overlay =
-  | { kind: 'review'; needId: string; purposeId?: NeedPurpose['id']; source: RequestSource }
+  | { kind: 'review'; needId: string; purposeId?: NeedPurpose['id']; source: RequestSource; understanding?: Understanding }
   | { kind: 'picker'; category: NeedCategory }
   | { kind: 'speech' }
   | { kind: 'typed' }
-  | { kind: 'ask'; options: string[]; purposeId?: NeedPurpose['id']; source: RequestSource; transcript: string }
-  | { kind: 'showCard'; needId: string };
+  | { kind: 'ask'; options: string[]; purposeId?: NeedPurpose['id']; source: RequestSource; transcript: string; confidence: number }
+  | { kind: 'showCard'; needId: string }
+  | { kind: 'care' };
 
 export interface Nav {
   tab: Tab;
