@@ -6,15 +6,18 @@
  *
  *   npm run chart -w @hearme/hub
  */
-import { readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const HUB = fileURLToPath(new URL('../../', import.meta.url));
 const OUT = join(HUB, '..', '..', 'docs', 'results.svg');
-const { speech } = JSON.parse(readFileSync(join(HUB, '.eval', 'results-small-heldout.json'), 'utf8')) as {
-  speech: { model: string; rows: { lang: string; expected: string; got?: string; snr: number | null; confidence: number }[] };
-};
+type Rows = { model: string; rows: { lang: string; expected: string; got?: string | null; snr: number | null; confidence: number }[] };
+// Prefer the transcripts re-scored with the current matcher (npm run rescore); else the original run.
+const rescored = join(HUB, '.eval', 'rescored-small-heldout.json');
+const speech: Rows = existsSync(rescored)
+  ? (JSON.parse(readFileSync(rescored, 'utf8')) as Rows)
+  : (JSON.parse(readFileSync(join(HUB, '.eval', 'results-small-heldout.json'), 'utf8')) as { speech: Rows }).speech;
 
 const LANGS: [string, string][] = [
   ['en', 'English'],
