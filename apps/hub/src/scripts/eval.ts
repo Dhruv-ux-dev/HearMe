@@ -29,6 +29,7 @@ import {
   type MatchResult,
 } from '@hearme/shared';
 import { createE5, createWhisper, hasSpeech, AiEngine } from '../ai';
+import { denoise } from '../denoise';
 import { loadNeedHead } from '../head';
 import { inferenceThreads, type AsrSize } from '../models';
 import { CREW_PHRASES, HELDOUT_PHRASES, NEED_PHRASES, VOICES } from './evalData';
@@ -229,7 +230,8 @@ async function speechEval(embedder: Embedder) {
       const text = [p].flat()[0]!;
       const clean = synthesize(text, lang, join(dir, `${set}-${lang}-${expected}`));
       for (const snr of conditions) {
-        const audio = Number.isFinite(snr) ? mix(clean, snr) : clean;
+        const noisy = Number.isFinite(snr) ? mix(clean, snr) : clean;
+        const audio = flag('denoise') ? denoise(noisy) : noisy;
         const t0 = Date.now();
         const transcript = hasSpeech(audio) ? await asr.transcribe(audio, lang) : '';
         const asrMs = Date.now() - t0;
@@ -271,7 +273,7 @@ const previous = (() => {
   }
 })();
 const heldOutSpeech = speech?.set === 'heldout';
-if (heldOutSpeech) writeFileSync(join(OUT, `results-${speech.model}-heldout.json`), JSON.stringify({ at: new Date().toISOString(), speech }, null, 2));
+if (heldOutSpeech) writeFileSync(join(OUT, `results-${speech.model}-heldout${flag('denoise') ? '-denoise' : ''}.json`), JSON.stringify({ at: new Date().toISOString(), speech }, null, 2));
 writeFileSync(
   join(OUT, 'results.json'),
   JSON.stringify({ ...previous, at: new Date().toISOString(), calibration: SEMANTIC_CALIBRATION, text, crew, ...(speech && !heldOutSpeech ? { speech } : {}) }, null, 2),

@@ -14,7 +14,9 @@
     "rescore": "tsx src/scripts/rescore.ts",
     "record-demo": "tsx src/scripts/record-demo.ts",
     "train": "tsx src/scripts/train-head.ts",
-    "a11y": "tsx src/scripts/a11y.ts"
+    "a11y": "tsx src/scripts/a11y.ts",
+    "zeroshot": "tsx src/scripts/zeroshot.ts",
+    "chart": "tsx src/scripts/chart.ts"
   },
   "dependencies": {
     "@hearme/shared": "*",

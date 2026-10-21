@@ -55,7 +55,7 @@ export const NEEDS: Need[] = [
     icon: 'leaf',
     common: true,
     label: L('Tea', 'चाय', 'お茶', 'ชา', 'Teh', 'Trà'),
-    phrases: { en: ['tea', 'chai'], hi: ['चाय', 'चाए', 'chai', 'chaay'], ja: ['お茶', '紅茶', '緑茶'], th: ['น้ำชา', 'ขอชา', 'ชาร้อน'], id: ['teh'], vi: ['tra'] },
+    phrases: { en: ['tea', 'chai'], hi: ['चाय', 'चाए', 'chai', 'chaay'], ja: ['お茶', '紅茶', '緑茶'], th: ['น้ำชา', 'ชาร้อน'], id: ['teh'], vi: ['tra'] },
     hints: { en: ['hot', 'warm'], hi: ['गरम', 'गर्म', 'garam'], ja: ['温かい'], th: ['อุ่น'], id: ['hangat'] },
   },
   {

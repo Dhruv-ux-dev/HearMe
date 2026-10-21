@@ -99,6 +99,8 @@ interface AlikeKeyword {
   needId: string;
   kind: 'phrase' | 'hint';
   lang: LangCode;
+  /** Normalized spelling, and the same folded to how it sounds. */
+  plain: string;
   keyword: string;
   edits: number;
 }
@@ -110,9 +112,10 @@ function alikeKeywords(needs: Need[]): AlikeKeyword[] {
       const map = kind === 'phrase' ? need.phrases : need.hints;
       for (const lang of SOUND_ALIKE_LANGS) {
         for (const w of map?.[lang] ?? []) {
-          const keyword = soundAlike(normalize(w).trim(), lang);
+          const plain = normalize(w).trim();
+          const keyword = soundAlike(plain, lang);
           const edits = allowedEdits(keyword, lang);
-          if (keyword && edits >= 0) out.push({ needId: need.id, kind, lang, keyword, edits });
+          if (keyword && edits >= 0) out.push({ needId: need.id, kind, lang, plain, keyword, edits });
         }
       }
     }
@@ -143,24 +146,14 @@ export function createKeywordMatcher(needs: Need[] = NEEDS): IntentMatcher {
         (h) => !hits.some((o) => o !== h && o.start <= h.start && o.end >= h.end && o.end - o.start > h.end - h.start),
       );
 
-      const scores = new Map<string, number>();
-      const seen = new Set<string>();
-      for (const h of kept) {
-        if (!h.needId) continue;
-        const key = `${h.needId}:${h.start}:${h.end}`;
-        if (seen.has(key)) continue;
-        seen.add(key);
-        const add = h.kind === 'phrase' ? 1 : 0.35;
-        scores.set(h.needId, Math.min(1.5, (scores.get(h.needId) ?? 0) + add));
-      }
-
-      // Sound-alike tier: look for what the exact keywords did not explain, spelled the way it sounds.
+      // Sound-alike tier: what the exact keywords did not explain, spelled the way it sounds.
       const exactNeeds = new Set(kept.filter((h) => h.kind === 'phrase').map((h) => h.needId!));
       const masked = text.split('');
       for (const h of kept) for (let i = h.start; i < h.end; i++) masked[i] = ' ';
       const rest = masked.join('');
       const alikeText = new Map<LangCode, string>();
-      const alikeHits: (AlikeKeyword & { start: number; end: number; found: number })[] = [];
+      type AlikeHit = AlikeKeyword & { start: number; end: number; found: number };
+      const alikeHits: AlikeHit[] = [];
       for (const k of alike) {
         if (k.kind === 'phrase' && exactNeeds.has(k.needId)) continue;
         let t = alikeText.get(k.lang);
@@ -168,15 +161,48 @@ export function createKeywordMatcher(needs: Need[] = NEEDS): IntentMatcher {
         const hit = fuzzyFind(t, k.keyword, k.edits, k.lang !== 'th' && k.lang !== 'ja');
         if (hit) alikeHits.push({ ...k, start: hit.start, end: hit.end, found: hit.edits });
       }
+
+      // A longer phrase heard by sound explains the exact keyword inside it:
+      // Whisper's "गरन पानी" is hot water (गरम पानी), not water (पानी).
+      const explained = new Set<Hit>();
+      const extensions: AlikeHit[] = [];
+      for (const e of kept) {
+        if (e.kind !== 'phrase') continue;
+        const word = text.slice(e.start, e.end);
+        for (const k of alike) {
+          if (k.kind !== 'phrase' || k.needId === e.needId || k.plain.length <= word.length || !k.plain.includes(word)) continue;
+          const around = soundAlike(text.slice(Math.max(0, e.start - k.plain.length - 2), e.end + k.plain.length + 2), k.lang);
+          const hit = fuzzyFind(around, k.keyword, k.edits, k.lang !== 'th' && k.lang !== 'ja');
+          if (hit && hit.edits > 0) {
+            explained.add(e);
+            extensions.push({ ...k, start: -1, end: -1, found: hit.edits });
+          }
+        }
+      }
+      const exact = kept.filter((h) => !explained.has(h));
+
       const alikeBest = new Map<string, number>();
       for (const h of alikeHits) {
         // As above, but a hint ("cold") still supports its need inside another need's phrase ("so cold").
-        const inside = (o: (typeof alikeHits)[number]) =>
-          o !== h && o.lang === h.lang && o.start <= h.start && o.end >= h.end && o.end - o.start > h.end - h.start;
+        const inside = (o: AlikeHit) => o !== h && o.lang === h.lang && o.start <= h.start && o.end >= h.end && o.end - o.start > h.end - h.start;
         if (alikeHits.some((o) => inside(o) && (h.kind === 'phrase' || o.needId === h.needId))) continue;
         const key = `${h.needId}:${h.kind}`;
-        const w = h.kind === 'phrase' ? 0.8 - 0.1 * h.found : 0.25;
-        alikeBest.set(key, Math.max(alikeBest.get(key) ?? 0, w));
+        alikeBest.set(key, Math.max(alikeBest.get(key) ?? 0, h.kind === 'phrase' ? 0.8 - 0.1 * h.found : 0.25));
+      }
+      for (const h of extensions) {
+        const key = `${h.needId}:phrase`;
+        alikeBest.set(key, Math.max(alikeBest.get(key) ?? 0, 0.8 - 0.1 * h.found));
+      }
+
+      const scores = new Map<string, number>();
+      const seen = new Set<string>();
+      for (const h of exact) {
+        if (!h.needId) continue;
+        const key = `${h.needId}:${h.start}:${h.end}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        const add = h.kind === 'phrase' ? 1 : 0.35;
+        scores.set(h.needId, Math.min(1.5, (scores.get(h.needId) ?? 0) + add));
       }
       for (const [key, w] of alikeBest) {
         const needId = key.slice(0, key.lastIndexOf(':'));
@@ -196,7 +222,7 @@ export function createKeywordMatcher(needs: Need[] = NEEDS): IntentMatcher {
         const margin = (top.score - second) / top.score;
         confidence = Math.min(0.99, 0.6 * strength + 0.4 * margin);
         // Heard only by sound: show pictures rather than send.
-        if (!kept.some((h) => h.needId === top.needId)) confidence = Math.min(confidence, 0.8);
+        if (!exact.some((h) => h.needId === top.needId)) confidence = Math.min(confidence, 0.8);
       }
 
       let purposeId: NeedPurpose['id'] | undefined;

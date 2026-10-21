@@ -112,12 +112,20 @@ const keyword = createKeywordMatcher();
  *  - otherwise the meaning-based ranking decides, and the "Did you mean?"
  *    options mix both rankings so the right picture is very likely among the three
  */
-export function combineMatches(kw: MatchResult, sem: { ranked: { id: string; score: number }[]; confidence: number }): MatchResult {
+/** Meaning-model confidence at which it may overrule a keyword match (send → ask). */
+export const DISAGREEMENT = 0.35;
+
+export function combineMatches(kw: MatchResult, sem: { ranked: { id: string; score: number }[]; confidence: number }, disagreement = DISAGREEMENT): MatchResult {
   const semTop = sem.ranked[0]?.id;
   const kwTop = kw.candidates[0]?.needId;
   const semCandidates: MatchCandidate[] = sem.ranked.slice(0, 5).map((r) => ({ needId: r.id, score: Math.round(r.score * 1000) / 1000 }));
 
   if (kwTop && kw.confidence >= CONFIDENCE_THRESHOLD) {
+    // A keyword says one thing, the meaning model fairly surely another ("heat some water" has
+    // the word "water"): show both as pictures rather than send the wrong one.
+    if (semTop && semTop !== kwTop && sem.confidence >= disagreement) {
+      return { candidates: mergeCandidates(kw.candidates, semCandidates), confidence: round(Math.min(kw.confidence, CONFIDENCE_THRESHOLD - 0.01)), purposeId: kw.purposeId };
+    }
     const boost = kwTop === semTop ? 0.05 : 0;
     return { ...kw, confidence: Math.min(0.99, kw.confidence + boost) };
   }
