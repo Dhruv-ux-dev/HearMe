@@ -9,13 +9,16 @@ import { createWriteStream, existsSync, mkdirSync, renameSync, statSync } from '
 import { dirname, join } from 'node:path';
 import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
-import { ASR_MODELS, EMBED_MODEL, MODEL_DIR, MODEL_FILES, asrSizeFromEnv } from '../models';
+import { ASR_MODELS, EMBED_MODEL, MODEL_DIR, MODEL_FILES, TRANSLATE_MODEL, asrSizeFromEnv } from '../models';
 
 const arg = process.argv[2];
+// all: both Whisper sizes + e5 · translate: the NLLB model for drafting language packs (~900 MB, optional)
 const repos =
-  arg === 'all'
-    ? [ASR_MODELS.small, ASR_MODELS.base, EMBED_MODEL]
-    : [ASR_MODELS[arg === 'base' || arg === 'small' ? arg : asrSizeFromEnv()], EMBED_MODEL];
+  arg === 'translate'
+    ? [TRANSLATE_MODEL]
+    : arg === 'all'
+      ? [ASR_MODELS.small, ASR_MODELS.base, EMBED_MODEL]
+      : [ASR_MODELS[arg === 'base' || arg === 'small' ? arg : asrSizeFromEnv()], EMBED_MODEL];
 
 for (const repo of repos) {
   for (const file of MODEL_FILES[repo] ?? []) {

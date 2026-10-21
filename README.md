@@ -149,9 +149,9 @@ All numbers were measured on a MacBook Air (M2, 8 GB RAM). The scripts and test 
 
 | Noise | top-1 | sent without asking | wrong but sent confidently | median recognition time |
 | --- | --- | --- | --- | --- |
-| Clean | 81% | 53% | 1% | 3.1 s |
-| 10 dB SNR | 83% | 53% | 1% | 3.5 s |
-| 0 dB SNR (noise as loud as the voice) | 68% | 44% | 0% | 3.4 s |
+| Clean | 82% | 53% | 1% | 3.1 s |
+| 10 dB SNR | 85% | 56% | 1% | 3.5 s |
+| 0 dB SNR (noise as loud as the voice) | 67% | 44% | 0% | 3.4 s |
 
 ![Spoken requests understood, by language and noise level](docs/results.svg)
 
@@ -162,19 +162,52 @@ All numbers were measured on a MacBook Air (M2, 8 GB RAM). The scripts and test 
   - A longer phrase heard by sound overrides the keyword inside it.
   - One Thai keyword was removed because it sits inside "ขอชาร์จ" ("may I charge").
 - The table shows the results after these fixes, so it is no longer fully blind.
-- On the development phrasings, which were used to design the sound-alike rules, the results are 89% / 82% / 74% top-1.
-- Thai is the weak spot, especially in loud noise.
+- On the development phrasings, which were used to design the sound-alike rules, the results are 92% / 85% / 75% top-1.
+- Thai is the weak spot, especially in loud noise. Thai vocabulary and two Whisper Thai spellings (ขออยาก → ขอยา, ชาติ → ชาร์จ) were then fixed using the development set only. Thai on the held-out set went from 53% to 56%, and the development set from 50% to 64%. Folding long and short Thai vowels together was also tried: no measurable change.
 - Whisper-base is about 4× faster but less accurate (57–69% top-1).
 
 **Languages HearMe has never seen.** Typed requests in Bengali, Tamil and Tagalog, with no HearMe vocabulary, translations or training data for them:
 
 | | top-1 | right picture in top 3 | wrong but sent confidently |
 | --- | --- | --- | --- |
-| Bengali | 67% | 92% | 0% |
-| Tamil | 58% | 83% | 0% |
-| Tagalog | 67% | 92% | 0% |
+| Bengali (no pack) | 67% | 92% | 0% |
+| Tamil (no pack) | 58% | 92% | 0% |
+| Tagalog (no pack) | 58% | 92% | 0% |
 
 The trained classifier roughly doubles e5's zero-shot top-1 (33–42% → 58–67%). The sample is small: 12 requests per language.
+
+**Adding a language is a data file.** A language pack (`apps/hub/data/languages/<code>.json`) lists keywords for the 40 needs, plus templates or example requests. With a pack:
+
+- The hub understands the language **typed and spoken**: Whisper runs in it, and the sound-alike tier covers Indian scripts.
+- The phone offers it at onboarding ("speak or type in Bengali · screens in English").
+- The crew console and the stage show it.
+- It is loaded without restarting the hub.
+
+To add a language:
+
+```bash
+npm run models -- translate                                # once: NLLB-200 offline translation model (~900 MB)
+npm run add-language -w @hearme/hub -- ta --draft          # draft data/languages/ta.json offline, retrain, measure, load
+```
+
+`--draft` translates the English catalogue with NLLB-200 on the laptop. The draft is marked `machine` and is only used to *understand* passengers; it is never shown to them, and it needs a native speaker's review. Some of its words are wrong: in the Tamil draft, "blanket" came out as "cloth".
+
+| Typed (12 requests each) | top-1 | top-3 | wrong but sent confidently |
+| --- | --- | --- | --- |
+| Bengali, hand-written pack | 100%* | 100% | 0% |
+| Tamil, machine-drafted pack | 67% (was 58%) | 83% | 0% |
+
+| Spoken (macOS voices → Whisper-small, 12 each) | top-1 | top-3 | wrong but sent confidently |
+| --- | --- | --- | --- |
+| Bengali, with pack | 42% (was 17%) | 67% | 0% |
+| Tamil, with pack | 50% | 67% | 0% |
+
+\* Optimistic: the pack and the test phrases were written by the same person and share words.
+
+Notes on these numbers:
+- Whisper-small writes Bengali speech in Hindi letters ("अमार" for "আমার"). The hub converts it to Bengali script, which is why spoken Bengali rose from 17% to 42%.
+- Spoken Bengali and Tamil are still weak. Whisper-small hears these languages poorly; a larger speech model would be the next step.
+- The screens, replies and captions for pack languages are still in English.
 
 **Other results:**
 - **Crew voice replies:** 14 of 14 spoken Japanese phrasings matched the right verified reply. Each takes about 1.7 s.
@@ -300,6 +333,7 @@ npm run record-demo    # re-record docs/demo.mp4 (needs Google Chrome, ffmpeg, m
 npm run train -w @hearme/hub      # retrain the need classifier (minutes, on the laptop CPU)
 npm run rescore -w @hearme/hub    # re-score saved Whisper transcripts after matcher changes (seconds)
 npm run zeroshot -w @hearme/hub   # Bengali / Tamil / Tagalog check
+npm run add-language -w @hearme/hub -- bn   # add a language from data/languages/<code>.json, retrain, measure
 npm run chart -w @hearme/hub      # redraw docs/results.svg
 npm run a11y -w @hearme/hub       # axe-core accessibility check of every screen
 ```

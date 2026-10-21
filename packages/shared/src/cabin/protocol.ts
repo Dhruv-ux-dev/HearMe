@@ -28,6 +28,8 @@ export type PassengerToCrew =
       createdAt: number;
       understanding?: Understanding;
       medical?: MedicalReport;
+      /** Language the passenger spoke or typed, when it differs from the screen language (language packs). */
+      spokenLang?: string;
     }
   | { type: 'request.cancel'; requestId: string; seat: string }
   | { type: 'request.thanks'; requestId: string; seat: string };

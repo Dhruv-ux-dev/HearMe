@@ -20,6 +20,13 @@ export type AsrSize = keyof typeof ASR_MODELS;
 
 export const EMBED_MODEL = 'Xenova/multilingual-e5-small';
 
+/**
+ * Offline translation (NLLB-200, 200 languages), used only to *draft* the
+ * vocabulary of a new language pack (`npm run add-language -- <code> --draft`).
+ * Its output never reaches passengers: they only see verified phrases.
+ */
+export const TRANSLATE_MODEL = 'Xenova/nllb-200-distilled-600M';
+
 const WHISPER_FILES = [
   'config.json',
   'generation_config.json',
@@ -35,6 +42,15 @@ export const MODEL_FILES: Record<string, string[]> = {
   [ASR_MODELS.small]: WHISPER_FILES,
   [ASR_MODELS.base]: WHISPER_FILES,
   [EMBED_MODEL]: ['config.json', 'tokenizer.json', 'tokenizer_config.json', 'special_tokens_map.json', 'onnx/model_quantized.onnx'],
+  [TRANSLATE_MODEL]: [
+    'config.json',
+    'generation_config.json',
+    'tokenizer.json',
+    'tokenizer_config.json',
+    'special_tokens_map.json',
+    'onnx/encoder_model_quantized.onnx',
+    'onnx/decoder_model_merged_quantized.onnx',
+  ],
 };
 
 export function asrSizeFromEnv(value = process.env.HEARME_ASR_MODEL): AsrSize {

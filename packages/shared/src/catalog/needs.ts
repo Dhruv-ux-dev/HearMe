@@ -101,7 +101,7 @@ export const NEEDS: Need[] = [
     icon: 'bed',
     common: true,
     label: L('Blanket', 'कंबल', '毛布', 'ผ้าห่ม', 'Selimut', 'Chăn'),
-    phrases: { en: ['blanket'], hi: ['कंबल', 'कम्बल', 'kambal'], ja: ['毛布', 'ブランケット'], th: ['ผ้าห่ม'], id: ['selimut'], vi: ['chan'] },
+    phrases: { en: ['blanket'], hi: ['कंबल', 'कम्बल', 'kambal'], ja: ['毛布', 'ブランケット'], th: ['ผ้าห่ม', 'ผ้าคลุม'], id: ['selimut'], vi: ['chan'] },
     hints: { en: ['warm', 'cold'], hi: ['गरम', 'गर्म', 'garam', 'ठंड'], ja: ['寒い'], th: ['หนาว'], id: ['dingin'], vi: ['lanh'] },
   },
   {
@@ -167,7 +167,7 @@ export const NEEDS: Need[] = [
     category: 'comfort',
     icon: 'battery-charging',
     label: L('Phone charging', 'फ़ोन चार्ज करना', 'スマホの充電', 'ชาร์จโทรศัพท์', 'Mengisi daya HP', 'Sạc điện thoại'),
-    phrases: { en: ['charge', 'charger', 'charging', 'usb', 'battery'], hi: ['चार्ज', 'चार्जर', 'charger', 'charge'], ja: ['充電', '充電器'], th: ['ชาร์จ', 'ที่ชาร์จ'], id: ['charger', 'mengisi daya', 'cas hp', 'baterai'], vi: ['sac pin', 'sac dien thoai', 'het pin'] },
+    phrases: { en: ['charge', 'charger', 'charging', 'usb', 'battery'], hi: ['चार्ज', 'चार्जर', 'charger', 'charge'], ja: ['充電', '充電器'], th: ['ชาร์จ', 'ที่ชาร์จ', 'ชาร์จแบต', 'แบตหมด', 'สายชาร์จ'], id: ['charger', 'mengisi daya', 'cas hp', 'baterai'], vi: ['sac pin', 'sac dien thoai', 'het pin'] },
   },
   // ── Food ───────────────────────────────────────────────────────────────
   {
@@ -177,7 +177,7 @@ export const NEEDS: Need[] = [
     common: true,
     purposes: ['vegetarian', 'for_child'],
     label: L('Food', 'खाना', '食事', 'อาหาร', 'Makanan', 'Suất ăn'),
-    phrases: { en: ['food', 'meal', 'hungry', 'eat'], hi: ['खाना', 'खाने', 'भूख', 'khana', 'bhookh'], ja: ['食事', 'ご飯', 'お腹が空'], th: ['อาหาร', 'หิวข้าว'], id: ['makanan', 'makan', 'lapar'], vi: ['do an', 'suat an', 'doi'] },
+    phrases: { en: ['food', 'meal', 'hungry', 'eat'], hi: ['खाना', 'खाने', 'भूख', 'khana', 'bhookh'], ja: ['食事', 'ご飯', 'お腹が空'], th: ['อาหาร', 'หิวข้าว', 'กินข้าว', 'อาหารกลางวัน', 'อาหารเย็น'], id: ['makanan', 'makan', 'lapar'], vi: ['do an', 'suat an', 'doi'] },
   },
   {
     id: 'snack',
@@ -214,7 +214,7 @@ export const NEEDS: Need[] = [
     icon: 'toilet',
     common: true,
     label: L('Toilet', 'टॉयलेट', 'トイレ', 'ห้องน้ำ', 'Toilet', 'Nhà vệ sinh'),
-    phrases: { en: ['toilet', 'bathroom', 'restroom', 'washroom', 'lavatory'], hi: ['टॉयलेट', 'शौचालय', 'बाथरूम', 'toilet'], ja: ['トイレ', 'お手洗い'], th: ['ห้องน้ำ'], id: ['toilet', 'kamar kecil'], vi: ['nha ve sinh', 'di ve sinh', 'toilet'] },
+    phrases: { en: ['toilet', 'bathroom', 'restroom', 'washroom', 'lavatory'], hi: ['टॉयलेट', 'शौचालय', 'बाथरूम', 'toilet'], ja: ['トイレ', 'お手洗い'], th: ['ห้องน้ำ', 'สุขา', 'ห้องส้วม'], id: ['toilet', 'kamar kecil'], vi: ['nha ve sinh', 'di ve sinh', 'toilet'] },
   },
   {
     id: 'medicine',
@@ -222,7 +222,7 @@ export const NEEDS: Need[] = [
     icon: 'pill',
     common: true,
     label: L('Medicine', 'दवाई', '薬', 'ยา', 'Obat', 'Thuốc'),
-    phrases: { en: ['medicine', 'tablets', 'pills', 'painkiller'], hi: ['दवाई', 'दवा', 'dawai', 'dawa', 'goli', 'गोली'], ja: ['薬', 'くすり'], th: ['ขอยา', 'ยาแก้', 'ยาประจำตัว'], id: ['obat'], vi: ['thuoc'] },
+    phrases: { en: ['medicine', 'tablets', 'pills', 'painkiller'], hi: ['दवाई', 'दवा', 'dawai', 'dawa', 'goli', 'गोली'], ja: ['薬', 'くすり'], th: ['ขอยา', 'ยาแก้', 'ยาประจำตัว', 'ยาแก้ปวด', 'ยาลดไข้'], id: ['obat'], vi: ['thuoc'] },
   },
   {
     id: 'unwell',
@@ -231,7 +231,7 @@ export const NEEDS: Need[] = [
     common: true,
     purposes: ['urgent'],
     label: L('I feel unwell', 'तबीयत ख़राब', '体調が悪い', 'ไม่สบาย', 'Tidak enak badan', 'Tôi thấy không khỏe'),
-    phrases: { en: ['unwell', 'sick', 'not feeling well', 'dizzy', 'pain'], hi: ['तबीयत', 'चक्कर', 'दर्द', 'tabiyat', 'bimar', 'बीमार'], ja: ['体調', '気分が悪', 'めまい', '痛い'], th: ['ไม่สบาย', 'เวียนหัว', 'ปวด'], id: ['tidak enak badan', 'pusing', 'sakit'], vi: ['khong khoe', 'chong mat', 'dau'] },
+    phrases: { en: ['unwell', 'sick', 'not feeling well', 'dizzy', 'pain'], hi: ['तबीयत', 'चक्कर', 'दर्द', 'tabiyat', 'bimar', 'बीमार'], ja: ['体調', '気分が悪', 'めまい', '痛い'], th: ['ไม่สบาย', 'เวียนหัว', 'ปวด', 'ปวดหัว'], id: ['tidak enak badan', 'pusing', 'sakit'], vi: ['khong khoe', 'chong mat', 'dau'] },
   },
   {
     id: 'bag_help',
@@ -253,7 +253,7 @@ export const NEEDS: Need[] = [
     category: 'help',
     icon: 'accessibility',
     label: L('Wheelchair on arrival', 'पहुँचने पर व्हीलचेयर', '到着時に車いす', 'รถเข็นเมื่อถึงปลายทาง', 'Kursi roda saat tiba', 'Xe lăn khi đến nơi'),
-    phrases: { en: ['wheelchair'], hi: ['व्हीलचेयर', 'व्हील चेयर', 'wheelchair'], ja: ['車いす', '車椅子'], th: ['รถเข็น'], id: ['kursi roda'], vi: ['xe lan'] },
+    phrases: { en: ['wheelchair'], hi: ['व्हीलचेयर', 'व्हील चेयर', 'wheelchair'], ja: ['車いす', '車椅子'], th: ['รถเข็น', 'วีลแชร์'], id: ['kursi roda'], vi: ['xe lan'] },
   },
   {
     id: 'arrival_form',
@@ -305,7 +305,7 @@ export const NEEDS: Need[] = [
     icon: 'shopping-bag',
     private: true,
     label: L('Sick bag', 'उल्टी की थैली', 'エチケット袋', 'ถุงอาเจียน', 'Kantong muntah', 'Túi nôn'),
-    phrases: { en: ['sick bag', 'vomit', 'vomiting', 'throw up', 'nausea', 'nauseous'], hi: ['उल्टी', 'ulti'], ja: ['吐き気', 'エチケット袋'], th: ['อาเจียน', 'คลื่นไส้'], id: ['muntah', 'mual'], vi: ['buon non', 'muon non'] },
+    phrases: { en: ['sick bag', 'vomit', 'vomiting', 'throw up', 'nausea', 'nauseous'], hi: ['उल्टी', 'ulti'], ja: ['吐き気', 'エチケット袋'], th: ['อาเจียน', 'คลื่นไส้', 'อ้วก', 'ถุงอาเจียน'], id: ['muntah', 'mual'], vi: ['buon non', 'muon non'] },
   },
   {
     id: 'toilet_assist',

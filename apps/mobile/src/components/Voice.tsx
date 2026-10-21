@@ -15,7 +15,7 @@ import Square from 'lucide-react-native/icons/square';
 import { useEffect, useRef, useState } from 'react';
 import { AccessibilityInfo, ActivityIndicator, Platform, Pressable, Text, View } from 'react-native';
 import { useNav } from '../nav';
-import { clipRecognizer, currentSpeech, getHubUrl, inStage } from '../runtime';
+import { clipRecognizer, currentSpeech, getHubUrl, inStage, session } from '../runtime';
 import { useTheme } from '../theme';
 import { T } from './ui';
 
@@ -88,7 +88,8 @@ export function HoldToSpeak({ lang }: { lang: LangCode }) {
     startedAt.current = Date.now();
     setPhase('listening');
     AccessibilityInfo.announceForAccessibility(tr('speech.listening'));
-    Promise.resolve(speech.start(lang, setDb)).catch((e: unknown) => {
+    // A passenger with a language pack (e.g. Bengali) speaks it; the screens stay in `lang`.
+    Promise.resolve(speech.start(session.getState().profile?.speechLang ?? lang, setDb)).catch((e: unknown) => {
       setPhase('idle');
       setError(e instanceof MicUnavailableError && e.reason !== 'denied' ? tr('speech.needsHub') : tr('speech.micDenied'));
     });

@@ -13,7 +13,8 @@ import { ActivityIndicator, BackHandler, Platform, Pressable, Text, View } from 
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { ConnectionPill, T } from './components/ui';
 import { NavContext, useNav, type Nav, type Overlay, type Tab } from './nav';
-import { connectHub, inStage, loadSession, registerOfflineCache, session, startAutosave, unlockVoiceOnFirstTap } from './runtime';
+import { clearStoredSession, connectHub, inStage, loadSession, registerOfflineCache, session, startAutosave, unlockVoiceOnFirstTap } from './runtime';
+import { seatFromUrl } from './screens/Onboarding';
 import { Home } from './screens/Home';
 import { Onboarding } from './screens/Onboarding';
 import { Overlays } from './screens/Overlays';
@@ -36,8 +37,12 @@ export default function App() {
       };
     }
     // Find the cabin hub first (quick), so onboarding can read the booking for this seat.
-    Promise.all([loadSession(), connectHub().catch(() => false)]).then(([r]) => {
+    Promise.all([loadSession(), connectHub().catch(() => false)]).then(async ([r]) => {
       if (r === 'corrupt') setNotice('Saved data could not be read and was cleared.');
+      // Opened from another seat's QR code: a new passenger, so start fresh.
+      const qr = seatFromUrl();
+      const saved = session.getState().profile?.seat;
+      if (qr && saved && qr !== saved) await clearStoredSession();
       setReady(true);
     });
     return startAutosave();

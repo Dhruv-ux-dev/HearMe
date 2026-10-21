@@ -162,6 +162,12 @@ export interface PassengerProfile {
   tags: ProfileTag[];
   /** Passenger consent to send profile tags with requests. */
   shareTagsWithCrew: boolean;
+  /**
+   * A language the passenger speaks that HearMe understands through a
+   * language pack but has no screens for yet (e.g. "bn"): speech and typing
+   * are understood in it, screens and replies use `lang`.
+   */
+  speechLang?: string;
 }
 
 export type ReplyChannel = 'text' | 'voice' | 'buzz';

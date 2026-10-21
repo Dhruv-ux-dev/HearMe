@@ -103,7 +103,6 @@ export function semanticConfidence(ranked: { score: number }[]): number {
   return Math.round(Math.min(0.99, 0.55 * closeness + 0.45 * lead) * 100) / 100;
 }
 
-const keyword = createKeywordMatcher();
 
 /**
  * Combine keyword and meaning-based results:
@@ -169,15 +168,16 @@ export class SemanticNeedMatcher {
     private embedder: Embedder,
     private index: SemanticIndex<string>,
     private head?: NeedHead,
+    private keyword = createKeywordMatcher(),
   ) {}
 
   /** `head`: the trained classifier (apps/hub/data/need-head.json); without it, nearest-example similarity alone. */
   static async create(embedder: Embedder, needs: Need[] = NEEDS, head?: NeedHead): Promise<SemanticNeedMatcher> {
-    return new SemanticNeedMatcher(embedder, await buildNeedIndex(embedder, needs), head);
+    return new SemanticNeedMatcher(embedder, await buildNeedIndex(embedder, needs), head, createKeywordMatcher(needs));
   }
 
   async match(text: string): Promise<MatchResult> {
-    const kw = keyword.match(text);
+    const kw = this.keyword.match(text);
     if (!text.trim()) return kw;
     const [q] = await this.embedder.embed([text], 'query');
     const ranked = rankByIndex(this.index, q!);

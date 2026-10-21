@@ -105,7 +105,7 @@ export class MicRecorder {
 export async function recordAndUnderstand(
   recorder: MicRecorder,
   hubUrl: string,
-  lang: LangCode,
+  lang: string,
   target: UnderstandTarget,
   onProgress?: (p: UnderstandProgress) => void,
 ): Promise<UnderstandResult & { seconds: number }> {
@@ -119,11 +119,11 @@ export async function recordAndUnderstand(
 export class HubSpeechRecognizer implements SpeechRecognizer {
   readonly simulated = false;
   private recorder = new MicRecorder();
-  private lang: LangCode = 'en';
+  private lang: string = 'en';
 
   constructor(private hubUrl: () => string | null) {}
 
-  async start(lang: LangCode, onLevel: (db: number) => void): Promise<void> {
+  async start(lang: string, onLevel: (db: number) => void): Promise<void> {
     this.lang = lang;
     if (!this.hubUrl()) throw new MicUnavailableError('unsupported');
     await this.recorder.start(onLevel);

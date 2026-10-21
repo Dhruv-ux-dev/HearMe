@@ -302,6 +302,7 @@ export class PassengerSession {
       createdAt: r.createdAt,
       ...(r.understanding ? { understanding: r.understanding } : {}),
       ...(r.medical ? { medical: r.medical } : {}),
+      ...(profile.speechLang ? { spokenLang: profile.speechLang } : {}),
     });
     if (!left) {
       // Connection dropped between the status check and sending: wait for it instead.

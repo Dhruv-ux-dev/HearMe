@@ -163,6 +163,18 @@ describe('cabin hub', () => {
     expect((await fetch(`${base}/api/understand?lang=zz`, { method: 'POST', body: 'x' })).status).toBe(400);
   });
 
+  it('lists language packs and understands their language (Bengali: typed, with a Bengali booking)', async () => {
+    const l = await (await fetch(`${base}/api/languages`)).json();
+    expect(l.builtIn).toHaveLength(6);
+    expect(l.packs.map((p: { code: string }) => p.code)).toContain('bn');
+    const m = await (await fetch(`${base}/api/match`, { method: 'POST', body: JSON.stringify({ text: 'একটা কম্বল দিন', lang: 'bn' }) })).json();
+    expect(m.match.candidates[0].needId).toBe('blanket');
+    const b = await (await fetch(`${base}/api/booking?seat=22B`)).json();
+    expect(b.profile).toMatchObject({ lang: 'en', speechLang: 'bn' });
+    const r = await (await fetch(`${base}/api/languages/reload`, { method: 'POST' })).json();
+    expect(r.packs).toContain('bn');
+  });
+
   it('serves static files without leaving the static folder', async () => {
     expect((await fetch(`${base}/`)).status).toBe(200);
     expect((await fetch(`${base}/..%2f..%2fetc%2fpasswd`)).status).not.toBe(200);

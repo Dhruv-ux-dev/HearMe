@@ -1,5 +1,4 @@
 import {
-  LANGUAGES,
   WebSocketBus,
   getAnnouncement,
   getNeed,
@@ -7,13 +6,14 @@ import {
   getReply,
   hubSocketUrl,
   languageInfo,
+  languageName,
   type CabinMessage,
   type CrewTabletState,
   type HubEvent,
   type ReplyId,
   type ServerFrame,
 } from '@hearme/shared';
-import { ArrowLeft, ArrowRight, Cpu, Film, Megaphone, Mic, Monitor, QrCode, RotateCcw, Smartphone, Volume2, VolumeX, WifiOff, X, Zap } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Cpu, Film, Languages, Megaphone, Mic, Monitor, QrCode, RotateCcw, Smartphone, Volume2, VolumeX, WifiOff, X, Zap } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createBrowserVoice } from '@hearme/shared/tts';
 import { hubBaseUrl, useHubStatus } from '../common/hub';
@@ -49,7 +49,7 @@ function describe(m: CabinMessage, state: CrewTabletState | null): Item | null {
         at: Date.now(),
         dir: 'to-crew',
         title: `${m.seat} asks: ${need?.label.en ?? m.needId}${purpose ? ` · ${purpose.label.en}` : ''}`,
-        detail: `${languageInfo(m.lang).englishName} · ${how}${pics} · crew sees “${need?.label.ja ?? ''}”`,
+        detail: `${m.spokenLang ? `${languageName(m.spokenLang)} (language pack)` : languageInfo(m.lang).englishName} · ${how}${pics} · crew sees “${need?.label.ja ?? ''}”`,
         tone: m.medical ? 'urgent' : undefined,
       };
     }
@@ -82,7 +82,7 @@ function describe(m: CabinMessage, state: CrewTabletState | null): Item | null {
 }
 
 function describeEvent(e: HubEvent): Item {
-  const lang = languageInfo(e.lang).englishName;
+  const lang = languageName(e.lang);
   if (e.type === 'working') {
     return {
       id: `work-${e.at}`,
@@ -103,11 +103,6 @@ function describeEvent(e: HubEvent): Item {
   };
 }
 
-function languageName(bcp47: string): string {
-  const code = bcp47.split('-')[0];
-  return LANGUAGES.find((l) => l.code === code)?.englishName ?? bcp47;
-}
-
 /** "warming up…" while the practice run happens, then the typical time per request. */
 function modelLabel(m?: { state: string; typicalMs?: number }): string {
   if (!m) return '…';
@@ -119,7 +114,8 @@ function modelLabel(m?: { state: string; typicalMs?: number }): string {
 export function Stage() {
   const status = useHubStatus(4000);
   const [items, setItems] = useState<Item[]>([]);
-  const [passenger, setPassenger] = useState<'phone' | 'ife'>('phone');
+  const [passenger, setPassenger] = useState<'phone' | 'bengali' | 'ife'>('phone');
+  const [packs, setPacks] = useState<{ code: string; name: string; draft: string }[]>([]);
   const [noiseOn, setNoiseOn] = useState(false);
   const [volume, setVolume] = useState(0.5);
   const [showQr, setShowQr] = useState(false);
@@ -181,6 +177,14 @@ export function Stage() {
       bus.close();
     };
     // Reconnect only when the hub appears/disappears, not on every poll.
+  }, [!!status]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (!status) return;
+    fetch('/api/languages')
+      .then((r) => r.json() as Promise<{ packs: { code: string; name: string; draft: string }[] }>)
+      .then((d) => setPacks(d.packs))
+      .catch(() => undefined);
   }, [!!status]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const phoneUrl = status?.urls ? (status.urls.join ?? `${status.urls.base}/mobile/?seat=23C`) : null;
@@ -252,12 +256,18 @@ export function Stage() {
           <span className="stage-chip ok">
             <WifiOff aria-hidden /> no internet needed
           </span>
+          <span className="stage-chip ok" title={packs.map((p) => `${p.name}: understood through a language pack (${p.draft} draft), screens in English`).join('\n') || 'Add one: npm run add-language -w @hearme/hub -- <code> --draft'}>
+            <Languages aria-hidden /> 6 languages{packs.length ? ` + ${packs.map((p) => p.name).join(', ')}` : ''}
+          </span>
         </div>
         <div className="stage-actions">
           <StoryButtons story={story} />
           <div className="stage-seg" role="group" aria-label="Passenger device">
             <button className={passenger === 'phone' ? 'on' : ''} onClick={() => setPassenger('phone')}>
               <Smartphone aria-hidden /> Phone
+            </button>
+            <button className={passenger === 'bengali' ? 'on' : ''} onClick={() => setPassenger('bengali')} title="Rahim, seat 22B, speaks Bengali (language pack)">
+              <Smartphone aria-hidden /> Bengali
             </button>
             <button className={passenger === 'ife' ? 'on' : ''} onClick={() => setPassenger('ife')}>
               <Monitor aria-hidden /> Seatback
@@ -307,13 +317,13 @@ export function Stage() {
       )}
 
       <main className="stage-main">
-        <section className={`stage-device stage-device--${passenger}`} aria-label="Passenger">
+        <section className={`stage-device stage-device--${passenger === 'ife' ? 'ife' : 'phone'}`} aria-label="Passenger">
           <div className="stage-label">
-            <Smartphone aria-hidden /> Passenger · Sharda, seat 23C
+            <Smartphone aria-hidden /> {passenger === 'bengali' ? 'Passenger · Rahim, seat 22B · speaks Bengali (language pack)' : 'Passenger · Sharda, seat 23C'}
           </div>
-          {passenger === 'phone' ? (
+          {passenger !== 'ife' ? (
             <div className="stage-phone">
-              <iframe key={`p${reload}`} title="Passenger phone" src="/mobile/?seat=23C&stage=1" allow="microphone; autoplay" />
+              <iframe key={`p${reload}${passenger}`} title="Passenger phone" src={`/mobile/?seat=${passenger === 'bengali' ? '22B' : '23C'}&stage=1`} allow="microphone; autoplay" />
               {spoken && (
                 <div className={`stage-spoken ${spoken.state}`} role="status" aria-live="polite">
                   {spoken.state === 'failed' ? <VolumeX aria-hidden /> : <Volume2 aria-hidden />}
@@ -322,8 +332,8 @@ export function Stage() {
                       {spoken.state === 'failed'
                         ? 'Could not play: shown as text'
                         : spoken.state === 'speaking'
-                          ? `Reading aloud in ${languageName(spoken.lang)}…`
-                          : `Read aloud in ${languageName(spoken.lang)}`}
+                          ? `Reading aloud in ${languageName(spoken.lang.split('-')[0]!)}…`
+                          : `Read aloud in ${languageName(spoken.lang.split('-')[0]!)}`}
                     </small>
                     <q lang={spoken.lang}>{spoken.text}</q>
                   </span>

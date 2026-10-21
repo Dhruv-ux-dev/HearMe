@@ -28,6 +28,7 @@ export interface CrewRequest {
   reply?: { replyId: ReplyId; at: number };
   understanding?: Understanding;
   medical?: MedicalReport;
+  spokenLang?: string;
 }
 
 export interface CrewAnnouncementLog {

@@ -1,5 +1,6 @@
 import {
   LANGUAGES,
+  languageName,
   PROFILE_TAGS,
   isValidSeat,
   languageInfo,
@@ -26,7 +27,7 @@ import { useTheme } from '../theme';
 type Step = 'booking' | 'language' | 'seat' | 'needs';
 
 /** Seat from the QR code on the seat (`?seat=23C` in the URL the phone camera opens). */
-function seatFromUrl(): string | null {
+export function seatFromUrl(): string | null {
   const search = (globalThis as { location?: { search?: string } }).location?.search ?? '';
   const raw = new URLSearchParams(search).get('seat');
   return raw && isValidSeat(raw) ? normalizeSeat(raw) : null;
@@ -44,6 +45,16 @@ export function Onboarding() {
   const [step, setStep] = useState<Step>('language');
   const [scanHint, setScanHint] = useState(false);
   const [lang, setLang] = useState<LangCode>('en');
+  const [speechLang, setSpeechLang] = useState<string | undefined>();
+  const [packs, setPacks] = useState<{ code: string; name: string }[]>([]);
+  useEffect(() => {
+    const hub = getHubUrl();
+    if (!hub) return;
+    fetch(`${hub}/api/languages`)
+      .then((r) => r.json() as Promise<{ packs: { code: string; name: string; speech: boolean }[] }>)
+      .then((d) => setPacks(d.packs.filter((p) => p.speech)))
+      .catch(() => undefined);
+  }, []);
   const [seat, setSeat] = useState(qrSeat ?? '');
   const [seatError, setSeatError] = useState(false);
   const [booking, setBooking] = useState<'idle' | 'loading' | 'error'>('idle');
@@ -92,7 +103,7 @@ export function Onboarding() {
 
   const finish = () => {
     const clean = sanitizeName(name);
-    session.setProfile({ lang, seat: normalizeSeat(seat), name: clean || undefined, tags, shareTagsWithCrew: share });
+    session.setProfile({ lang, seat: normalizeSeat(seat), name: clean || undefined, tags, shareTagsWithCrew: share, ...(speechLang ? { speechLang } : {}) });
   };
 
   const back = (to: Step) => (
@@ -126,7 +137,7 @@ export function Onboarding() {
                   {found.name ? `${found.name} · ` : ''}
                   {translator(found.lang)('common.seat')} {found.seat}
                 </T>
-                <T v="bodyLarge">{languageInfo(found.lang).nativeName}</T>
+                <T v="bodyLarge">{found.speechLang ? `${languageName(found.speechLang)} · screens in ${languageInfo(found.lang).englishName}` : languageInfo(found.lang).nativeName}</T>
                 {found.tags.length > 0 && <T muted>{found.tags.map((x) => translator(found.lang)(`tag.${x}`)).join(' · ')}</T>}
               </View>
               <View style={{ flex: 1 }} />
@@ -150,6 +161,7 @@ export function Onboarding() {
                     key={l.code}
                     onPress={() => {
                       setLang(l.code);
+                      setSpeechLang(undefined);
                       setStep(qrSeat ? 'needs' : 'seat');
                     }}
                     accessibilityRole="radio"
@@ -170,6 +182,23 @@ export function Onboarding() {
                   >
                     <T v="title">{l.nativeName}</T>
                     <T muted>{l.englishName}</T>
+                  </Pressable>
+                ))}
+              {packs.map((p) => (
+                  <Pressable
+                    key={p.code}
+                    onPress={() => {
+                      setLang('en');
+                      setSpeechLang(p.code);
+                      setStep(qrSeat ? 'needs' : 'seat');
+                    }}
+                    accessibilityRole="radio"
+                    accessibilityState={{ checked: speechLang === p.code }}
+                    accessibilityLabel={`${p.name}, understood; screens in English`}
+                    style={{ minHeight: 64, borderRadius: th.radius.md, borderWidth: 2, borderStyle: 'dashed', borderColor: th.p.border, padding: th.space.md, justifyContent: 'center' }}
+                  >
+                    <T bold>{p.name}</T>
+                    <T muted>Speak or type in {p.name} · screens in English</T>
                   </Pressable>
                 ))}
               </View>

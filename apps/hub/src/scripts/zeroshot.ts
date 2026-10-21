@@ -4,13 +4,18 @@
  * vocabulary, translations or training data at all: only multilingual-e5
  * (which saw ~100 languages in pre-training) and the trained head.
  *
- *   npm run zeroshot -w @hearme/hub
+ *   npm run zeroshot -w @hearme/hub              typed
+ *   npm run zeroshot -w @hearme/hub -- --speech  also spoken Bengali and Tamil (macOS voices Piya, Vani) through Whisper-small
  *
  * Phrasings are our own drafts, not native-checked.
  */
 import { CONFIDENCE_THRESHOLD, SemanticNeedMatcher, createKeywordMatcher, type MatchResult } from '@hearme/shared';
-import { createE5 } from '../ai';
+import { execFileSync } from 'node:child_process';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { createE5, createWhisper } from '../ai';
 import { loadNeedHead } from '../head';
+import { fromDevanagari, loadLanguagePacks, withLanguagePacks } from '../langpacks';
 import { inferenceThreads } from '../models';
 
 const PHRASES: Record<string, Record<string, string>> = {
@@ -70,12 +75,15 @@ function score(results: { expected: string; m: MatchResult }[]) {
 }
 
 const e5 = await createE5(inferenceThreads());
-const keyword = createKeywordMatcher();
-const plain = await SemanticNeedMatcher.create(e5);
+const packs = loadLanguagePacks();
+const needs = withLanguagePacks(undefined, packs);
+const keyword = createKeywordMatcher(needs);
+const plain = await SemanticNeedMatcher.create(e5, needs);
 const head = loadNeedHead();
-const trained = await SemanticNeedMatcher.create(e5, undefined, head);
+const trained = await SemanticNeedMatcher.create(e5, needs, head);
 const table: Record<string, Record<string, string>> = {};
-for (const [lang, phrases] of Object.entries(PHRASES)) {
+for (const [name, phrases] of Object.entries(PHRASES)) {
+  const lang = packs.some((p) => name.includes(`(${p.code})`)) ? `${name} with language pack` : name;
   const items = Object.entries(phrases).map(([expected, text]) => ({ expected, text }));
   const run = async (match: (t: string) => MatchResult | Promise<MatchResult>) => {
     const out: { expected: string; m: MatchResult }[] = [];
@@ -91,3 +99,25 @@ for (const [lang, phrases] of Object.entries(PHRASES)) {
 }
 console.log('\n▶ Zero-shot languages (no HearMe vocabulary), 12 typed requests each');
 console.table(table);
+
+if (process.argv.includes('--speech')) {
+  const VOICES: Record<string, [voice: string, whisper: string]> = { 'Bengali (bn)': ['Piya', 'bengali'], 'Tamil (ta)': ['Vani', 'tamil'] };
+  const whisper = await createWhisper('small', inferenceThreads());
+  const speech: Record<string, Record<string, string>> = {};
+  for (const [name, [voice, whisperLang]] of Object.entries(VOICES)) {
+    const out: { expected: string; m: MatchResult; transcript: string }[] = [];
+    for (const [expected, text] of Object.entries(PHRASES[name]!)) {
+      const aiff = join(tmpdir(), `hearme-${voice}.aiff`);
+      execFileSync('say', ['-v', voice, '-o', aiff, text]);
+      const raw = execFileSync('ffmpeg', ['-loglevel', 'error', '-i', aiff, '-ac', '1', '-ar', '16000', '-f', 'f32le', 'pipe:1'], { maxBuffer: 64e6 });
+      const heard = await whisper.transcribe(new Float32Array(raw.buffer, raw.byteOffset, raw.length / 4).slice(), whisperLang);
+      // Same as the hub: Hindi letters → the pack's script (Whisper writes Bengali in Devanagari).
+      const transcript = fromDevanagari(heard, packs.find((p) => name.includes(`(${p.code})`))?.script);
+      out.push({ expected, transcript, m: await trained.match(transcript) });
+    }
+    speech[`${name} spoken`] = score(out);
+    for (const o of out.filter((x) => x.m.candidates[0]?.needId !== x.expected)) console.log(`  ${name} ${o.expected}: "${o.transcript}" -> ${o.m.candidates[0]?.needId}`);
+  }
+  console.log('\n▶ Spoken (Whisper-small + keywords + e5 + head)');
+  console.table(speech);
+}

@@ -126,8 +126,12 @@ export function createHandler(opts: HandlerOptions) {
   const labOpen = (req: IncomingMessage) => labFromLan || isLocal(req);
   const LAB_CLOSED = 'the voice lab is open on the hub laptop only; start the hub with HEARME_LAB=1 to record from other devices';
 
+  /** One of the 6 languages, or a language pack's code (understood, but no screens yet). */
+  const parseAnyLang = (v: unknown): string | null =>
+    parseLang(v) ?? (typeof v === 'string' && opts.ai.languagePacks().some((p) => p.code === v) ? v : null);
+
   /** `announce`: tell the stage and crew (not for voice lab takes). */
-  async function understandText(text: string, lang: LangCode, target: UnderstandTarget, asrMs: number, onMatching?: () => void, announce = true): Promise<UnderstandResult> {
+  async function understandText(text: string, lang: string, target: UnderstandTarget, asrMs: number, onMatching?: () => void, announce = true): Promise<UnderstandResult> {
     if (text) onMatching?.();
     const t0 = Date.now();
     const result: UnderstandResult = { transcript: text, asrMs, matchMs: 0 };
@@ -155,7 +159,7 @@ export function createHandler(opts: HandlerOptions) {
     req: IncomingMessage,
     res: ServerResponse,
     samples: Float32Array,
-    lang: LangCode,
+    lang: string,
     target: UnderstandTarget,
     { announce = true, finish = (r: UnderstandResult): UnderstandResult => r } = {},
   ): Promise<void> {
@@ -208,7 +212,7 @@ export function createHandler(opts: HandlerOptions) {
       return json(res, 200, status);
     }
     if (path === '/api/understand' && req.method === 'POST') {
-      const lang = parseLang(url.searchParams.get('lang'));
+      const lang = parseAnyLang(url.searchParams.get('lang'));
       if (!lang) return json(res, 400, { error: 'unknown language' });
       if (!opts.ai.canTranscribe) return json(res, 503, { error: 'speech model is not ready yet' });
       const target = parseTarget(url.searchParams.get('target'));
@@ -287,6 +291,17 @@ export function createHandler(opts: HandlerOptions) {
       if (!isLocal(req)) return json(res, 403, { error: 'only from the hub laptop' });
       return json(res, 200, await opts.ai.warmup());
     }
+    if (path === '/api/languages' && req.method === 'GET') {
+      return json(res, 200, {
+        builtIn: LANGUAGES.map((l) => ({ code: l.code, name: l.englishName })),
+        packs: opts.ai.languagePacks().map((p) => ({ code: p.code, name: p.name, draft: p.draft ?? 'human', needs: Object.keys(p.needs).length, speech: !!p.whisper })),
+      });
+    }
+    if (path === '/api/languages/reload' && req.method === 'POST') {
+      if (!isLocal(req)) return json(res, 403, { error: 'only from the hub laptop' });
+      await opts.ai.reloadLanguages();
+      return json(res, 200, { packs: opts.ai.languagePacks().map((p) => p.code) });
+    }
     if (path === '/api/asr' && req.method === 'POST') {
       // Only the laptop running the hub (the demo stage) may change the speech model.
       if (!isLocal(req)) return json(res, 403, { error: 'only from the hub laptop' });
@@ -303,7 +318,7 @@ export function createHandler(opts: HandlerOptions) {
       } catch {
         return json(res, 400, { error: 'invalid JSON' });
       }
-      const lang = parseLang(input.lang);
+      const lang = parseAnyLang(input.lang);
       if (!lang || typeof input.text !== 'string' || input.text.length > 300) return json(res, 400, { error: 'invalid request' });
       return json(res, 200, await understandText(input.text.trim(), lang, parseTarget(input.target), 0));
     }
