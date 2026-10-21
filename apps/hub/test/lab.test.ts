@@ -145,6 +145,13 @@ describe('voice lab on the hub', () => {
     expect((await fetch(`${base}/api/lab/takes/${a.id}/discard`, { method: 'POST' })).status).toBe(404);
   });
 
+  it('records language-pack speakers (Bengali) in own words, and refuses reading for them', async () => {
+    const take = await record({ lang: 'bn', mode: 'own-words', prompt: '' });
+    expect(take).toMatchObject({ lang: 'bn', mode: 'own-words' });
+    const read = await fetch(`${base}/api/lab/take?${labTakeQuery(info({ lang: 'bn', mode: 'read' }))}`, { method: 'POST', body: speech() });
+    expect(read.status).toBe(400);
+  });
+
   it('refuses takes that do not say what was asked', async () => {
     const res = await fetch(`${base}/api/lab/take?${labTakeQuery(info({ expected: 'champagne' }))}`, { method: 'POST', body: speech() });
     expect(res.status).toBe(400);

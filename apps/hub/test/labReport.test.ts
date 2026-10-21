@@ -55,6 +55,11 @@ describe('voice lab report', () => {
     expect(md).toContain('the right verified reply was suggested in **100%** of 1');
   });
 
+  it('names language packs by their own name', () => {
+    const bn = renderLabReport([take({ lang: 'bn', mode: 'own-words', prompt: '' })], new Date('2026-10-22T09:00:00Z'), { bn: 'Bengali' });
+    expect(bn).toContain('Takes by language: Bengali 1.');
+  });
+
   it('splits by place only when there is more than one, and lists what went wrong safely', () => {
     expect(md).toContain('## Passengers, by place');
     expect(md).not.toContain('by microphone');

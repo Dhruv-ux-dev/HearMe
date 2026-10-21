@@ -79,7 +79,7 @@ How many taps that takes depends on the phone. Apple and Google deliberately mak
 
 Open `http://localhost:8080/#/lab` on the hub laptop. A teammate picks:
 - who speaks: a passenger, or crew replying in Japanese;
-- the language, and whether it is their first language;
+- the language, and whether it is their first language (language packs such as Bengali and Tamil are offered too, in own words only, because they have no sentences to read yet);
 - the place: quiet, cabin noise playing, or a noisy room;
 - the microphone;
 - the task: read a held-out sentence that never tuned the matcher, or ask in their own words from a picture.
@@ -273,7 +273,7 @@ Care Mode reports (where it hurts, how much, symptoms) go only to the crew, and 
 
 **How accurate is it?**
 - Typed, 72 held-out requests in 6 languages: 94% right first time, the right picture among three every time, and none wrong-but-confident.
-- Spoken by synthetic voices through Whisper-small: 81% right in quiet, 83% at 10 dB SNR, and 68% when the noise is as loud as the voice.
+- Spoken by synthetic voices through Whisper-small: 82% right in quiet, 85% at 10 dB SNR, and 67% when the noise is as loud as the voice.
 - Real voices: not measured yet. The voice lab is how we will measure them.
 
 **What happens when it is wrong?**
@@ -283,7 +283,7 @@ Care Mode reports (where it hurts, how much, symptoms) go only to the crew, and 
 - The number we watch is *wrong but sent confidently*: 0–1% on the held-out sets.
 
 **What about accents and real cabin noise?**
-Whisper was trained on many accents, but our speech numbers come from synthetic voices and synthetic noise. That is why the voice lab exists, and why a field test at 75–85 dB is the first item of remaining work. Thai is the weakest language today.
+Whisper was trained on many accents, but our speech numbers come from synthetic voices and synthetic noise. That is why the voice lab exists, and why a field test at 75–85 dB is the first item of remaining work. Thai is the weakest of the six built-in languages, and spoken Bengali and Tamil (language packs) are weaker still, at 42–50%.
 
 **Why not use Google Translate or an AI chatbot?**
 They need internet, which most flights don't have or charge for. Their translations can be wrong in ways nobody on board can check, so HearMe never sends free translation: requests are matched to a known need, and replies are pre-checked texts. Most cabin requests are the same few dozen things, so matching is more reliable, and it works fully offline.
@@ -300,7 +300,7 @@ No new hardware, and about ₹0 a flight to run, because there is no satellite d
 Almost nothing per use, because the AI runs on the airline's tablet, not on our servers. Our costs are people: translation review for each new language, support and updates. That is why a flat price per aircraft works.
 
 **What does adding a language take?**
-Translating about 1,500 words (the interface, needs, replies, announcements, safety texts and matching keywords), plus native-speaker review. No new code. Matching already partly works in languages it has never seen: 58–67% right first time for Bengali, Tamil and Tagalog.
+No new code. To *understand* it, a language pack: a data file with keywords for the 40 needs, which `npm run add-language` can draft offline and which then needs native-speaker review. Bengali and Tamil work this way today, with screens in English. To show the *screens and replies* in it as well: about 1,300 more words to translate and review. Even with no pack, matching partly works: 58–67% right first time for Bengali, Tamil and Tagalog.
 
 ---
 

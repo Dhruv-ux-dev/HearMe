@@ -57,17 +57,20 @@ export const STORY_SENTENCES: Partial<Record<LangCode, { text: string; expected:
   hi: { text: 'मुझे दवाई के लिए गरम पानी चाहिए', expected: 'hot_water' },
 };
 
-/** Crew speak Japanese, as on the crew console. */
-export const labLanguage = (speaker: LabSpeaker, lang: LangCode): LangCode => (speaker === 'crew' ? 'ja' : lang);
+/** Crew speak Japanese, as on the crew console. `lang`: one of the 6 languages or a language pack's code. */
+export const labLanguage = (speaker: LabSpeaker, lang: string): string => (speaker === 'crew' ? 'ja' : lang);
+
+const LANGS: LangCode[] = ['en', 'hi', 'ja', 'th', 'id', 'vi'];
+/** Language packs (Bengali, Tamil…) have no held-out sentences to read yet: own words only. */
+export const isBuiltInLang = (lang: string): lang is LangCode => LANGS.includes(lang as LangCode);
 
 /** One round of prompts. Reading uses the held-out phrases that never tuned the matcher. */
-export function labPrompts(speaker: LabSpeaker, mode: LabMode, lang: LangCode): LabPrompt[] {
+export function labPrompts(speaker: LabSpeaker, mode: LabMode, lang: string): LabPrompt[] {
   if (speaker === 'crew') {
     return mode === 'read' ? CREW_PHRASES.map(([text, expected]) => ({ expected, text })) : REPLIES.map((r) => ({ expected: r.id, text: '' }));
   }
-  const needs = HELDOUT_PHRASES[lang];
-  if (mode === 'own-words') return Object.keys(needs).map((expected) => ({ expected, text: '' }));
-  const prompts: LabPrompt[] = Object.entries(needs).map(([expected, text]) => ({ expected, text }));
+  if (!isBuiltInLang(lang) || mode === 'own-words') return Object.keys(HELDOUT_PHRASES.en).map((expected) => ({ expected, text: '' }));
+  const prompts: LabPrompt[] = Object.entries(HELDOUT_PHRASES[lang]).map(([expected, text]) => ({ expected, text }));
   const story = STORY_SENTENCES[lang];
   if (story) prompts.push({ ...story, story: true });
   return prompts;
@@ -111,7 +114,8 @@ export interface LabTakeInfo {
   /** Initials or a nickname; optional, never a full name. */
   tester: string;
   speaker: LabSpeaker;
-  lang: LangCode;
+  /** One of the 6 languages, or a language pack's code (e.g. "bn"). */
+  lang: string;
   /** Is this the speaker's first language? */
   firstLanguage: boolean;
   place: LabPlace;
@@ -142,7 +146,6 @@ export interface LabTake extends Omit<LabTakeInfo, 'keepAudio'>, LabScore {
   audio?: string;
 }
 
-const LANGS: LangCode[] = ['en', 'hi', 'ja', 'th', 'id', 'vi'];
 const pick = <T extends string>(v: string | null, allowed: readonly T[]): T | null => (allowed.includes(v as T) ? (v as T) : null);
 
 export function labTakeQuery(info: LabTakeInfo): string {
@@ -151,15 +154,19 @@ export function labTakeQuery(info: LabTakeInfo): string {
   return q.toString();
 }
 
-/** Check what a lab page sent; returns the take info or what is wrong with it. */
-export function parseLabTakeQuery(q: URLSearchParams): LabTakeInfo | string {
+/**
+ * Check what a lab page sent; returns the take info or what is wrong with it.
+ * `packLangs`: language packs the hub can hear (passengers, own words only).
+ */
+export function parseLabTakeQuery(q: URLSearchParams, packLangs: readonly string[] = []): LabTakeInfo | string {
   const speaker = pick(q.get('speaker'), ['passenger', 'crew'] as const);
-  const lang = pick(q.get('lang'), LANGS);
+  const lang = pick(q.get('lang'), [...LANGS, ...packLangs]);
   const place = pick(q.get('place'), Object.keys(LAB_PLACES) as LabPlace[]);
   const mic = pick(q.get('mic'), Object.keys(LAB_MICS) as LabMic[]);
   const mode = pick(q.get('mode'), Object.keys(LAB_MODES) as LabMode[]);
   if (!speaker || !lang || !place || !mic || !mode) return 'speaker, lang, place, mic and mode are required';
   if (speaker === 'crew' && lang !== 'ja') return 'crew speak Japanese';
+  if (!isBuiltInLang(lang) && mode !== 'own-words') return 'language packs have no sentences to read yet: use own words';
   const session = q.get('session') ?? '';
   if (!/^[a-z0-9-]{4,40}$/i.test(session)) return 'bad session id';
   const expected = q.get('expected') ?? '';

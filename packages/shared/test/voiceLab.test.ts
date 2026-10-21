@@ -23,6 +23,12 @@ describe('voice lab prompts', () => {
     expect(labPrompts('crew', 'read', 'ja')).toHaveLength(14);
     expect(labPrompts('crew', 'own-words', 'ja')).toHaveLength(11);
   });
+
+  it('asks in own words for language packs, which have no sentences to read yet', () => {
+    const bn = labPrompts('passenger', 'read', 'bn');
+    expect(bn).toHaveLength(12);
+    expect(bn.every((p) => p.text === '')).toBe(true);
+  });
 });
 
 describe('scoring a take the way the apps act on it', () => {
@@ -68,6 +74,13 @@ describe('what the lab page sends', () => {
     expect(parseLabTakeQuery(q({ session: '../../x' }))).toMatch(/session/);
     expect(parseLabTakeQuery(q({ speaker: 'crew', expected: 'bringing_now' }))).toMatch(/Japanese/);
     expect(parseLabTakeQuery(q({ speaker: 'crew', lang: 'ja', expected: 'bringing_now' }))).toMatchObject({ speaker: 'crew' });
+  });
+
+  it('accepts a language pack the hub can hear, for own-words takes only', () => {
+    const q = (patch: Partial<LabTakeInfo>) => new URLSearchParams(labTakeQuery({ ...info, ...patch }));
+    expect(parseLabTakeQuery(q({ lang: 'bn', mode: 'own-words', prompt: '' }), ['bn', 'ta'])).toMatchObject({ lang: 'bn' });
+    expect(parseLabTakeQuery(q({ lang: 'bn', mode: 'read' }), ['bn'])).toMatch(/own words/);
+    expect(parseLabTakeQuery(q({ lang: 'bn', mode: 'own-words' }))).toMatch(/required/);
   });
 });
 

@@ -1,4 +1,4 @@
-import { LANGUAGES, getNeed, getReply, languageInfo, readUnderstandStream, type LangCode, type ReplyId, type UnderstandProgress, type UnderstandResult } from '@hearme/shared';
+import { LANGUAGES, getNeed, getReply, languageName, readUnderstandStream, type ReplyId, type UnderstandProgress, type UnderstandResult } from '@hearme/shared';
 import {
   LAB_MICS,
   LAB_MODES,
@@ -6,6 +6,7 @@ import {
   LAB_PLACES,
   OUTCOME_LABEL,
   fmtSeconds,
+  isBuiltInLang,
   labItemLabel,
   labLanguage,
   labPrompts,
@@ -38,7 +39,8 @@ import { CabinNoise } from '../common/sounds';
 interface Setup {
   tester: string;
   speaker: LabSpeaker;
-  lang: LangCode;
+  /** One of the 6 languages, or a language pack's code (own words only). */
+  lang: string;
   firstLanguage: boolean;
   place: LabPlace;
   mic: LabMic;
@@ -78,6 +80,16 @@ const shuffled = <T,>(items: T[]): T[] => {
   return a;
 };
 
+/** A language pack the hub can hear (Bengali, Tamil…): understood, no screens yet. */
+type Pack = { code: string; name: string };
+
+const bcp47Of = (code: string) => LANGUAGES.find((l) => l.code === code)?.bcp47 ?? code;
+const nativeNameOf = (code: string, packs: Pack[]) => LANGUAGES.find((l) => l.code === code)?.nativeName ?? packs.find((p) => p.code === code)?.name ?? languageName(code);
+/** English name, with a pack's own name first ("Bengali", where browsers may say "Bangla"). */
+const nameOf = (code: string, packs: Pack[]) => packs.find((p) => p.code === code)?.name ?? languageName(code);
+/** Language packs have no sentences to read yet. */
+const modeFor = (setup: Setup): LabMode => (isBuiltInLang(setup.lang) || setup.speaker === 'crew' ? setup.mode : 'own-words');
+
 const newSession = () => `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 
 function micError(e: unknown): string {
@@ -100,8 +112,8 @@ function progressText(p: { p: UnderstandProgress; since: number } | null): strin
   return 'Sending…';
 }
 
-const GROUPS: Record<GroupBy, { label: string; key: (t: LabTake) => string }> = {
-  lang: { label: 'Language', key: (t) => `${languageInfo(t.lang).englishName}${t.speaker === 'crew' ? ' (crew)' : ''}` },
+const GROUPS: Record<GroupBy, { label: string; key: (t: LabTake, packs: Pack[]) => string }> = {
+  lang: { label: 'Language', key: (t, packs) => `${nameOf(t.lang, packs)}${t.speaker === 'crew' ? ' (crew)' : ''}` },
   place: { label: 'Place', key: (t) => LAB_PLACES[t.place] },
   mic: { label: 'Microphone', key: (t) => LAB_MICS[t.mic] },
   mode: { label: 'Task', key: (t) => LAB_MODES[t.mode] },
@@ -131,6 +143,7 @@ export function VoiceLab() {
   const [view, setView] = useState<'session' | 'all'>('session');
   const [groupBy, setGroupBy] = useState<GroupBy>('lang');
   const [noiseOn, setNoiseOn] = useState(false);
+  const [packs, setPacks] = useState<Pack[]>([]);
   const [, redraw] = useState(0);
   const rec = useRef(new MicRecorder());
   const noise = useRef(new CabinNoise());
@@ -167,6 +180,22 @@ export function VoiceLab() {
     void refresh();
   }, [refresh]);
   useEffect(() => {
+    let alive = true;
+    fetch(`${hubBaseUrl()}/api/languages`)
+      .then((r) => r.json() as Promise<{ packs: (Pack & { speech: boolean })[] }>)
+      .then((d) => {
+        if (!alive) return;
+        const heard = d.packs.filter((p) => p.speech);
+        setPacks(heard);
+        // A language pack chosen last time that this hub no longer has.
+        setSetupState((s) => (isBuiltInLang(s.lang) || heard.some((p) => p.code === s.lang) ? s : { ...s, lang: 'hi' }));
+      })
+      .catch(() => undefined);
+    return () => {
+      alive = false;
+    };
+  }, []);
+  useEffect(() => {
     const r = rec.current;
     const n = noise.current;
     return () => {
@@ -182,7 +211,7 @@ export function VoiceLab() {
 
   const start = () => {
     setSession(newSession());
-    setPrompts(shuffled(labPrompts(setup.speaker, setup.mode, lang)));
+    setPrompts(shuffled(labPrompts(setup.speaker, modeFor(setup), lang)));
     setIndex(0);
     setLast(null);
     setError(null);
@@ -190,7 +219,7 @@ export function VoiceLab() {
   };
 
   const another = () => {
-    setPrompts(shuffled(labPrompts(setup.speaker, setup.mode, lang)));
+    setPrompts(shuffled(labPrompts(setup.speaker, modeFor(setup), lang)));
     setIndex(0);
     setLast(null);
     setPhase('ready');
@@ -234,7 +263,7 @@ export function VoiceLab() {
     setPhase('thinking');
     setProgress(null);
     const t0 = Date.now();
-    const info = { session, tester: setup.tester.trim(), speaker: setup.speaker, lang, firstLanguage: setup.firstLanguage, place: setup.place, mic: setup.mic, mode: setup.mode, expected: prompt.expected, prompt: prompt.text, keepAudio: setup.keepAudio };
+    const info = { session, tester: setup.tester.trim(), speaker: setup.speaker, lang, firstLanguage: setup.firstLanguage, place: setup.place, mic: setup.mic, mode: modeFor(setup), expected: prompt.expected, prompt: prompt.text, keepAudio: setup.keepAudio };
     try {
       const res = await fetch(`${hubBaseUrl()}/api/lab/take?${labTakeQuery(info)}`, {
         method: 'POST',
@@ -322,12 +351,12 @@ export function VoiceLab() {
         <section className="lab-work" aria-label="Recording">
           {closed && <p className="lab-note warn">{closed}</p>}
           {phase === 'setup' ? (
-            <SetupForm setup={setup} setSetup={setSetup} lang={lang} onStart={start} canStart={!!status && !closed} />
+            <SetupForm setup={setup} setSetup={setSetup} lang={lang} packs={packs} onStart={start} canStart={!!status && !closed} />
           ) : (
             <>
               <div className="lab-run-head">
                 <span>
-                  {setup.speaker === 'crew' ? 'Crew · 日本語' : `${languageInfo(lang).nativeName}`} · {LAB_PLACES[setup.place]} · {LAB_MICS[setup.mic]} · {LAB_MODES[setup.mode]}
+                  {setup.speaker === 'crew' ? 'Crew · 日本語' : nativeNameOf(lang, packs)} · {LAB_PLACES[setup.place]} · {LAB_MICS[setup.mic]} · {LAB_MODES[modeFor(setup)]}
                 </span>
                 <button className="lab-link" onClick={() => setPhase('setup')} disabled={phase === 'listening' || phase === 'thinking'}>
                   Change setup
@@ -362,7 +391,7 @@ export function VoiceLab() {
                     <div className="lab-progress" aria-label={`Prompt ${index + 1} of ${prompts.length}`}>
                       <span style={{ width: `${(100 * index) / prompts.length}%` }} />
                     </div>
-                    <PromptCard prompt={prompt} speaker={setup.speaker} lang={lang} n={index + 1} of={prompts.length} />
+                    <PromptCard prompt={prompt} speaker={setup.speaker} lang={lang} langName={nameOf(lang, packs)} n={index + 1} of={prompts.length} />
                     <div className="lab-rec">
                       <button
                         className={`lab-mic${phase === 'listening' ? ' on' : ''}`}
@@ -445,7 +474,7 @@ export function VoiceLab() {
               </select>
             </label>
           </div>
-          <SummaryTable takes={shown} groupBy={groupBy} />
+          <SummaryTable takes={shown} groupBy={groupBy} packs={packs} />
           <RecentTakes takes={shown} onDiscard={(id) => void discard(id)} />
           <div className="lab-export">
             <a className="lab-btn ghost" href={`${hubBaseUrl()}/api/lab/takes.csv`} download>
@@ -489,8 +518,23 @@ function Choice<T extends string>({ label, value, options, onChange }: { label: 
   );
 }
 
-function SetupForm({ setup, setSetup, lang, onStart, canStart }: { setup: Setup; setSetup: (p: Partial<Setup>) => void; lang: LangCode; onStart: () => void; canStart: boolean }) {
-  const n = labPrompts(setup.speaker, setup.mode, lang).length;
+function SetupForm({
+  setup,
+  setSetup,
+  lang,
+  packs,
+  onStart,
+  canStart,
+}: {
+  setup: Setup;
+  setSetup: (p: Partial<Setup>) => void;
+  lang: string;
+  packs: Pack[];
+  onStart: () => void;
+  canStart: boolean;
+}) {
+  const n = labPrompts(setup.speaker, modeFor(setup), lang).length;
+  const pack = setup.speaker === 'passenger' && !isBuiltInLang(lang);
   return (
     <form
       className="lab-card lab-setup"
@@ -514,23 +558,34 @@ function SetupForm({ setup, setSetup, lang, onStart, canStart }: { setup: Setup;
                 {l.nativeName}
               </button>
             ))}
+            {packs.map((p) => (
+              <button type="button" key={p.code} lang={p.code} className={p.code === setup.lang ? 'on' : ''} aria-pressed={p.code === setup.lang} onClick={() => setSetup({ lang: p.code })} title="Language pack: understood, screens in English">
+                {p.name} <small>pack</small>
+              </button>
+            ))}
           </div>
         </fieldset>
       )}
       <Choice
-        label={`Is ${languageInfo(lang).englishName} your first language?`}
+        label={`Is ${nameOf(lang, packs)} your first language?`}
         value={setup.firstLanguage ? 'yes' : 'no'}
         options={{ yes: 'Yes', no: 'No' }}
         onChange={(v) => setSetup({ firstLanguage: v === 'yes' })}
       />
       <Choice label="Where are you?" value={setup.place} options={LAB_PLACES} onChange={(place) => setSetup({ place })} />
       <Choice label="Microphone" value={setup.mic} options={LAB_MICS} onChange={(mic) => setSetup({ mic })} />
-      <Choice
-        label="Task"
-        value={setup.mode}
-        options={{ read: 'Read the sentence shown', 'own-words': 'Say it in my own words (closer to real use)' }}
-        onChange={(mode) => setSetup({ mode })}
-      />
+      {pack ? (
+        <p className="lab-note">
+          {nameOf(lang, packs)} is a language pack: it has no sentences to read yet, so you ask for each picture in your own words.
+        </p>
+      ) : (
+        <Choice
+          label="Task"
+          value={setup.mode}
+          options={{ read: 'Read the sentence shown', 'own-words': 'Say it in my own words (closer to real use)' }}
+          onChange={(mode) => setSetup({ mode })}
+        />
+      )}
       <label className="lab-field lab-text">
         <span>Initials or a nickname (optional, no full names)</span>
         <input value={setup.tester} maxLength={40} onChange={(e) => setSetup({ tester: e.target.value })} placeholder="e.g. DM" autoComplete="off" />
@@ -548,8 +603,8 @@ function SetupForm({ setup, setSetup, lang, onStart, canStart }: { setup: Setup;
   );
 }
 
-function PromptCard({ prompt, speaker, lang, n, of }: { prompt: LabPrompt; speaker: LabSpeaker; lang: LangCode; n: number; of: number }) {
-  const bcp47 = languageInfo(lang).bcp47;
+function PromptCard({ prompt, speaker, lang, langName, n, of }: { prompt: LabPrompt; speaker: LabSpeaker; lang: string; langName: string; n: number; of: number }) {
+  const bcp47 = bcp47Of(lang);
   const need = speaker === 'passenger' ? getNeed(prompt.expected) : undefined;
   const reply = speaker === 'crew' ? getReply(prompt.expected as ReplyId) : undefined;
   return (
@@ -573,7 +628,7 @@ function PromptCard({ prompt, speaker, lang, n, of }: { prompt: LabPrompt; speak
       ) : need ? (
         <>
           {/* Only the English name, so the speaker is not handed the exact words to say. */}
-          <span className="lab-say-label">Ask for this in {languageInfo(lang).englishName}, in your own words, the way you would on a plane:</span>
+          <span className="lab-say-label">Ask for this in {langName}, in your own words, the way you would on a plane:</span>
           <div className="lab-need">
             <NeedIcon name={need.icon} size={56} />
             <b>{need.label.en}</b>
@@ -609,7 +664,7 @@ function ResultCard({
   onStory: () => void;
 }) {
   const t = last.take;
-  const bcp47 = languageInfo(t.lang).bcp47;
+  const bcp47 = bcp47Of(t.lang);
   return (
     <div className={`lab-card lab-result o-${t.outcome}${last.discarded ? ' discarded' : ''}`} role="status">
       <span className={`lab-outcome o-${t.outcome}`}>{last.discarded ? 'Discarded' : OUTCOME_LABEL[t.outcome]}</span>
@@ -653,9 +708,9 @@ function ResultCard({
   );
 }
 
-function SummaryTable({ takes, groupBy }: { takes: LabTake[]; groupBy: GroupBy }) {
+function SummaryTable({ takes, groupBy, packs }: { takes: LabTake[]; groupBy: GroupBy; packs: Pack[] }) {
   if (!takes.length) return <p className="lab-empty">No takes yet. Each recording appears here as soon as the hub has scored it.</p>;
-  const rows = [...summarizeBy(takes, GROUPS[groupBy].key), ...(takes.length > 1 ? [summarizeTakes(takes, 'All')] : [])];
+  const rows = [...summarizeBy(takes, (t) => GROUPS[groupBy].key(t, packs)), ...(takes.length > 1 ? [summarizeTakes(takes, 'All')] : [])];
   return (
     <div className="lab-table-wrap">
       <table className="lab-table">
@@ -724,7 +779,7 @@ function RecentTakes({ takes, onDiscard }: { takes: LabTake[]; onDiscard: (id: s
             <span className={`lab-dot o-${t.outcome}`} title={OUTCOME_LABEL[t.outcome]} />
             <span className="lab-recent__what">
               <b>{labItemLabel(t.speaker, t.expected)}</b>
-              <q lang={languageInfo(t.lang).bcp47}>{t.transcript || '…'}</q>
+              <q lang={bcp47Of(t.lang)}>{t.transcript || '…'}</q>
             </span>
             <span className="lab-recent__meta">
               {OUTCOME_LABEL[t.outcome]} · {fmtSeconds(t.hubMs)}

@@ -223,7 +223,10 @@ export function createHandler(opts: HandlerOptions) {
     if (path === '/api/lab/take' && req.method === 'POST') {
       // Voice lab: the same pipeline as a phone, scored against what the speaker was asked to say, and logged.
       if (!labOpen(req)) return json(res, 403, { error: LAB_CLOSED });
-      const info = parseLabTakeQuery(url.searchParams);
+      const info = parseLabTakeQuery(
+        url.searchParams,
+        opts.ai.languagePacks().filter((p) => p.whisper).map((p) => p.code),
+      );
       if (typeof info === 'string') return json(res, 400, { error: info });
       if (!opts.ai.canTranscribe) return json(res, 503, { error: 'speech model is not ready yet' });
       const body = await readBody(req, MAX_AUDIO_BYTES);

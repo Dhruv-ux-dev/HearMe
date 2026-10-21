@@ -10,6 +10,7 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { LabLog } from '../lab';
 import { renderLabReport } from '../labReport';
+import { loadLanguagePacks } from '../langpacks';
 
 const args = process.argv.slice(2);
 const i = args.indexOf('--out');
@@ -20,5 +21,5 @@ if (!takes.length) {
   console.error(`No voice lab takes yet in ${lab.file}.\nStart the hub (npm run hub), open http://localhost:8080/#/lab and record some, then run this again.`);
   process.exit(1);
 }
-writeFileSync(out, renderLabReport(takes));
+writeFileSync(out, renderLabReport(takes, new Date(), Object.fromEntries(loadLanguagePacks().map((p) => [p.code, p.name]))));
 console.log(`Wrote ${out} from ${takes.length} takes.`);

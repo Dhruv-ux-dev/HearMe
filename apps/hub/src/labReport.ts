@@ -1,8 +1,12 @@
-import { languageInfo } from '@hearme/shared';
+import { languageName } from '@hearme/shared';
 import { LAB_MICS, LAB_MODES, LAB_OUTCOMES, LAB_PLACES, OUTCOME_LABEL, fmtSeconds, labItemLabel, pct, summarizeBy, summarizeTakes, type LabSummary, type LabTake } from '@hearme/shared/lab';
 
-/** Markdown for docs/voice-lab.md, from the voice lab's takes (`npm run lab-report`). */
-export function renderLabReport(takes: LabTake[], generatedAt = new Date()): string {
+/**
+ * Markdown for docs/voice-lab.md, from the voice lab's takes (`npm run lab-report`).
+ * `names`: language packs' own names ("Bengali", where Intl may say "Bangla").
+ */
+export function renderLabReport(takes: LabTake[], generatedAt = new Date(), names: Record<string, string> = {}): string {
+  const langLabel = (t: LabTake) => `${names[t.lang] ?? languageName(t.lang)}${t.speaker === 'crew' ? ' (crew)' : ''}`;
   const passenger = takes.filter((t) => t.speaker === 'passenger');
   const crew = takes.filter((t) => t.speaker === 'crew');
   const people = new Set(takes.map((t) => t.tester || '(no name)'));
@@ -83,7 +87,6 @@ export function renderLabReport(takes: LabTake[], generatedAt = new Date()): str
   return out.join('\n');
 }
 
-const langLabel = (t: LabTake) => `${languageInfo(t.lang).englishName}${t.speaker === 'crew' ? ' (crew)' : ''}`;
 const cell = (s: string) => s.replace(/\|/g, '\\|').replace(/\s*\n\s*/g, ' ');
 
 function table(rows: LabSummary[], first: string): string {
