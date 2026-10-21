@@ -1,4 +1,4 @@
-import { Info, Monitor, Printer, QrCode, Smartphone, Tablet, Theater, WifiOff, X } from 'lucide-react';
+import { Film, Info, Monitor, Printer, QrCode, Smartphone, Tablet, Theater, WifiOff, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useHubStatus } from '../common/hub';
 import { themeVars } from '../common/theme';
@@ -54,6 +54,9 @@ export function Launcher() {
         {phoneUrl && <PhoneQr url={phoneUrl} />}
         <a className="home-link" href="/seats" target="_blank" rel="noreferrer">
           <Printer aria-hidden /> Printable seat cards (QR + picture card)
+        </a>
+        <a className="home-link" href="/demo.mp4" target="_blank" rel="noreferrer">
+          <Film aria-hidden /> Recorded demo (75 s)
         </a>
         <button className="home-link" onClick={() => setAbout(true)}>
           <Info aria-hidden /> About this prototype

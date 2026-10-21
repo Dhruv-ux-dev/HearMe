@@ -8,6 +8,7 @@ import {
   type ModelState,
   type ReplyId,
 } from '@hearme/shared';
+import { loadNeedHead } from './head';
 import { ASR_MODELS, EMBED_MODEL, MODEL_DIR, type AsrSize } from './models';
 
 /**
@@ -19,6 +20,8 @@ import { ASR_MODELS, EMBED_MODEL, MODEL_DIR, type AsrSize } from './models';
 
 export interface Transcriber {
   transcribe(samples: Float32Array, lang: LangCode): Promise<string>;
+  /** Frees the model's memory (used when switching models). */
+  dispose?(): Promise<void>;
 }
 
 const WHISPER_LANG: Record<LangCode, string> = {
@@ -32,14 +35,43 @@ const WHISPER_LANG: Record<LangCode, string> = {
 
 /** Whisper invents text for silence ("Thank you." …); skip clips with no speech. */
 export function hasSpeech(samples: Float32Array, sampleRate = 16000): boolean {
+  return trimSilence(samples, sampleRate) !== null;
+}
+
+/**
+ * The part of a clip between the first and last voiced 20 ms frame (plus a
+ * quarter second either side), or null with under 0.25 s of speech. Long
+ * silent tails are where Whisper hallucinates; it does not make Whisper
+ * faster, which always encodes a 30 s window.
+ */
+export function trimSilence(samples: Float32Array, sampleRate = 16000): Float32Array | null {
   const frame = Math.round(sampleRate * 0.02);
   let voiced = 0;
+  let first = -1;
+  let last = -1;
   for (let i = 0; i + frame <= samples.length; i += frame) {
     let sum = 0;
     for (let j = i; j < i + frame; j++) sum += samples[j]! * samples[j]!;
-    if (Math.sqrt(sum / frame) > 0.01) voiced += 1;
+    if (Math.sqrt(sum / frame) > 0.01) {
+      voiced += 1;
+      if (first < 0) first = i;
+      last = i + frame;
+    }
   }
-  return voiced * 0.02 >= 0.25;
+  if (voiced * 0.02 < 0.25) return null;
+  const pad = Math.round(sampleRate * 0.25);
+  return samples.subarray(Math.max(0, first - pad), Math.min(samples.length, last + pad));
+}
+
+/** Rejects when the work takes too long, so one stuck request cannot block the queue. */
+function withTimeout<T>(work: Promise<T>, ms: number): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(`timed out after ${ms} ms`)), ms);
+    work.then(
+      (v) => (clearTimeout(timer), resolve(v)),
+      (e: unknown) => (clearTimeout(timer), reject(e)),
+    );
+  });
 }
 
 async function loadTransformers() {
@@ -63,6 +95,7 @@ export async function createWhisper(size: AsrSize, threads: number): Promise<Tra
       const out = (await asr(clip, { language: WHISPER_LANG[lang], task: 'transcribe', max_new_tokens: 64 })) as { text: string };
       return out.text.trim();
     },
+    dispose: () => asr.dispose(),
   };
 }
 
@@ -107,6 +140,7 @@ export class AiEngine {
   private replies: ReplyMatcher | null = null;
   private keyword = createKeywordMatcher();
   private queue: Promise<unknown> = Promise.resolve();
+  private asrFailures = 0;
   readonly status: AiStatus;
 
   constructor(private options: AiEngineOptions) {
@@ -121,7 +155,7 @@ export class AiEngine {
     this.status.embed.state = 'loading';
     try {
       const embedder = await (this.options.loadEmbedder ?? (() => createE5(this.options.threads)))();
-      this.needs = await SemanticNeedMatcher.create(embedder);
+      this.needs = await SemanticNeedMatcher.create(embedder, undefined, loadNeedHead());
       this.replies = await ReplyMatcher.create(embedder);
       this.status.embed.state = 'ready';
     } catch (e) {
@@ -140,19 +174,64 @@ export class AiEngine {
     return this.asr !== null;
   }
 
-  /** Speech → text. Throws if the speech model is not available. */
-  transcribe(samples: Float32Array, lang: LangCode): Promise<string> {
-    const asr = this.asr;
-    if (!asr) return Promise.reject(new Error('speech model not loaded'));
-    if (!hasSpeech(samples)) return Promise.resolve('');
-    return this.serial(() => asr.transcribe(samples, lang));
+  get asrSize(): AsrSize {
+    return this.options.asrSize;
   }
 
-  /** Text → need. Uses meaning-based matching when the embedding model is ready, else keywords. */
+  /**
+   * Speech → text. Throws if the speech model is not available. After two
+   * failures in a row the model is reloaded in the background; meanwhile
+   * passengers can still tap and type.
+   */
+  async transcribe(samples: Float32Array, lang: LangCode): Promise<string> {
+    const asr = this.asr;
+    if (!asr) throw new Error('speech model not loaded');
+    const voiced = trimSilence(samples);
+    if (!voiced) return '';
+    try {
+      const text = await this.serial(() => withTimeout(asr.transcribe(voiced, lang), 30_000));
+      this.asrFailures = 0;
+      return text;
+    } catch (e) {
+      if (++this.asrFailures >= 2) void this.loadAsr(this.options.asrSize);
+      throw e;
+    }
+  }
+
+  /**
+   * Switch the speech model (small: more accurate, base: about 4× faster)
+   * without restarting. The current model keeps working until the new one is
+   * ready, and stays if the new one cannot load.
+   */
+  async switchAsr(size: AsrSize): Promise<void> {
+    if (size === this.options.asrSize && this.asr) return;
+    await this.loadAsr(size);
+  }
+
+  private async loadAsr(size: AsrSize): Promise<void> {
+    this.asrFailures = 0;
+    const previous = this.asr;
+    const previousSize = this.options.asrSize;
+    this.status.asr = { model: ASR_MODELS[size], state: 'loading' };
+    try {
+      const load = this.options.loadAsr && size === previousSize ? this.options.loadAsr : () => createWhisper(size, this.options.threads);
+      const next = await load();
+      this.asr = next;
+      this.options.asrSize = size;
+      this.status.asr = { model: ASR_MODELS[size], state: 'ready' };
+      if (previous && previous !== next) await previous.dispose?.().catch(() => undefined);
+    } catch (e) {
+      this.status.asr = previous
+        ? { model: ASR_MODELS[previousSize], state: 'ready', error: `could not load ${ASR_MODELS[size]}: ${String(e)}` }
+        : { model: ASR_MODELS[size], state: 'error', error: String(e) };
+    }
+  }
+
+  /** Text → need. Uses meaning-based matching when the embedding model is ready, else (or if it fails) keywords. */
   matchNeeds(text: string): Promise<MatchResult> {
     const needs = this.needs;
     if (!needs) return Promise.resolve(this.keyword.match(text));
-    return this.serial(() => needs.match(text));
+    return this.serial(() => withTimeout(needs.match(text), 10_000)).catch(() => this.keyword.match(text));
   }
 
   /** Crew speech → closest verified reply (null when unsure or unavailable). */

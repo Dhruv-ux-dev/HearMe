@@ -1,4 +1,5 @@
 import { NEEDS } from '../catalog/needs';
+import { headSignal, type NeedHead } from './head';
 import { REPLIES } from '../catalog/replies';
 import type { Need, ReplyId } from '../types';
 import { CONFIDENCE_THRESHOLD, createKeywordMatcher, type MatchCandidate, type MatchResult } from './matcher';
@@ -159,10 +160,12 @@ export class SemanticNeedMatcher {
   private constructor(
     private embedder: Embedder,
     private index: SemanticIndex<string>,
+    private head?: NeedHead,
   ) {}
 
-  static async create(embedder: Embedder, needs: Need[] = NEEDS): Promise<SemanticNeedMatcher> {
-    return new SemanticNeedMatcher(embedder, await buildNeedIndex(embedder, needs));
+  /** `head`: the trained classifier (apps/hub/data/need-head.json); without it, nearest-example similarity alone. */
+  static async create(embedder: Embedder, needs: Need[] = NEEDS, head?: NeedHead): Promise<SemanticNeedMatcher> {
+    return new SemanticNeedMatcher(embedder, await buildNeedIndex(embedder, needs), head);
   }
 
   async match(text: string): Promise<MatchResult> {
@@ -170,7 +173,7 @@ export class SemanticNeedMatcher {
     if (!text.trim()) return kw;
     const [q] = await this.embedder.embed([text], 'query');
     const ranked = rankByIndex(this.index, q!);
-    return combineMatches(kw, { ranked, confidence: semanticConfidence(ranked) });
+    return combineMatches(kw, this.head ? headSignal(ranked, this.head.predict(q!)) : { ranked, confidence: semanticConfidence(ranked) });
   }
 }
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CONFIDENCE_THRESHOLD, decide, defaultMatcher, normalize, SAMPLE_UTTERANCES, type LangCode } from '../src';
+import { CONFIDENCE_THRESHOLD, decide, defaultMatcher, headSignal, NeedHead, normalize, SAMPLE_UTTERANCES, type LangCode } from '../src';
 
 const m = (text: string) => defaultMatcher.match(text);
 
@@ -74,5 +74,22 @@ describe('sound-alike tier (Whisper spellings, from the speech eval)', () => {
 
   it('leaves exact matches alone', () => {
     expect(m('मुझे दवाई के लिए गरम पानी चाहिए').confidence).toBeGreaterThanOrEqual(CONFIDENCE_THRESHOLD);
+  });
+});
+
+describe('trained need head', () => {
+  const head = new NeedHead({ model: 'toy', labels: ['water', 'tea'], weights: [[4, 0], [0, 4]], bias: [0, 0], trainedOn: 2, at: '' });
+
+  it('turns a vector into probabilities, most likely first', () => {
+    const p = head.predict(new Float32Array([1, 0]));
+    expect(p[0]!.id).toBe('water');
+    expect(p[0]!.p + p[1]!.p).toBeCloseTo(1);
+  });
+
+  it('is only as sure as e5 when the two disagree', () => {
+    const ranked = [{ id: 'tea', score: 0.95 }, { id: 'water', score: 0.8 }];
+    const s = headSignal(ranked, head.predict(new Float32Array([1, 0])));
+    expect(s.ranked[0]!.id).toBe('water');
+    expect(s.confidence).toBeLessThan(head.predict(new Float32Array([1, 0]))[0]!.p);
   });
 });

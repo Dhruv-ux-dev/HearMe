@@ -84,11 +84,12 @@ function allKeywords(map: Partial<Record<string, string[]>> | undefined): string
 }
 
 /**
- * Vietnamese written with tone marks keeps words apart that fold to the same
- * letters: "ở đâu" (where) is not "đau" (pain). Drop these before folding.
+ * Words that contain or fold into a need's keyword without meaning it:
+ * Vietnamese "ở đâu" (where) is not "đau" (pain); Thai has no spaces, and
+ * "อยาก" (want) contains "ยา" (medicine). Drop them before matching.
  */
 function dropFalseFriends(input: string): string {
-  return input.toLowerCase().normalize('NFC').replace(/đâu/g, ' ');
+  return input.toLowerCase().normalize('NFC').replace(/đâu/g, ' ').replace(/อยาก/g, ' ');
 }
 
 /** Languages whose speech transcripts get the sound-alike tier (English and Indonesian come out of Whisper clean). */

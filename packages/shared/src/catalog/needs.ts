@@ -55,7 +55,7 @@ export const NEEDS: Need[] = [
     icon: 'leaf',
     common: true,
     label: L('Tea', 'चाय', 'お茶', 'ชา', 'Teh', 'Trà'),
-    phrases: { en: ['tea', 'chai'], hi: ['चाय', 'chai', 'chaay'], ja: ['お茶', '紅茶', '緑茶'], th: ['น้ำชา', 'ขอชา', 'ชาร้อน'], id: ['teh'], vi: ['tra'] },
+    phrases: { en: ['tea', 'chai'], hi: ['चाय', 'चाए', 'chai', 'chaay'], ja: ['お茶', '紅茶', '緑茶'], th: ['น้ำชา', 'ขอชา', 'ชาร้อน'], id: ['teh'], vi: ['tra'] },
     hints: { en: ['hot', 'warm'], hi: ['गरम', 'गर्म', 'garam'], ja: ['温かい'], th: ['อุ่น'], id: ['hangat'] },
   },
   {
@@ -253,7 +253,7 @@ export const NEEDS: Need[] = [
     category: 'help',
     icon: 'accessibility',
     label: L('Wheelchair on arrival', 'पहुँचने पर व्हीलचेयर', '到着時に車いす', 'รถเข็นเมื่อถึงปลายทาง', 'Kursi roda saat tiba', 'Xe lăn khi đến nơi'),
-    phrases: { en: ['wheelchair'], hi: ['व्हीलचेयर', 'wheelchair'], ja: ['車いす', '車椅子'], th: ['รถเข็น'], id: ['kursi roda'], vi: ['xe lan'] },
+    phrases: { en: ['wheelchair'], hi: ['व्हीलचेयर', 'व्हील चेयर', 'wheelchair'], ja: ['車いす', '車椅子'], th: ['รถเข็น'], id: ['kursi roda'], vi: ['xe lan'] },
   },
   {
     id: 'arrival_form',

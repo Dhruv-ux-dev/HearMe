@@ -12,7 +12,7 @@ import {
   type ReplyId,
   type ServerFrame,
 } from '@hearme/shared';
-import { ArrowLeft, ArrowRight, Cpu, Megaphone, Mic, Monitor, QrCode, RotateCcw, Smartphone, Volume2, VolumeX, WifiOff } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Cpu, Film, Megaphone, Mic, Monitor, QrCode, RotateCcw, Smartphone, Volume2, VolumeX, WifiOff, X, Zap } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { hubBaseUrl, useHubStatus } from '../common/hub';
 import { CabinNoise } from '../common/sounds';
@@ -97,6 +97,7 @@ export function Stage() {
   const [noiseOn, setNoiseOn] = useState(false);
   const [volume, setVolume] = useState(0.5);
   const [showQr, setShowQr] = useState(false);
+  const [showVideo, setShowVideo] = useState(false);
   const noise = useMemo(() => new CabinNoise(), []);
   const crewState = useRef<CrewTabletState | null>(null);
   const [reload, setReload] = useState(0);
@@ -144,6 +145,9 @@ export function Stage() {
     setReload((x) => x + 1);
   };
 
+  const fast = !!status?.asr.model.endsWith('base');
+  const switchSpeech = () => fetch(`/api/asr?size=${fast ? 'small' : 'base'}`, { method: 'POST' }).catch(() => undefined);
+
   if (status === null) {
     return (
       <div className="stage stage--nohub">
@@ -154,6 +158,12 @@ export function Stage() {
           <pre>npm run demo</pre>
           <p>
             Then open <code>http://localhost:8080/#/stage</code>. Without the hub you can still try the <a href="#/mobile">phone app</a> and <a href="#/ife">seatback screen</a> with a simulated crew.
+          </p>
+          <p>
+            <a href="/demo.mp4" target="_blank" rel="noreferrer">
+              Watch the recorded demo
+            </a>{' '}
+            (75 s, works offline).
           </p>
         </div>
       </div>
@@ -169,9 +179,14 @@ export function Stage() {
         </a>
         <span className="stage-title">Live demo · seat 23C ↔ cabin crew</span>
         <div className="stage-chips">
-          <span className={`stage-chip${ready(status?.asr.state) ? ' ok' : ''}`} title={status?.asr.model}>
-            <Mic aria-hidden /> Whisper {status?.asr.state ?? '…'}
-          </span>
+          <button
+            className={`stage-chip${ready(status?.asr.state) ? ' ok' : ''}`}
+            title={`${status?.asr.model ?? ''} · click to switch between accurate (small) and fast (base)`}
+            onClick={switchSpeech}
+            disabled={status?.asr.state === 'loading'}
+          >
+            {fast ? <Zap aria-hidden /> : <Mic aria-hidden />} Whisper {fast ? 'base (fast)' : 'small'} {status?.asr.state ?? '…'}
+          </button>
           <span className={`stage-chip${ready(status?.embed.state) ? ' ok' : ''}`} title={status?.embed.model}>
             <Cpu aria-hidden /> e5 matching {status?.embed.state ?? '…'}
           </span>
@@ -197,6 +212,9 @@ export function Stage() {
           <button className="stage-btn" onClick={() => setShowQr(!showQr)} aria-expanded={showQr}>
             <QrCode aria-hidden /> Try on your phone
           </button>
+          <button className="stage-btn ghost" onClick={() => setShowVideo(true)} title="Recorded run of this demo, for when the room's Wi-Fi fails">
+            <Film aria-hidden /> Recorded demo
+          </button>
           <button className="stage-btn ghost" onClick={reset} title="Clear requests and reload both sides">
             <RotateCcw aria-hidden /> Reset
           </button>
@@ -212,6 +230,15 @@ export function Stage() {
             <code>{phoneUrl}</code>
             <p className="stage-qr__note">If the browser warns about the certificate, choose Advanced → Continue (the microphone needs HTTPS).</p>
           </div>
+        </div>
+      )}
+
+      {showVideo && (
+        <div className="stage-video" role="dialog" aria-label="Recorded demo" onClick={() => setShowVideo(false)}>
+          <video src="/demo.mp4" controls autoPlay onClick={(e) => e.stopPropagation()} />
+          <button className="stage-video__close" onClick={() => setShowVideo(false)} aria-label="Close">
+            <X aria-hidden />
+          </button>
         </div>
       )}
 

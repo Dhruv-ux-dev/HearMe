@@ -19,6 +19,8 @@ import {
   SEMANTIC_CALIBRATION,
   buildNeedIndex,
   combineMatches,
+  headSignal,
+  type HeadProbability,
   createKeywordMatcher,
   rankByIndex,
   semanticConfidence,
@@ -27,6 +29,7 @@ import {
   type MatchResult,
 } from '@hearme/shared';
 import { createE5, createWhisper, hasSpeech, AiEngine } from '../ai';
+import { loadNeedHead } from '../head';
 import { inferenceThreads, type AsrSize } from '../models';
 import { CREW_PHRASES, HELDOUT_PHRASES, NEED_PHRASES, VOICES } from './evalData';
 
@@ -47,17 +50,21 @@ interface Row {
   text: string;
   kw: MatchResult;
   ranked: { id: string; score: number }[];
+  probs?: HeadProbability[];
 }
+
+const head = loadNeedHead();
 
 const pct = (n: number, d: number) => (d ? `${Math.round((100 * n) / d)}%` : '—');
 
-function summarize(rows: Row[], label: string, useSemantic: boolean) {
+function summarize(rows: Row[], label: string, useSemantic: boolean, useHead = false) {
   let top1 = 0;
   let inOptions = 0;
   let confident = 0;
   let confidentWrong = 0;
   for (const r of rows) {
-    const m = useSemantic ? combineMatches(r.kw, { ranked: r.ranked, confidence: semanticConfidence(r.ranked) }) : r.kw;
+    const sem = useHead && r.probs ? headSignal(r.ranked, r.probs) : { ranked: r.ranked, confidence: semanticConfidence(r.ranked) };
+    const m = useSemantic ? combineMatches(r.kw, sem) : r.kw;
     const top = m.candidates[0]?.needId;
     const options = m.candidates.slice(0, 3).map((c) => c.needId);
     if (top === r.expected) top1 += 1;
@@ -80,7 +87,7 @@ function summarize(rows: Row[], label: string, useSemantic: boolean) {
 
 function byLanguage(rows: Row[]) {
   const langs = [...new Set(rows.map((r) => r.lang))];
-  return Object.fromEntries(langs.map((l) => [l, summarize(rows.filter((r) => r.lang === l), l, true).top1]));
+  return Object.fromEntries(langs.map((l) => [l, summarize(rows.filter((r) => r.lang === l), l, true, !!head).top1]));
 }
 
 /** Try calibration settings: keep wrong-but-confident ≤ 2%, then send as many as possible without asking. */
@@ -106,7 +113,7 @@ async function collect(embedder: Embedder, index: Awaited<ReturnType<typeof buil
     for (const [expected, phrases] of Object.entries(needs)) {
       for (const text of Array.isArray(phrases) ? phrases : [phrases]) {
         const [q] = await embedder.embed([text], 'query');
-        rows.push({ lang, expected, text, kw: keyword.match(text), ranked: rankByIndex(index, q!).slice(0, 6) });
+        rows.push({ lang, expected, text, kw: keyword.match(text), ranked: rankByIndex(index, q!).slice(0, 6), probs: head?.predict(q!) });
       }
     }
   }
@@ -118,7 +125,7 @@ async function textEval(embedder: Embedder) {
   const index = await buildNeedIndex(embedder);
   const rows = await collect(embedder, index, NEED_PHRASES);
   const saved = { ...SEMANTIC_CALIBRATION };
-  const results = [summarize(rows, 'keywords only (before)', false), summarize(rows, 'keywords + e5 (now)', true)];
+  const results = [summarize(rows, 'keywords only (before)', false), summarize(rows, 'keywords + e5', true), ...(head ? [summarize(rows, 'keywords + e5 + trained head (now)', true, true)] : [])];
   console.table(results.map(({ raw: _raw, ...r }) => r));
   console.log('  top-1 by language (keywords + e5):', byLanguage(rows));
   const candidates = sweep(rows);
@@ -128,7 +135,7 @@ async function textEval(embedder: Embedder) {
 
   console.log('\n▶ Typed requests — held-out set (72 phrases never used for tuning)');
   const held = await collect(embedder, index, HELDOUT_PHRASES);
-  const heldResults = [summarize(held, 'keywords only (before)', false), summarize(held, 'keywords + e5 (now)', true)];
+  const heldResults = [summarize(held, 'keywords only (before)', false), summarize(held, 'keywords + e5', true), ...(head ? [summarize(held, 'keywords + e5 + trained head (now)', true, true)] : [])];
   console.table(heldResults.map(({ raw: _raw, ...r }) => r));
   console.log('  top-1 by language (keywords + e5):', byLanguage(held));
   return { rows, results, candidates, heldOut: { rows: held, results: heldResults } };
@@ -206,7 +213,10 @@ async function speechEval(embedder: Embedder) {
   const snrs = opt('snr', '20,10,5,0')
     .split(',')
     .map((x) => (x === 'clean' ? Infinity : Number(x)));
-  console.log(`\n▶ Synthetic speech → Whisper-${size} → keywords + e5 (one phrasing per need, conditions: clean, ${snrs.join(', ')} dB SNR)`);
+  // --set heldout speaks the held-out phrasings (never used for tuning) instead of the tuning set's first phrasing.
+  const set = opt('set', 'tuning') === 'heldout' ? 'heldout' : 'tuning';
+  const phrases = (set === 'heldout' ? HELDOUT_PHRASES : NEED_PHRASES) as Record<LangCode, Record<string, string | string[]>>;
+  console.log(`\n▶ Synthetic speech (${set} set) → Whisper-${size} → keywords + e5 + head (one phrasing per need, conditions: clean, ${snrs.join(', ')} dB SNR)`);
   const asr = await createWhisper(size, threads);
   const engine = new AiEngine({ asrSize: size, threads, loadEmbedder: async () => embedder, loadAsr: async () => asr });
   await engine.start();
@@ -214,9 +224,10 @@ async function speechEval(embedder: Embedder) {
   mkdirSync(dir, { recursive: true });
   const conditions = [Infinity, ...snrs.filter((x) => Number.isFinite(x))];
   const rows: { lang: LangCode; expected: string; snr: number; transcript: string; got?: string; confidence: number; asrMs: number }[] = [];
-  for (const [lang, needs] of Object.entries(NEED_PHRASES) as [LangCode, Record<string, [string, string]>][]) {
-    for (const [expected, [text]] of Object.entries(needs)) {
-      const clean = synthesize(text, lang, join(dir, `${lang}-${expected}`));
+  for (const [lang, needs] of Object.entries(phrases) as [LangCode, Record<string, string | string[]>][]) {
+    for (const [expected, p] of Object.entries(needs)) {
+      const text = [p].flat()[0]!;
+      const clean = synthesize(text, lang, join(dir, `${set}-${lang}-${expected}`));
       for (const snr of conditions) {
         const audio = Number.isFinite(snr) ? mix(clean, snr) : clean;
         const t0 = Date.now();
@@ -245,7 +256,7 @@ async function speechEval(embedder: Embedder) {
     };
   });
   console.table(table);
-  return { model: size, rows, table };
+  return { model: size, set, rows, table };
 }
 
 const embedder = await createE5(threads);
@@ -259,8 +270,10 @@ const previous = (() => {
     return {};
   }
 })();
+const heldOutSpeech = speech?.set === 'heldout';
+if (heldOutSpeech) writeFileSync(join(OUT, `results-${speech.model}-heldout.json`), JSON.stringify({ at: new Date().toISOString(), speech }, null, 2));
 writeFileSync(
   join(OUT, 'results.json'),
-  JSON.stringify({ ...previous, at: new Date().toISOString(), calibration: SEMANTIC_CALIBRATION, text, crew, ...(speech ? { speech } : {}) }, null, 2),
+  JSON.stringify({ ...previous, at: new Date().toISOString(), calibration: SEMANTIC_CALIBRATION, text, crew, ...(speech && !heldOutSpeech ? { speech } : {}) }, null, 2),
 );
 console.log(`\nSaved ${join(OUT, 'results.json')}`);

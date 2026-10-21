@@ -8,6 +8,7 @@ export * from './catalog/safety';
 export * from './catalog/medical';
 export * from './matching/matcher';
 export * from './matching/semantic';
+export * from './matching/head';
 export * from './metrics/crewMetrics';
 export * from './cabin/protocol';
 export * from './cabin/hubProtocol';

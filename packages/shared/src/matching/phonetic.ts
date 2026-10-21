@@ -39,6 +39,8 @@ function foldThai(s: string): string {
   return mapChars(
     s
       .replace(/.์/g, '') // a letter under the silencer mark is not pronounced
+      .replace(/ำ/g, 'าม') // ำ sounds like า + ม (น้ำ = น้าม)
+      .replace(/เ(.)ีย/g, '$1ี') // Whisper often drops the เ–ีย glide (อาเจียน → อาจีน)
       .replace(/ห(?=[งญนมยรลว])/g, '') // leading ห only sets the tone (หนาว sounds like นาว)
       .replace(/[็-๋]/g, ''), // tone marks
     THAI_SAME,

@@ -13,6 +13,7 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { CONFIDENCE_THRESHOLD, SemanticNeedMatcher } from '@hearme/shared';
 import { createE5 } from '../ai';
+import { loadNeedHead } from '../head';
 import { inferenceThreads } from '../models';
 
 interface Row {
@@ -31,7 +32,7 @@ if (!files.length) {
   process.exit(0);
 }
 
-const matcher = await SemanticNeedMatcher.create(await createE5(inferenceThreads()));
+const matcher = await SemanticNeedMatcher.create(await createE5(inferenceThreads()), undefined, loadNeedHead());
 const pct = (n: number, d: number) => `${Math.round((100 * n) / Math.max(1, d))}%`;
 const cond = (snr: number | null) => (snr === null ? 'clean' : `${snr} dB SNR`);
 

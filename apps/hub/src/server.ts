@@ -31,6 +31,7 @@ const MIME: Record<string, string> = {
   '.webmanifest': 'application/manifest+json; charset=utf-8',
   '.svg': 'image/svg+xml',
   '.png': 'image/png',
+  '.mp4': 'video/mp4',
   '.jpg': 'image/jpeg',
   '.jpeg': 'image/jpeg',
   '.webp': 'image/webp',
@@ -130,6 +131,15 @@ export function createHandler(opts: HandlerOptions) {
       const t0 = Date.now();
       const transcript = await opts.ai.transcribe(samples, lang);
       return json(res, 200, await understandText(transcript, lang, parseTarget(url.searchParams.get('target')), Date.now() - t0));
+    }
+    if (path === '/api/asr' && req.method === 'POST') {
+      // Only the laptop running the hub (the demo stage) may change the speech model.
+      const from = req.socket.remoteAddress ?? '';
+      if (!['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(from)) return json(res, 403, { error: 'only from the hub laptop' });
+      const size = url.searchParams.get('size');
+      if (size !== 'small' && size !== 'base') return json(res, 400, { error: 'size must be small or base' });
+      void opts.ai.switchAsr(size);
+      return json(res, 202, { switching: size });
     }
     if (path === '/api/match' && req.method === 'POST') {
       const body = await readBody(req, MAX_JSON_BYTES);

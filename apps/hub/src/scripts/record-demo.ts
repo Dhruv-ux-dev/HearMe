@@ -10,7 +10,7 @@
  *   npm run record-demo     starts the hub if needed; needs Google Chrome, ffmpeg and macOS `say`
  */
 import { execFileSync, spawn, type ChildProcess } from 'node:child_process';
-import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { copyFileSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { BODY_AREAS, SYMPTOMS, translator } from '@hearme/shared';
@@ -303,11 +303,9 @@ async function main() {
     await sleep(2500);
 
     // 3. Speak Hindi → Whisper → e5
-    await caption('She taps the microphone and says in Hindi: “I need hot water for my medicine.”');
+    await caption('She holds the microphone and says in Hindi: “I need hot water for my medicine.”');
     await sleep(1500);
-    await press(PHONE, { label: hi('home.holdToSpeak') }); // tap to start …
-    await sleep(4500);
-    await press(PHONE, { label: hi('speech.tapToFinish') }); // … tap to finish
+    await press(PHONE, { label: hi('home.holdToSpeak') }, 4500); // hold to talk
     await caption('Whisper turns her voice into text and e5 works out what she needs. Both run on this laptop, with no internet.');
     await find(PHONE, { text: hi('review.send') }, 40000);
     await sleep(3500);
@@ -362,6 +360,7 @@ async function main() {
       '-loglevel', 'error', '-y', '-f', 'concat', '-safe', '0', '-i', join(WORK, 'frames.txt'),
       '-vf', `fps=25,scale=${W}:${H}:flags=lanczos,format=yuv420p`, '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '27', '-movflags', '+faststart', OUT,
     ]);
+    copyFileSync(OUT, join(ROOT, 'apps', 'ife', 'public', 'demo.mp4')); // served by the hub at /demo.mp4
     console.log(`Saved ${OUT} (${frames.length} frames)`);
   } finally {
     cleanup();

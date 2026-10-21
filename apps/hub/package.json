@@ -12,7 +12,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "rescore": "tsx src/scripts/rescore.ts",
-    "record-demo": "tsx src/scripts/record-demo.ts"
+    "record-demo": "tsx src/scripts/record-demo.ts",
+    "train": "tsx src/scripts/train-head.ts"
   },
   "dependencies": {
     "@hearme/shared": "*",

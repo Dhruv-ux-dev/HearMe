@@ -55,7 +55,7 @@ export function HoldToSpeak({ lang }: { lang: LangCode }) {
   const speech = currentSpeech();
   const startedAt = useRef(0);
   /** True while a pointer gesture is in progress; activations without one come from screen readers or keyboards. */
-  const viaPointer = useRef(false);
+  const lastPointer = useRef(0);
 
   useEffect(() => () => speech.cancel(), [speech]);
 
@@ -74,7 +74,6 @@ export function HoldToSpeak({ lang }: { lang: LangCode }) {
 
   const finish = async () => {
     if (phaseRef.current !== 'listening') return;
-    viaPointer.current = false;
     setPhase('processing');
     try {
       const { transcript, match } = await speech.stop();
@@ -92,6 +91,7 @@ export function HoldToSpeak({ lang }: { lang: LangCode }) {
 
   /** Pointer released: a real hold finishes; a quick tap switches to tap-to-finish. */
   const release = () => {
+    lastPointer.current = Date.now();
     if (phaseRef.current !== 'listening') return;
     if (Date.now() - startedAt.current < MIN_HOLD_MS) setTapMode(true);
     else finish();
@@ -99,17 +99,18 @@ export function HoldToSpeak({ lang }: { lang: LangCode }) {
 
   /** Pointer down: starts listening, or finishes when already listening in tap mode. */
   const pressIn = () => {
-    viaPointer.current = true;
+    lastPointer.current = Date.now();
     if (phaseRef.current === 'listening') finish();
     else start();
   };
 
-  /** Activation without a pointer (VoiceOver/TalkBack double-tap, keyboard): toggle. */
+  /**
+   * Activation without a pointer (VoiceOver/TalkBack double-tap, keyboard): toggle.
+   * The browser also sends a click right after every pointer press; that one
+   * was already handled by pressIn/release, so it is ignored.
+   */
   const activate = () => {
-    if (viaPointer.current) {
-      viaPointer.current = false;
-      return;
-    }
+    if (Date.now() - lastPointer.current < 800) return;
     if (phaseRef.current === 'idle') {
       start();
       setTapMode(true);

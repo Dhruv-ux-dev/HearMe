@@ -1223,3 +1223,41 @@
     display: none;
   }
 }
+
+/* Demo stage: recorded demo player (backup when the room's network fails). */
+.stage-video {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  background: rgba(5, 10, 22, 0.86);
+}
+.stage-video video {
+  width: min(92vw, 1400px);
+  max-height: 86vh;
+  border-radius: 14px;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.5);
+}
+.stage-video__close {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 0;
+  background: #fff;
+  color: var(--hm-navy);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+button.stage-chip {
+  font: inherit;
+  cursor: pointer;
+}
+button.stage-chip:disabled {
+  cursor: progress;
+  opacity: 0.7;
+}
