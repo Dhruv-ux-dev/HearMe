@@ -13,7 +13,7 @@ import { ActivityIndicator, BackHandler, Platform, Pressable, Text, View } from 
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { ConnectionPill, T } from './components/ui';
 import { NavContext, useNav, type Nav, type Overlay, type Tab } from './nav';
-import { connectHub, loadSession, registerOfflineCache, session, startAutosave } from './runtime';
+import { connectHub, loadSession, registerOfflineCache, session, startAutosave, unlockVoiceOnFirstTap } from './runtime';
 import { Home } from './screens/Home';
 import { Onboarding } from './screens/Onboarding';
 import { Overlays } from './screens/Overlays';
@@ -25,6 +25,7 @@ export default function App() {
   const [notice, setNotice] = useState<string | null>(null);
   useEffect(() => {
     registerOfflineCache();
+    unlockVoiceOnFirstTap();
     // Find the cabin hub first (quick), so onboarding can read the booking for this seat.
     Promise.all([loadSession(), connectHub().catch(() => false)]).then(([r]) => {
       if (r === 'corrupt') setNotice('Saved data could not be read and was cleared.');

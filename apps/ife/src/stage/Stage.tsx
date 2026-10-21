@@ -1,4 +1,5 @@
 import {
+  LANGUAGES,
   WebSocketBus,
   getAnnouncement,
   getNeed,
@@ -14,6 +15,7 @@ import {
 } from '@hearme/shared';
 import { ArrowLeft, ArrowRight, Cpu, Film, Megaphone, Mic, Monitor, QrCode, RotateCcw, Smartphone, Volume2, VolumeX, WifiOff, X, Zap } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { createBrowserVoice } from '@hearme/shared/tts';
 import { hubBaseUrl, useHubStatus } from '../common/hub';
 import { CabinNoise } from '../common/sounds';
 
@@ -100,6 +102,11 @@ function describeEvent(e: HubEvent): Item {
   };
 }
 
+function languageName(bcp47: string): string {
+  const code = bcp47.split('-')[0];
+  return LANGUAGES.find((l) => l.code === code)?.englishName ?? bcp47;
+}
+
 /** "warming up…" while the practice run happens, then the typical time per request. */
 function modelLabel(m?: { state: string; typicalMs?: number }): string {
   if (!m) return '…';
@@ -119,6 +126,39 @@ export function Stage() {
   const noise = useMemo(() => new CabinNoise(), []);
   const crewState = useRef<CrewTabletState | null>(null);
   const [reload, setReload] = useState(0);
+  const [spoken, setSpoken] = useState<{ text: string; lang: string; state: 'speaking' | 'played' | 'failed' } | null>(null);
+
+  // The phone is an iframe, which may not speak by itself: the stage reads its replies aloud
+  // (the presenter's clicks allow it) and tells the phone what really happened.
+  useEffect(() => {
+    const voice = createBrowserVoice();
+    let clear: ReturnType<typeof setTimeout> | undefined;
+    const onMessage = (e: MessageEvent) => {
+      const d = e.data as { source?: string; type?: string; id?: number; text?: unknown; bcp47?: unknown };
+      if (e.origin !== window.location.origin || d?.source !== 'hearme-phone') return;
+      const answer = (msg: object) => (e.source as Window | null)?.postMessage({ source: 'hearme-stage', id: d.id, ...msg }, window.location.origin);
+      if (d.type === 'stop') return voice?.stop();
+      if (d.type !== 'speak' || typeof d.text !== 'string' || typeof d.bcp47 !== 'string' || d.text.length > 500) return;
+      if (!voice) return answer({ event: 'end', outcome: 'no-voice' });
+      const lang = d.bcp47;
+      clearTimeout(clear);
+      setSpoken({ text: d.text, lang, state: 'speaking' });
+      voice.speak(d.text, lang, { onStart: () => answer({ event: 'start' }) }).done.then((outcome) => {
+        answer({ event: 'end', outcome });
+        setSpoken((cur) => (cur && cur.text === d.text ? { ...cur, state: outcome === 'played' ? 'played' : 'failed' } : cur));
+        clear = setTimeout(() => setSpoken(null), 4000);
+      });
+    };
+    const unlock = () => voice?.unlock();
+    window.addEventListener('message', onMessage);
+    window.addEventListener('pointerdown', unlock, { once: true, capture: true });
+    return () => {
+      window.removeEventListener('message', onMessage);
+      window.removeEventListener('pointerdown', unlock, true);
+      clearTimeout(clear);
+      voice?.stop();
+    };
+  }, []);
 
   useEffect(() => () => noise.stop(), [noise]);
   useEffect(() => noise.setVolume(volume), [noise, volume]);
@@ -275,6 +315,21 @@ export function Stage() {
           {passenger === 'phone' ? (
             <div className="stage-phone">
               <iframe key={`p${reload}`} title="Passenger phone" src="/mobile/?seat=23C&stage=1" allow="microphone; autoplay" />
+              {spoken && (
+                <div className={`stage-spoken ${spoken.state}`} role="status" aria-live="polite">
+                  {spoken.state === 'failed' ? <VolumeX aria-hidden /> : <Volume2 aria-hidden />}
+                  <span>
+                    <small>
+                      {spoken.state === 'failed'
+                        ? 'Could not play: shown as text'
+                        : spoken.state === 'speaking'
+                          ? `Reading aloud in ${languageName(spoken.lang)}…`
+                          : `Read aloud in ${languageName(spoken.lang)}`}
+                    </small>
+                    <q lang={spoken.lang}>{spoken.text}</q>
+                  </span>
+                </div>
+              )}
             </div>
           ) : (
             <div className="stage-ife">

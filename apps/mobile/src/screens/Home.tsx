@@ -10,8 +10,9 @@ import { Pressable, ScrollView, Text, View } from 'react-native';
 import { NeedIcon } from '../components/Icon';
 import { Btn, Card, StatusChip, T } from '../components/ui';
 import { HoldToSpeak } from '../components/Voice';
+import { VoiceCheck } from '../components/VoiceCheck';
 import { useNav } from '../nav';
-import { session } from '../runtime';
+import { inStage, session } from '../runtime';
 import { useTheme } from '../theme';
 
 export function Home({ lang }: { lang: LangCode }) {
@@ -20,8 +21,12 @@ export function Home({ lang }: { lang: LangCode }) {
   const profile = useSession(session, (s) => s.profile);
   const requests = useSession(session, (s) => s.requests);
   const link = useSession(session, (s) => s.link);
+  const prefs = useSession(session, (s) => s.prefs);
   const tr = translator(lang);
   const current = requests.find((r) => isActive(r) || r.status === 'failed');
+  // Ask once whether replies can be heard (and unlock speech with that tap); never nag again after an answer.
+  // (Not inside the demo stage: there the stage's own speakers read replies aloud.)
+  const askVoice = prefs.replyChannels.includes('voice') && !prefs.voiceCheck && !inStage;
 
   return (
     <View style={{ flex: 1 }}>
@@ -45,6 +50,8 @@ export function Home({ lang }: { lang: LangCode }) {
         )}
 
         {current && <CurrentRequest r={current} lang={lang} />}
+
+        {askVoice && !current && <VoiceCheck lang={lang} />}
 
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: th.space.md }}>
           {COMMON_NEEDS.slice(0, 7).map((n) => (

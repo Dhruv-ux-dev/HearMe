@@ -8,6 +8,7 @@ import {
   type Speaker,
   type SpeechRecognizer,
 } from '@hearme/shared';
+import { createBrowserVoice, type ReplyVoice, type SpeakOutcome } from '@hearme/shared/tts';
 import { HubSpeechRecognizer, MicRecorder } from '@hearme/shared/web';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Haptics from 'expo-haptics';
@@ -91,16 +92,126 @@ export function currentSpeech(): SpeechRecognizer {
   return hubSpeech && hubUrl && MicRecorder.supported() ? hubSpeech : mockSpeech;
 }
 
-/** On-device text-to-speech (expo-speech). Uses the phone's installed voices, which work offline on most devices. */
+// ── Reading replies aloud ─────────────────────────────────────────────────
+/**
+ * Native: expo-speech, with the phone's installed voices (most work offline).
+ * Reports whether speech really started, so the app can say so when it did not.
+ */
+function nativeVoice(): ReplyVoice {
+  return {
+    async hasVoice(bcp47) {
+      const voices = await Speech.getAvailableVoicesAsync().catch(() => []);
+      if (!voices.length) return null;
+      const primary = bcp47.split('-')[0]!.toLowerCase();
+      return voices.some((v) => v.language.replace('_', '-').toLowerCase().split('-')[0] === primary);
+    },
+    speak(text, bcp47, options = {}) {
+      let settle!: (o: SpeakOutcome) => void;
+      const done = new Promise<SpeakOutcome>((r) => (settle = r));
+      let started = false;
+      const timer = setTimeout(() => !started && settle('blocked'), 5000);
+      const end = (o: SpeakOutcome) => {
+        clearTimeout(timer);
+        settle(o);
+      };
+      Speech.stop();
+      Speech.speak(text, {
+        language: bcp47,
+        rate: options.rate ?? 0.9,
+        onStart: () => {
+          started = true;
+          options.onStart?.();
+        },
+        onDone: () => end('played'),
+        onStopped: () => end(started ? 'played' : 'stopped'),
+        onError: () => end('blocked'),
+      });
+      return { done, stop: () => void Speech.stop() };
+    },
+    unlock: () => undefined,
+    stop: () => void Speech.stop(),
+  };
+}
+
+/**
+ * Inside the demo stage the phone is an iframe, which browsers do not let
+ * speak on its own; the stage page (where the presenter clicks) reads the
+ * reply aloud for it and reports back, so the phone's display stays truthful.
+ */
+function stageVoice(): ReplyVoice {
+  const w = globalThis as unknown as Window;
+  let seq = 0;
+  const pending = new Map<number, { settle: (o: SpeakOutcome) => void; onStart?: () => void }>();
+  w.addEventListener('message', (e: MessageEvent) => {
+    const d = e.data as { source?: string; id?: number; event?: string; outcome?: SpeakOutcome };
+    if (e.origin !== w.location.origin || d?.source !== 'hearme-stage' || typeof d.id !== 'number') return;
+    const p = pending.get(d.id);
+    if (!p) return;
+    if (d.event === 'start') p.onStart?.();
+    else if (d.event === 'end') {
+      pending.delete(d.id);
+      p.settle(d.outcome ?? 'played');
+    }
+  });
+  const post = (msg: object) => w.parent.postMessage({ source: 'hearme-phone', ...msg }, w.location.origin);
+  return {
+    hasVoice: async () => null,
+    speak(text, bcp47, options = {}) {
+      const id = ++seq;
+      let settle!: (o: SpeakOutcome) => void;
+      const done = new Promise<SpeakOutcome>((r) => (settle = r));
+      pending.set(id, { settle, onStart: options.onStart });
+      setTimeout(() => {
+        if (pending.delete(id)) settle('blocked');
+      }, 20_000);
+      post({ type: 'speak', id, text, bcp47 });
+      return { done, stop: () => post({ type: 'stop' }) };
+    },
+    unlock: () => undefined,
+    stop: () => post({ type: 'stop' }),
+  };
+}
+
+/** No speech engine at all: say so instead of failing silently. */
+const silentVoice: ReplyVoice = {
+  hasVoice: async () => false,
+  speak: () => ({ done: Promise.resolve('no-voice'), stop: () => undefined }),
+  unlock: () => undefined,
+  stop: () => undefined,
+};
+
+/** True when this phone is the one embedded in the demo stage (the stage reads replies aloud for it). */
+export const inStage = (() => {
+  if (Platform.OS !== 'web') return false;
+  const w = globalThis as unknown as Partial<Window>;
+  try {
+    return !!w.location && new URLSearchParams(w.location.search).get('stage') === '1' && w.parent !== w;
+  } catch {
+    return false;
+  }
+})();
+
+/** Reads crew replies aloud in the passenger's language (see `@hearme/shared/tts`). */
+export const replyVoice: ReplyVoice = Platform.OS !== 'web' ? nativeVoice() : inStage ? stageVoice() : (createBrowserVoice() ?? silentVoice);
+
+/** Browsers only allow speech after a tap: unlock it on the passenger's first one, so replies can speak when they arrive. */
+export function unlockVoiceOnFirstTap(): void {
+  if (Platform.OS !== 'web') return;
+  const w = globalThis as unknown as Window;
+  const once = () => {
+    replyVoice.unlock();
+    w.removeEventListener('pointerdown', once, true);
+    w.removeEventListener('keydown', once, true);
+  };
+  w.addEventListener('pointerdown', once, true);
+  w.addEventListener('keydown', once, true);
+}
+
+/** The simple `Speaker` shape, for code that only needs to start speech. */
 export const speaker: Speaker = {
-  available: () => true,
-  speak: (text, bcp47) => {
-    Speech.stop();
-    Speech.speak(text, { language: bcp47, rate: 0.9 });
-  },
-  stop: () => {
-    Speech.stop();
-  },
+  available: () => replyVoice !== silentVoice,
+  speak: (text, bcp47) => void replyVoice.speak(text, bcp47),
+  stop: () => replyVoice.stop(),
 };
 
 /** Haptic "buzz" (vibration on web where supported). */

@@ -29,7 +29,7 @@ import { NeedIcon } from '../components/Icon';
 import { Btn, Card, Sheet, T } from '../components/ui';
 import { useRouteTranscript } from '../components/Voice';
 import { useNav, type Overlay } from '../nav';
-import { buzzer, currentSpeech, session, speaker } from '../runtime';
+import { buzzer, currentSpeech, replyVoice, session } from '../runtime';
 import { CareSheet } from './Care';
 import { useTheme } from '../theme';
 
@@ -374,11 +374,20 @@ function ReplyModal({ lang }: { lang: LangCode }) {
   const text = r?.reply ? getReply(r.reply.replyId).text[lang] : '';
   const voice = prefs.replyChannels.includes('voice');
   const buzz = prefs.replyChannels.includes('buzz');
+  const info = languageInfo(lang);
+  // What really happened to the spoken reply, so the passenger is never told it played when it did not.
+  const [play, setPlay] = useState<'idle' | 'speaking' | 'played' | 'blocked' | 'no-voice'>('idle');
+  const say = () => {
+    setPlay('speaking');
+    replyVoice.speak(text, info.bcp47).done.then((o) => setPlay(o === 'stopped' ? 'idle' : o));
+  };
   useEffect(() => {
     if (!id || !text) return;
     AccessibilityInfo.announceForAccessibility(text);
     if (buzz) buzzer.buzz();
-    if (voice) speaker.speak(text, languageInfo(lang).bcp47);
+    if (voice) say();
+    return () => replyVoice.stop();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, text, voice, buzz, lang]);
   if (!r?.reply) return null;
   const need = getNeed(r.needId);
@@ -404,6 +413,17 @@ function ReplyModal({ lang }: { lang: LangCode }) {
             <T v="heading" live="assertive">
               {text}
             </T>
+            {voice && play !== 'idle' && (
+              <T v="caption" color={play === 'blocked' || play === 'no-voice' ? th.p.warning : th.p.textMuted}>
+                {play === 'speaking'
+                  ? `🔊 ${tr('voice.speakingIn', { language: info.nativeName })}`
+                  : play === 'played'
+                    ? `✓ ${tr('voice.spoke', { language: info.nativeName })}`
+                    : play === 'blocked'
+                      ? tr('voice.blocked')
+                      : tr('voice.noVoice', { language: info.nativeName })}
+              </T>
+            )}
           </Card>
           {need && (
             <View style={{ alignSelf: 'center', backgroundColor: th.p.successSoft, borderRadius: th.radius.lg, padding: th.space.lg }}>
@@ -415,7 +435,7 @@ function ReplyModal({ lang }: { lang: LangCode }) {
               <Pressable
                 key={c.key}
                 disabled={c.key !== 'voice' || !voice}
-                onPress={() => speaker.speak(text, languageInfo(lang).bcp47)}
+                onPress={say}
                 accessibilityRole={c.key === 'voice' ? 'button' : 'text'}
                 accessibilityLabel={c.key === 'voice' ? tr('reply.playAgain') : c.label}
                 accessibilityState={{ disabled: !c.on }}

@@ -172,6 +172,11 @@ export interface AccessibilityPrefs {
   /** How crew replies are delivered. Text is always shown. */
   replyChannels: ReplyChannel[];
   reduceMotion: boolean;
+  /**
+   * Result of the passenger's voice check ("Can you hear the crew's replies?"):
+   * heard it, did not hear it, or the device has no voice for their language.
+   */
+  voiceCheck?: 'ok' | 'not_heard' | 'no_voice';
 }
 
 export interface Announcement {

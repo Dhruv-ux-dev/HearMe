@@ -34,6 +34,7 @@ import { useEffect, useReducer, useState } from 'react';
 import { Alert, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { NeedIcon } from '../components/Icon';
 import { Btn, Card, Segmented, StatusChip, T, ToggleRow } from '../components/ui';
+import { VoiceCheck } from '../components/VoiceCheck';
 import { useNav } from '../nav';
 import { clearStoredSession, connectHub, forgetHub, link, mockSpeech, session, useHubUrl } from '../runtime';
 import { useTheme } from '../theme';
@@ -312,6 +313,7 @@ export function SettingsTab({ lang }: { lang: LangCode }) {
         {tr('settings.repliesHint')}
       </T>
       <ToggleRow label={tr('channel.voice')} value={prefs.replyChannels.includes('voice')} onChange={(v) => toggleChannel('voice', v)} />
+      {prefs.replyChannels.includes('voice') && <VoiceCheck lang={lang} inSettings />}
       <ToggleRow label={tr('channel.buzz')} value={prefs.replyChannels.includes('buzz')} onChange={(v) => toggleChannel('buzz', v)} />
 
       {section(tr('settings.needs'))}

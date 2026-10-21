@@ -1,24 +1,21 @@
 import type { Speaker } from '@hearme/shared';
+import { createBrowserVoice } from '@hearme/shared/tts';
 
 /**
- * Text-to-speech through the browser's Web Speech API. On a real seatback this
- * would route to the passenger's headphone jack via the IFE platform's audio API
- * (not integrated here). Many browsers ship offline voices; if none exists for
- * the language, `available()` still returns true and the browser may stay silent,
- * so text is always shown as well.
+ * Text-to-speech through the browser's Web Speech API, with the shared voice
+ * choice (the passenger's language, on-device voices first). On a real
+ * seatback this would route to the headphone jack via the IFE platform's
+ * audio API (not integrated here). Text is always shown as well.
  */
+const voice = typeof window !== 'undefined' ? createBrowserVoice() : null;
+
 export const browserSpeaker: Speaker = {
-  available: () => typeof window !== 'undefined' && 'speechSynthesis' in window,
+  available: () => voice !== null,
   speak(text, bcp47) {
-    if (!this.available()) return;
-    window.speechSynthesis.cancel();
-    const u = new SpeechSynthesisUtterance(text);
-    u.lang = bcp47;
-    u.rate = 0.9;
-    window.speechSynthesis.speak(u);
+    void voice?.speak(text, bcp47);
   },
   stop() {
-    if (this.available()) window.speechSynthesis.cancel();
+    voice?.stop();
   },
 };
 
