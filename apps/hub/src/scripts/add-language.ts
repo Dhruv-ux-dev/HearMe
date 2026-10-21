@@ -44,6 +44,22 @@ const LANGS: Record<string, { nllb: string; whisper?: string }> = {
   zh: { nllb: 'zho_Hans', whisper: 'chinese' },
 };
 
+/**
+ * Keep the translation proper: stop at the first word in another script
+ * (non-Latin targets) and drop words repeated back to back.
+ */
+function keepTarget(text: string, script: string): string {
+  const own = new RegExp(`\\p{Script=${script}}`, 'u');
+  const letter = /\p{L}/u;
+  const kept: string[] = [];
+  for (const word of text.trim().split(/\s+/)) {
+    if (script !== 'Latn' && letter.test(word) && !own.test(word)) break;
+    if (word === '-' || word === kept[kept.length - 1]) continue;
+    kept.push(word);
+  }
+  return kept.join(' ');
+}
+
 async function draft(code: string): Promise<LanguagePack> {
   const lang = LANGS[code];
   if (!lang) throw new Error(`No translation code for "${code}". Known: ${Object.keys(LANGS).join(', ')}`);
@@ -53,6 +69,7 @@ async function draft(code: string): Promise<LanguagePack> {
     dtype: { encoder_model: 'q8', decoder_model_merged: 'q8' },
     session_options: { intraOpNumThreads: inferenceThreads(), interOpNumThreads: 1 },
   } as never)) as unknown as (texts: string[], opts: Record<string, unknown>) => Promise<{ translation_text: string }[]>;
+  const script = lang.nllb.split('_')[1]!;
   const needs: Record<string, string[]> = {};
   const examples: Record<string, string[]> = {};
   for (const need of NEEDS) {
@@ -61,10 +78,15 @@ async function draft(code: string): Promise<LanguagePack> {
     const isThing = !/^(I |My |How |Help |Please |Talk |Someone )/.test(label);
     const words = [...new Set([label, ...(need.phrases.en ?? []).slice(0, 3)])];
     const sentences = isThing ? [`I need ${lower}.`, `Can I have ${lower}, please?`] : [`Excuse me, ${lower}.`];
-    const out = await translate([...words, ...sentences], { src_lang: 'eng_Latn', tgt_lang: lang.nllb, max_new_tokens: 48 });
-    const clean = (s: string) => s.trim().replace(/[.!?。।]+$/u, '');
-    needs[need.id] = [...new Set(out.slice(0, words.length).map((o) => clean(o.translation_text)))].filter((w) => w && w.length <= 40);
-    examples[need.id] = out.slice(words.length).map((o) => o.translation_text.trim());
+    // One text at a time: batched generation runs on past the end of shorter sentences.
+    const out: string[] = [];
+    for (const text of [...words, ...sentences]) {
+      const [r] = await translate([text], { src_lang: 'eng_Latn', tgt_lang: lang.nllb, max_new_tokens: 40 });
+      out.push(keepTarget(r?.translation_text ?? '', script));
+    }
+    const clean = (s: string) => s.replace(/[.!?。।]+$/u, '').trim();
+    needs[need.id] = [...new Set(out.slice(0, words.length).map(clean))].filter((w) => w && w.length <= 40);
+    examples[need.id] = out.slice(words.length).filter(Boolean);
     process.stdout.write('.');
   }
   console.log();
@@ -72,7 +94,7 @@ async function draft(code: string): Promise<LanguagePack> {
     code,
     name: languageName(code),
     ...(lang.whisper ? { whisper: lang.whisper } : {}),
-    script: lang.nllb.split('_')[1],
+    script,
     draft: 'machine',
     note: 'Drafted offline by NLLB-200 from the English catalogue. Used only to understand requests, never shown to passengers. Needs native review.',
     templates: ['{k}'],

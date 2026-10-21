@@ -171,6 +171,8 @@ describe('cabin hub', () => {
     expect(m.match.candidates[0].needId).toBe('blanket');
     const b = await (await fetch(`${base}/api/booking?seat=22B`)).json();
     expect(b.profile).toMatchObject({ lang: 'en', speechLang: 'bn' });
+    const r = await (await fetch(`${base}/api/languages/reload`, { method: 'POST' })).json();
+    expect(r.packs).toContain('bn');
   });
 
   it('serves static files without leaving the static folder', async () => {
