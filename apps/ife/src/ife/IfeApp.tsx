@@ -40,7 +40,7 @@ export type IfeScreen =
   | { name: 'safety' }
   | { name: 'captions' }
   | { name: 'settings' }
-  | { name: 'care' };
+  | { name: 'care'; from?: 'home' };
 
 export interface IfeAppProps {
   session: PassengerSession;
@@ -223,7 +223,7 @@ export function IfeApp({ session, link, seat, idleMs = 180_000, idleGraceSeconds
         {screen.name === 'care' && (
           <CareScreen
             lang={lang}
-            onBack={() => go({ name: 'review', needId: 'unwell' })}
+            onBack={() => go(screen.from === 'home' ? { name: 'home' } : { name: 'review', needId: 'unwell' })}
             onSend={(medical) => {
               const res = session.submit({ needId: 'unwell', source: 'tap', medical });
               if (res.ok) go({ name: 'status', requestId: res.request.id });

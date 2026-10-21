@@ -1261,3 +1261,66 @@ button.stage-chip:disabled {
   cursor: progress;
   opacity: 0.7;
 }
+
+/* Crew console: heat view, seat details, handover button. */
+.crew2-heat {
+  margin-left: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font: inherit;
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid #2a3a5c;
+  background: transparent;
+  color: #9fb0d0;
+  cursor: pointer;
+}
+.crew2-heat svg {
+  width: 13px;
+  height: 13px;
+}
+.crew2-heat.on {
+  background: #ff8a65;
+  border-color: #ff8a65;
+  color: #0b1630;
+}
+.crew2-seat.heat {
+  background: color-mix(in srgb, #ff8a65 calc(var(--heat, 0) * 100%), #1a2742);
+  color: #0b1630;
+  font-weight: 800;
+}
+.crew2-seat.picked {
+  outline: 2px solid #fff;
+  outline-offset: 1px;
+}
+.crew2-seatcard {
+  position: relative;
+  margin-top: 10px;
+  display: grid;
+  gap: 4px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: #0d1628;
+  border: 1px solid #2a3a5c;
+  font-size: 13px;
+  color: #c9d4ea;
+}
+.crew2-seatcard b {
+  font-size: 18px;
+  color: #fff;
+}
+.crew2-seatcard em {
+  font-style: normal;
+  margin-right: 8px;
+}
+.crew2-seatcard .crew2-icon {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+}
+.crew2-btn.ghost {
+  background: transparent;
+  border: 1px solid #2a3a5c;
+}

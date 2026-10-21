@@ -135,6 +135,10 @@ export function HomeScreen({ session, lang, go }: { session: PassengerSession; l
             <span className="ife-tile__label">{tr('home.more')}</span>
           </button>
         </div>
+        {/* Feeling unwell goes straight to Care Mode, as on the phone. */}
+        <button className="ife-btn ife-btn--secondary ife-btn--wide" onClick={() => go({ name: 'care', from: 'home' })}>
+          <HeartPulse aria-hidden /> {tr('care.open')}
+        </button>
         <button className="ife-btn ife-btn--secondary ife-btn--wide" onClick={() => go({ name: 'request', category: 'private' })}>
           <Lock aria-hidden /> {tr('home.private')}
         </button>

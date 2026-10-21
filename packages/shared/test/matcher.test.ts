@@ -93,3 +93,11 @@ describe('trained need head', () => {
     expect(s.confidence).toBeLessThan(head.predict(new Float32Array([1, 0]))[0]!.p);
   });
 });
+
+describe('Thai has no spaces', () => {
+  it('does not read "อยาก" (want) as "ยา" (medicine)', () => {
+    const r = m('อยากได้ผ้าห่ม');
+    expect(r.candidates[0]?.needId).toBe('blanket');
+    expect(r.candidates.some((c) => c.needId === 'medicine')).toBe(false);
+  });
+});

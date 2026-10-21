@@ -13,7 +13,7 @@ import {
 } from '@hearme/shared';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import WebSocket, { WebSocketServer } from 'ws';
-import { AiEngine, hasSpeech } from '../src/ai';
+import { AiEngine, hasSpeech, trimSilence } from '../src/ai';
 import { CabinRelay } from '../src/relay';
 import { createHandler } from '../src/server';
 
@@ -173,5 +173,45 @@ describe('speech gate', () => {
   it('ignores silence (Whisper would invent words)', () => {
     expect(hasSpeech(new Float32Array(16000))).toBe(false);
     expect(hasSpeech(new Float32Array(16000).map((_, i) => 0.2 * Math.sin(i / 4)))).toBe(true);
+  });
+});
+
+describe('AI engine resilience', () => {
+  const tone = (seconds: number) => Float32Array.from({ length: 16000 * seconds }, (_, i) => 0.2 * Math.sin(i / 5));
+
+  it('trims the silence around speech', () => {
+    const clip = new Float32Array(16000 * 3);
+    clip.set(tone(1), 16000);
+    const trimmed = trimSilence(clip)!;
+    expect(trimmed.length).toBeGreaterThan(16000 * 0.9);
+    expect(trimmed.length).toBeLessThan(16000 * 1.6);
+  });
+
+  it('reloads the speech model after two failures and falls back to keywords when meaning-matching fails', async () => {
+    let loads = 0;
+    let embedderBroken = false;
+    const engine = new AiEngine({
+      asrSize: 'small',
+      threads: 1,
+      loadAsr: async () => {
+        loads++;
+        return { transcribe: async () => Promise.reject(new Error('onnx failed')) };
+      },
+      loadEmbedder: async () => ({
+        embed: async (texts: string[]) => {
+          if (embedderBroken) throw new Error('embedder down');
+          return texts.map(() => new Float32Array(384).fill(0.05));
+        },
+      }),
+    });
+    await engine.start();
+    await expect(engine.transcribe(tone(1), 'hi')).rejects.toThrow('onnx failed');
+    await expect(engine.transcribe(tone(1), 'hi')).rejects.toThrow('onnx failed');
+    await new Promise((r) => setTimeout(r, 20));
+    expect(loads).toBe(2);
+
+    embedderBroken = true;
+    const m = await engine.matchNeeds('hot water for my medicine');
+    expect(m.candidates[0]?.needId).toBe('hot_water');
   });
 });

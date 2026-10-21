@@ -12,6 +12,7 @@ import {
   getReply,
   isUrgentMedical,
   languageInfo,
+  lookupBookingOnHub,
   medicalSummaryLines,
   t,
   ago,
@@ -19,16 +20,18 @@ import {
   type CrewTabletApi,
   type HubEvent,
   type LangCode,
+  type PassengerProfile,
   type ProfileTag,
   type ReplyId,
 } from '@hearme/shared';
 import { useExternal } from '@hearme/shared/react';
 import { MicRecorder, MicUnavailableError, recordAndUnderstand } from '@hearme/shared/web';
-import { Activity, Info, Keyboard, Lock, Megaphone, Mic, MousePointerClick, RotateCcw, Square, Stethoscope, Users, Wifi, WifiOff, X } from 'lucide-react';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { Activity, FileText, Flame, Info, Keyboard, Lock, Megaphone, Mic, MousePointerClick, Printer, RotateCcw, Square, Stethoscope, Users, Wifi, WifiOff, X } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { NeedIcon } from '../common/Icon';
 import { detectHub, hubBaseUrl } from '../common/hub';
 import { playChime } from '../common/sounds';
+import { openFlightReport, openMedicalHandover } from './reports';
 
 /**
  * Crew console — "Crew app: requests by seat, with one-tap replies" from the
@@ -102,6 +105,8 @@ function Console({ tablet, viaHub }: { tablet: CrewTabletApi; viaHub: boolean })
   const [info, setInfo] = useState(false);
   const [heard, setHeard] = useState<HubEvent | null>(null);
   const [connected, setConnected] = useState(true);
+  const [heat, setHeat] = useState(false);
+  const [seatInfo, setSeatInfo] = useState<string | null>(null);
   useTick();
 
   // Chime when a new request arrives (an urgent tone for serious medical requests).
@@ -134,6 +139,9 @@ function Console({ tablet, viaHub }: { tablet: CrewTabletApi; viaHub: boolean })
   const metrics = computeCrewMetrics(state.requests);
   const openSeats = new Map(state.requests.filter((r) => r.status === 'new').map((r) => [r.seat, isUrgentMedical(r.medical) ? 'urgent' : 'open']));
   const doneSeats = new Set(state.requests.filter((r) => r.status === 'replied' || r.status === 'thanked').map((r) => r.seat));
+  const perSeat = new Map<string, number>();
+  for (const r of state.requests) perSeat.set(r.seat, (perSeat.get(r.seat) ?? 0) + 1);
+  const busiest = Math.max(1, ...perSeat.values());
 
   return (
     <div className={`crew2${embedded ? ' crew2--embedded' : ''}`} lang="ja">
@@ -150,12 +158,16 @@ function Console({ tablet, viaHub }: { tablet: CrewTabletApi; viaHub: boolean })
           <Metric label="Median answer" value={formatDuration(metrics.medianAnswerMs)} />
           <Metric label="Understood 1st time" value={metrics.firstTimeRate === null ? '—' : `${Math.round(metrics.firstTimeRate * 100)}%`} />
           <Metric label="Needed pictures" value={metrics.pictureRate === null ? '—' : `${Math.round(metrics.pictureRate * 100)}%`} />
+          <Metric label="Oldest wait" value={metrics.oldestOpenMs === null ? '—' : formatDuration(metrics.oldestOpenMs)} alert={(metrics.oldestOpenMs ?? 0) > 120_000} />
           <Metric label="Medical" value={String(metrics.medical)} alert={metrics.medical > 0} />
           <Metric label="Languages" value={Object.keys(metrics.byLang).length ? Object.keys(metrics.byLang).join(' ') : '—'} />
         </div>
         <label className="crew2-auto" lang="en">
           <input type="checkbox" checked={state.autoReply} onChange={(e) => tablet.setAutoReply(e.target.checked)} /> Auto-reply
         </label>
+        <button className="crew2-icon" onClick={() => openFlightReport(state)} title="Post-flight report (print or save as PDF)" aria-label="Flight report">
+          <FileText aria-hidden />
+        </button>
         <button className="crew2-icon" onClick={() => tablet.reset()} title="Clear all requests (demo reset)" aria-label="Reset demo">
           <RotateCcw aria-hidden />
         </button>
@@ -178,7 +190,12 @@ function Console({ tablet, viaHub }: { tablet: CrewTabletApi; viaHub: boolean })
 
       <div className="crew2-body">
         <section className="crew2-map" aria-label="Seat map rows 21–26" lang="en">
-          <h2>Cabin · rows 21–26</h2>
+          <h2>
+            Cabin · rows 21–26
+            <button className={`crew2-heat${heat ? ' on' : ''}`} onClick={() => setHeat(!heat)} aria-pressed={heat} title="Colour seats by how often they asked this flight">
+              <Flame aria-hidden /> Heat
+            </button>
+          </h2>
           <div className="crew2-cols">
             <span />
             {['A', 'B', 'C', '', 'D', 'E', 'F'].map((c, i) => (
@@ -196,12 +213,16 @@ function Console({ tablet, viaHub }: { tablet: CrewTabletApi; viaHub: boolean })
                 return (
                   <button
                     key={col}
-                    className={`crew2-seat${st ? ` ${st}` : doneSeats.has(seat) ? ' done' : ''}`}
+                    className={`crew2-seat${heat ? ' heat' : st ? ` ${st}` : doneSeats.has(seat) ? ' done' : ''}${seatInfo === seat ? ' picked' : ''}`}
+                    style={heat ? ({ '--heat': (perSeat.get(seat) ?? 0) / busiest } as CSSProperties) : undefined}
                     title={seat}
-                    aria-label={`${seat}${st ? ', request waiting' : ''}`}
-                    onClick={() => req && setSelected(req.requestId)}
+                    aria-label={`${seat}${st ? ', request waiting' : ''}${perSeat.get(seat) ? `, ${perSeat.get(seat)} requests this flight` : ''}`}
+                    onClick={() => {
+                      setSeatInfo(seat);
+                      if (req) setSelected(req.requestId);
+                    }}
                   >
-                    {st ? seat : ''}
+                    {heat ? (perSeat.get(seat) ?? '') : st ? seat : ''}
                   </button>
                 );
               })}
@@ -218,6 +239,7 @@ function Console({ tablet, viaHub }: { tablet: CrewTabletApi; viaHub: boolean })
               <i className="done" /> answered
             </li>
           </ul>
+          {seatInfo && <SeatCard seat={seatInfo} requests={state.requests} viaHub={viaHub} onClose={() => setSeatInfo(null)} />}
           {heard && <Heard e={heard} />}
         </section>
 
@@ -256,6 +278,51 @@ function Console({ tablet, viaHub }: { tablet: CrewTabletApi; viaHub: boolean })
           )}
         </section>
       </div>
+    </div>
+  );
+}
+
+/** Who sits here, before walking over: language, needs shared at check-in, this flight's requests. */
+function SeatCard({ seat, requests, viaHub, onClose }: { seat: string; requests: CrewRequest[]; viaHub: boolean; onClose: () => void }) {
+  const [booking, setBooking] = useState<PassengerProfile | null>(null);
+  useEffect(() => {
+    setBooking(null);
+    if (!viaHub) return;
+    let live = true;
+    void lookupBookingOnHub(hubBaseUrl(), seat).then((p) => live && setBooking(p));
+    return () => {
+      live = false;
+    };
+  }, [seat, viaHub]);
+  const mine = requests.filter((r) => r.seat === seat);
+  const lang = booking?.lang ?? mine[0]?.lang;
+  const tags = booking?.shareTagsWithCrew === false ? [] : (booking?.tags ?? mine[0]?.tags ?? []);
+  return (
+    <div className="crew2-seatcard" lang="en">
+      <button className="crew2-icon" onClick={onClose} aria-label="Close seat details">
+        <X aria-hidden />
+      </button>
+      <b>{seat}</b>
+      {lang ? (
+        <span>
+          <span lang="ja">{LANG_JA[lang]}</span> · {languageInfo(lang).englishName}
+        </span>
+      ) : (
+        <span>No booking details</span>
+      )}
+      {tags.length > 0 && (
+        <span>
+          {tags.map((tag) => (
+            <em key={tag} lang="ja">
+              {tagJa(tag)} <small lang="en">{tagEn(tag)}</small>
+            </em>
+          ))}
+        </span>
+      )}
+      <span>
+        {mine.length} request{mine.length === 1 ? '' : 's'} this flight
+        {mine.length > 0 && `: ${mine.map((r) => getNeed(r.needId)?.label.en ?? r.needId).join(', ')}`}
+      </span>
     </div>
   );
 }
@@ -373,6 +440,9 @@ function Detail({ r, tablet, viaHub }: { r: CrewRequest; tablet: CrewTabletApi; 
           </ul>
           <button className="crew2-btn" onClick={() => tablet.announce('doctor_call')}>
             <Megaphone aria-hidden /> 医師の呼び出し字幕 <small lang="en">Ask for a doctor (captions, all languages)</small>
+          </button>
+          <button className="crew2-btn ghost" onClick={() => openMedicalHandover(r, tablet.getState())}>
+            <Printer aria-hidden /> 引き継ぎ書 <small lang="en">Handover sheet for the doctor / ground team (JA + EN)</small>
           </button>
         </div>
       )}
