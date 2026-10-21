@@ -19,11 +19,11 @@ import { fileURLToPath } from 'node:url';
 import QRCode from 'qrcode';
 import { WebSocketServer } from 'ws';
 import { AiEngine } from './ai';
-import { loadOrCreateCert } from './cert';
+import { loadOrCreateCert, mkcertCaRoot, type HubCertificate } from './cert';
 import { asrSizeFromEnv, inferenceThreads } from './models';
 import { lanAddresses } from './net';
 import { CabinRelay } from './relay';
-import { createHandler, type PublicUrls } from './server';
+import { createHandler, joinUrl, type PublicUrls } from './server';
 
 const HTTP_PORT = Number(process.env.PORT ?? 8080);
 const HTTPS_PORT = Number(process.env.HTTPS_PORT ?? 8443);
@@ -39,13 +39,21 @@ try {
 
 const ai = new AiEngine({ asrSize: asrSizeFromEnv(), threads: inferenceThreads() });
 const relay = new CabinRelay();
-const lan = lanAddresses();
+// HEARME_HOST picks the address phones should use when the laptop has several (Wi-Fi, Ethernet, VPN, Docker…).
+const lan = [...new Set([process.env.HEARME_HOST, ...lanAddresses()].filter((h): h is string => !!h))];
 let httpsOk = false;
+let certificate: HubCertificate | null = null;
 const urls = (): PublicUrls => {
   const host = lan[0] ?? 'localhost';
-  return { base: httpsOk ? `https://${host}:${HTTPS_PORT}` : `http://${host}:${HTTP_PORT}`, lan };
+  const http = `http://${host}:${HTTP_PORT}`;
+  const base = httpsOk ? `https://${host}:${HTTPS_PORT}` : http;
+  // Phones that do not trust the hub's root yet go through the install page first.
+  const trust = httpsOk && certificate?.caPem ? `${http}/trust` : undefined;
+  const out: PublicUrls = { base, lan, trust };
+  out.join = joinUrl(out, '23C');
+  return out;
 };
-const handler = createHandler({ staticDir: STATIC_DIR, ai, relay, urls, version: VERSION });
+const handler = createHandler({ staticDir: STATIC_DIR, ai, relay, urls, version: VERSION, certificate: () => (httpsOk ? certificate : null) });
 const wss = new WebSocketServer({ noServer: true, maxPayload: 64 * 1024 });
 relay.attach(wss);
 
@@ -62,7 +70,8 @@ wire(httpServer);
 httpServer.listen(HTTP_PORT, '0.0.0.0');
 
 try {
-  const { key, cert } = await loadOrCreateCert(lan);
+  certificate = await loadOrCreateCert(lan);
+  const { key, cert } = certificate;
   const httpsServer = createHttpsServer({ key, cert });
   wire(httpsServer as unknown as ReturnType<typeof createHttpServer>);
   await new Promise<void>((ok, fail) => {
@@ -74,7 +83,12 @@ try {
   console.warn(`HTTPS not available (${String(e)}). Phones will not be able to use the microphone.`);
 }
 
-const phone = `${urls().base}/mobile/?seat=23C`;
+const phone = urls().join ?? `${urls().base}/mobile/?seat=23C`;
+const certLine = !certificate
+  ? 'none (phones cannot use the microphone)'
+  : certificate.source === 'custom'
+    ? 'your own certificate (HEARME_TLS_CERT)'
+    : `${certificate.source === 'mkcert' ? 'mkcert' : 'built-in local CA'} · phones trust it once at ${urls().trust ?? '/trust'}`;
 console.log(`
   HearMe cabin hub ${VERSION}  ·  works with no internet
   ─────────────────────────────────────────────────────────────
@@ -83,7 +97,11 @@ console.log(`
   Seatback (IFE) http://localhost:${HTTP_PORT}/?seat=23C#/ife
   Phone (LAN)    ${phone}
   Join page      ${urls().base}/join      Seat cards  ${urls().base}/seats
+  HTTPS          ${certLine}${certificate?.caFingerprint ? `\n  Root SHA-256   ${certificate.caFingerprint}` : ''}
 `);
+if (certificate?.source === 'local-ca' && !mkcertCaRoot()) {
+  console.log('  Tip: with mkcert installed (brew install mkcert), the hub uses your mkcert CA instead.\n');
+}
 if (lan.length) console.log(await QRCode.toString(phone, { type: 'terminal', small: true }));
 
 if (process.env.HEARME_NO_AI === '1') {

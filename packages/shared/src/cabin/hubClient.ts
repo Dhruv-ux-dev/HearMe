@@ -14,8 +14,12 @@ export interface HubStatus {
   embed: ModelInfo;
   /** True when this hub can decode compressed audio (ffmpeg installed). */
   ffmpeg: boolean;
-  /** Where other devices can reach the hub (LAN address, HTTPS when available). */
-  urls?: { base: string; lan: string[] };
+  /**
+   * Where other devices can reach the hub (LAN address, HTTPS when available).
+   * `join` is what a phone should open for seat 23C: the certificate install
+   * page (`trust`) when phones may need it, which then opens the app.
+   */
+  urls?: { base: string; lan: string[]; trust?: string; join?: string };
   clients?: number;
   /** Speech/matching jobs waiting on the hub right now. */
   queue?: number;

@@ -8,7 +8,7 @@ export function Launcher() {
   const status = useHubStatus(5000);
   const [about, setAbout] = useState(false);
   const hub = !!status;
-  const phoneUrl = status?.urls ? `${status.urls.base}/mobile/?seat=23C` : null;
+  const phoneUrl = status?.urls ? (status.urls.join ?? `${status.urls.base}/mobile/?seat=23C`) : null;
   return (
     <div className="home" style={themeVars(false)}>
       <section className="home-hero">

@@ -69,9 +69,13 @@ async function preflight() {
     ok(existsSync(new URL('../apps/ife/dist/index.html', import.meta.url)) && existsSync(new URL('../apps/ife/dist/mobile/index.html', import.meta.url)), 'apps built', 'npm run build'),
     running ? ok(true, `hub already running (speech: ${running.asr?.state}, meaning: ${running.embed?.state})`) : ok((await portFree(8080)) && (await portFree(8443)), 'ports 8080 and 8443 free', 'stop whatever uses them'),
   ];
-  ok(!!lan, lan ? `Wi-Fi address ${lan.address}: phones open https://${lan.address}:8443/mobile/` : 'no Wi-Fi/LAN address (phones cannot join; the stage still works)', 'connect to a network or a phone hotspot');
+  ok(!!lan, lan ? `Wi-Fi address ${lan.address}: phones scan the QR at http://${lan.address}:8080/join (set HEARME_HOST to pick another address)` : 'no Wi-Fi/LAN address (phones cannot join; the stage still works)', 'connect to a network or a phone hotspot');
   ok(ffmpeg, 'ffmpeg (only for native-app audio formats)', 'brew install ffmpeg');
-  ok(existsSync(hub('.cert')), 'HTTPS certificate for phones', 'created on first start');
+  const mkcert = spawnSync('mkcert', ['-CAROOT'], { encoding: 'utf8' });
+  const ip = lan ? lan.address : '<laptop-ip>';
+  if (process.env.HEARME_TLS_CERT) ok(true, 'HTTPS: your own certificate (HEARME_TLS_CERT): nothing for phones to install');
+  else if (mkcert.status === 0) ok(true, `HTTPS: mkcert's CA (${mkcert.stdout.trim()}): phones trust it once at http://${ip}:8080/trust`);
+  else ok(true, `HTTPS: built-in local CA: phones trust it once at http://${ip}:8080/trust  (optional: brew install mkcert)`);
   const fine = required.every(Boolean);
   console.log(fine ? '\nReady: npm run demo\n' : '\nFix the ✗ lines above, then run the check again.\n');
   return fine ? 0 : 1;

@@ -5,13 +5,32 @@ import { LANGUAGES, type HubStatus, type LangCode, type UnderstandResult, type U
 import type { AiEngine } from './ai';
 import { AudioError, decodeAudio, hasFfmpeg } from './audio';
 import { lookupBooking } from './booking';
-import { joinPage, qrSvg, seatCardsPage } from './pages';
+import { mobileconfig, pemToDer, type HubCertificate } from './cert';
+import { joinPage, qrSvg, seatCardsPage, trustPage } from './pages';
 import type { CabinRelay } from './relay';
 
 export interface PublicUrls {
   /** Best URL for other devices (LAN + HTTPS when available). */
   base: string;
   lan: string[];
+  /**
+   * Plain-http page that installs the hub's root certificate on a phone and
+   * then opens the app (set when phones may need to install it first).
+   */
+  trust?: string;
+  /** What seat 23C's QR code opens (the trust page when there is one). */
+  join?: string;
+}
+
+/** The address a seat's QR code should open: through /trust when phones may need the root first. */
+export function joinUrl(urls: PublicUrls, seat: string): string {
+  const app = `/mobile/?seat=${encodeURIComponent(seat)}`;
+  return urls.trust ? `${urls.trust}?next=${encodeURIComponent(app)}` : `${urls.base}${app}`;
+}
+
+/** Only same-site paths may follow the trust check (no open redirects). */
+export function safeNext(v: string | null): string {
+  return v && v.startsWith('/') && !v.startsWith('//') && !v.includes('\\') && v.length <= 200 ? v : '/mobile/?seat=23C';
 }
 
 export interface HandlerOptions {
@@ -20,6 +39,8 @@ export interface HandlerOptions {
   relay: CabinRelay;
   urls: () => PublicUrls;
   version: string;
+  /** The HTTPS certificate in use (null when HTTPS is off). */
+  certificate?: () => HubCertificate | null;
 }
 
 const MIME: Record<string, string> = {
@@ -196,6 +217,17 @@ export function createHandler(opts: HandlerOptions) {
       if (!lang || typeof input.text !== 'string' || input.text.length > 300) return json(res, 400, { error: 'invalid request' });
       return json(res, 200, await understandText(input.text.trim(), lang, parseTarget(input.target), 0));
     }
+    if (path === '/api/trust' && req.method === 'GET') {
+      const cert = opts.certificate?.() ?? null;
+      return json(res, 200, {
+        source: cert?.source ?? 'none',
+        caName: cert?.caName ?? null,
+        caFingerprint: cert?.caFingerprint ?? null,
+        hosts: cert?.hosts ?? [],
+        notAfter: cert?.notAfter ?? null,
+        trustPage: opts.urls().trust ?? null,
+      });
+    }
     if (path === '/api/booking' && req.method === 'GET') {
       const profile = lookupBooking(String(url.searchParams.get('seat') ?? '').toUpperCase());
       return profile ? json(res, 200, { profile, source: 'sample manifest' }) : json(res, 404, { error: 'no booking for this seat' });
@@ -245,13 +277,42 @@ export function createHandler(opts: HandlerOptions) {
         return await api(req, res, url);
       }
       const urls = opts.urls();
+      const cert = opts.certificate?.() ?? null;
+      if (url.pathname === '/trust' || url.pathname === '/trust/') {
+        const secure = urls.base.startsWith('https:') ? urls.base : null;
+        return send(
+          res,
+          200,
+          trustPage({
+            source: cert ? cert.source : 'none',
+            caName: cert?.caName ?? '',
+            caFingerprint: cert?.caFingerprint ?? null,
+            secureBase: cert ? secure : null,
+            next: safeNext(url.searchParams.get('next')),
+          }),
+          'text/html; charset=utf-8',
+        );
+      }
+      if (url.pathname.startsWith('/trust/')) {
+        // Only the root's public certificate is ever served; its private key stays on this laptop.
+        const ca = cert?.caPem;
+        if (!ca) return send(res, 404, 'no certificate to install', 'text/plain; charset=utf-8');
+        const download = (body: string | Buffer, type: string, name: string) => {
+          res.writeHead(200, { 'Content-Type': type, 'Content-Disposition': `attachment; filename="${name}"`, 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' });
+          res.end(body);
+        };
+        if (url.pathname === '/trust/hearme-ca.crt') return download(pemToDer(ca), 'application/x-x509-ca-cert', 'hearme-ca.crt');
+        if (url.pathname === '/trust/hearme-ca.pem') return download(ca, 'application/x-pem-file', 'hearme-ca.pem');
+        if (url.pathname === '/trust/hearme.mobileconfig') return download(mobileconfig(ca, cert.caName), 'application/x-apple-aspen-config', 'HearMe.mobileconfig');
+        return send(res, 404, 'not found', 'text/plain; charset=utf-8');
+      }
       if (url.pathname === '/join') {
-        return send(res, 200, await joinPage(`${urls.base}/mobile/?seat=23C`, `${urls.base}/#/crew`, `${urls.base}/#/stage`), 'text/html; charset=utf-8');
+        return send(res, 200, await joinPage(joinUrl(urls, '23C'), `${urls.base}/#/crew`, `${urls.base}/#/stage`, !!urls.trust), 'text/html; charset=utf-8');
       }
       if (url.pathname === '/seats') {
         const rows = [21, 22, 23, 24, 25, 26];
         const seats = rows.flatMap((r) => ['A', 'B', 'C', 'D', 'E', 'F'].map((c) => `${r}${c}`)).concat('31A');
-        return send(res, 200, await seatCardsPage(urls.base, seats), 'text/html; charset=utf-8');
+        return send(res, 200, await seatCardsPage((seat) => joinUrl(urls, seat), seats), 'text/html; charset=utf-8');
       }
       if (req.method !== 'GET' && req.method !== 'HEAD') return send(res, 405, 'method not allowed', 'text/plain');
       return serveStatic(res, url.pathname);

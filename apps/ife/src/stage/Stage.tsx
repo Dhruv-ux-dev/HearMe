@@ -142,7 +142,7 @@ export function Stage() {
     // Reconnect only when the hub appears/disappears, not on every poll.
   }, [!!status]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const phoneUrl = status?.urls ? `${status.urls.base}/mobile/?seat=23C` : null;
+  const phoneUrl = status?.urls ? (status.urls.join ?? `${status.urls.base}/mobile/?seat=23C`) : null;
   const toggleNoise = () => {
     if (noise.playing) {
       noise.stop();
@@ -249,7 +249,11 @@ export function Stage() {
             <b>Scan with your phone camera</b>
             <p>Same Wi-Fi as this laptop. You become seat 23C.</p>
             <code>{phoneUrl}</code>
-            <p className="stage-qr__note">If the browser warns about the certificate, choose Advanced → Continue (the microphone needs HTTPS).</p>
+            <p className="stage-qr__note">
+              {status?.urls?.trust
+                ? 'First time on this phone? It installs the hub’s certificate once (no warning screen afterwards), then opens HearMe.'
+                : 'If the browser warns about the certificate, choose Advanced → Continue (the microphone needs HTTPS).'}
+            </p>
           </div>
         </div>
       )}
