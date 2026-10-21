@@ -14,10 +14,11 @@ import {
   type ServerFrame,
 } from '@hearme/shared';
 import { ArrowLeft, ArrowRight, Cpu, Film, Megaphone, Mic, Monitor, QrCode, RotateCcw, Smartphone, Volume2, VolumeX, WifiOff, X, Zap } from 'lucide-react';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createBrowserVoice } from '@hearme/shared/tts';
 import { hubBaseUrl, useHubStatus } from '../common/hub';
 import { CabinNoise } from '../common/sounds';
+import { JudgePanel, StoryButtons, StoryEnd, StoryOverlay, sendCrewCommand, useStory } from './StoryLayer';
 
 /**
  * Demo stage: the passenger and the crew side by side, with what travels
@@ -192,19 +193,16 @@ export function Stage() {
       setNoiseOn(true);
     }
   };
-  const reset = () => {
-    const bus = new WebSocketBus(hubSocketUrl(hubBaseUrl()), { role: 'crew' });
-    const off = bus.onChange((up) => {
-      if (!up) return;
-      bus.sendFrame({ kind: 'crew', cmd: { type: 'reset' } });
-      setTimeout(() => {
-        off();
-        bus.close();
-      }, 200);
-    });
+  /** Clear the hub's requests and reload both apps (the story and judge mode start from here). */
+  const resetHub = useCallback(async () => {
+    await sendCrewCommand({ type: 'reset' });
     setItems([]);
+    setPassenger('phone');
     setReload((x) => x + 1);
-  };
+    await new Promise((r) => setTimeout(r, 400));
+  }, []);
+  const reset = () => void resetHub();
+  const story = useStory(resetHub);
 
   const fast = !!status?.asr.model.endsWith('base');
   const switchSpeech = () => fetch(`/api/asr?size=${fast ? 'small' : 'base'}`, { method: 'POST' }).catch(() => undefined);
@@ -256,6 +254,7 @@ export function Stage() {
           </span>
         </div>
         <div className="stage-actions">
+          <StoryButtons story={story} />
           <div className="stage-seg" role="group" aria-label="Passenger device">
             <button className={passenger === 'phone' ? 'on' : ''} onClick={() => setPassenger('phone')}>
               <Smartphone aria-hidden /> Phone
@@ -340,7 +339,9 @@ export function Stage() {
 
         <section className="stage-flow" aria-label="What travels between them" aria-live="polite">
           <div className="stage-label center">On the cabin network</div>
-          {items.length === 0 && (
+          {story.mode === 'judge' && <JudgePanel story={story} phoneUrl={phoneUrl} trust={!!status?.urls?.trust} />}
+          {story.mode === 'ended' && <StoryEnd story={story} onVideo={() => setShowVideo(true)} />}
+          {items.length === 0 && story.mode === 'idle' && (
             <div className="stage-empty">
               <p>
                 Tap a picture or hold the microphone on the phone.
@@ -377,6 +378,7 @@ export function Stage() {
           </div>
         </section>
       </main>
+      <StoryOverlay story={story} onVideo={() => setShowVideo(true)} />
     </div>
   );
 }

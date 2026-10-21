@@ -1,11 +1,21 @@
-import { decide, defaultMatcher, matchOnHub, translator, type LangCode, type MatchResult, type RequestSource, type UnderstandProgress } from '@hearme/shared';
+import {
+  decide,
+  defaultMatcher,
+  matchOnHub,
+  translator,
+  type LangCode,
+  type MatchResult,
+  type RequestSource,
+  type SpeechRecognizer,
+  type UnderstandProgress,
+} from '@hearme/shared';
 import { MicUnavailableError } from '@hearme/shared/web';
 import Mic from 'lucide-react-native/icons/mic';
 import Square from 'lucide-react-native/icons/square';
 import { useEffect, useRef, useState } from 'react';
 import { AccessibilityInfo, ActivityIndicator, Platform, Pressable, Text, View } from 'react-native';
 import { useNav } from '../nav';
-import { currentSpeech, getHubUrl } from '../runtime';
+import { clipRecognizer, currentSpeech, getHubUrl, inStage } from '../runtime';
 import { useTheme } from '../theme';
 import { T } from './ui';
 
@@ -61,7 +71,9 @@ export function HoldToSpeak({ lang }: { lang: LangCode }) {
   const [error, setError] = useState<string | null>(null);
   const [progress, setProgress] = useState<Progress | null>(null);
   const [, setTick] = useState(0);
-  const speech = currentSpeech();
+  // The demo stage can play a recording in place of the microphone (see below).
+  const override = useRef<SpeechRecognizer | null>(null);
+  const speech = override.current ?? currentSpeech();
   const startedAt = useRef(0);
   /** True while a pointer gesture is in progress; activations without one come from screen readers or keyboards. */
   const lastPointer = useRef(0);
@@ -70,6 +82,7 @@ export function HoldToSpeak({ lang }: { lang: LangCode }) {
 
   const start = () => {
     if (phaseRef.current !== 'idle') return;
+    const speech = override.current ?? currentSpeech();
     setTapMode(false);
     setError(null);
     startedAt.current = Date.now();
@@ -81,8 +94,9 @@ export function HoldToSpeak({ lang }: { lang: LangCode }) {
     });
   };
 
-  const finish = async () => {
-    if (phaseRef.current !== 'listening') return;
+  const finish = async (): Promise<string | null> => {
+    if (phaseRef.current !== 'listening') return null;
+    const speech = override.current ?? currentSpeech();
     setPhase('processing');
     setProgress({ p: { stage: 'sending' }, since: Date.now() });
     try {
@@ -94,15 +108,44 @@ export function HoldToSpeak({ lang }: { lang: LangCode }) {
       setProgress(null);
       if (!transcript.trim()) {
         setError(tr('speech.tooShort'));
-        return;
+        return '';
       }
       await route(transcript, 'speech', lang, match);
+      return transcript;
     } catch {
       setPhase('idle');
       setProgress(null);
       setError(tr('speech.error'));
+      return null;
     }
   };
+
+  /**
+   * Demo stage only: lets the stage's scripted story "speak" a recording into
+   * this phone. Everything after the microphone is the real flow: the clip
+   * goes to the hub, Whisper and matching run there, and the phone shows the
+   * same progress and result as for a live voice.
+   */
+  useEffect(() => {
+    if (!inStage) return;
+    const w = globalThis as unknown as { __hearmeStory?: Record<string, unknown> };
+    w.__hearmeStory = {
+      ...w.__hearmeStory,
+      speakClip: async (wav: ArrayBuffer, levels: number[], seconds: number) => {
+        override.current = clipRecognizer(wav, levels);
+        try {
+          start();
+          await new Promise((r) => setTimeout(r, Math.max(800, seconds * 1000)));
+          return await finish();
+        } finally {
+          override.current = null;
+        }
+      },
+    };
+    return () => {
+      if (w.__hearmeStory) delete w.__hearmeStory.speakClip;
+    };
+  });
 
   // Redraw the estimate a few times a second while Whisper works.
   useEffect(() => {

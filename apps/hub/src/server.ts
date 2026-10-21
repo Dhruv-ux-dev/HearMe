@@ -7,6 +7,7 @@ import { AudioError, decodeAudio, hasFfmpeg } from './audio';
 import { lookupBooking } from './booking';
 import { mobileconfig, pemToDer, type HubCertificate } from './cert';
 import { joinPage, qrSvg, seatCardsPage, trustPage } from './pages';
+import { STORY_SENTENCES, storyVoice } from './story';
 import type { CabinRelay } from './relay';
 
 export interface PublicUrls {
@@ -192,6 +193,19 @@ export function createHandler(opts: HandlerOptions) {
         write({ stage: 'error', status: e instanceof AudioError ? e.status : 500, error: e instanceof AudioError ? e.message : 'speech recognition failed' });
         return void res.end();
       }
+    }
+    if (path === '/api/story' && req.method === 'GET') {
+      // The scripted demo's sentence (and whether a recording of it exists on this hub).
+      const lang = parseLang(url.searchParams.get('lang')) ?? 'hi';
+      const voice = storyVoice(lang);
+      return json(res, 200, { lang, sentence: STORY_SENTENCES[lang] ?? null, voice: voice?.source ?? null });
+    }
+    if (path === '/api/story/voice' && req.method === 'GET') {
+      const lang = parseLang(url.searchParams.get('lang')) ?? 'hi';
+      const voice = storyVoice(lang);
+      if (!voice) return json(res, 404, { error: 'no recording of the story sentence on this hub' });
+      res.writeHead(200, { 'Content-Type': 'audio/wav', 'Cache-Control': 'no-store', 'X-HearMe-Voice': voice.source });
+      return void res.end(voice.wav);
     }
     if (path === '/api/warmup' && req.method === 'POST') {
       if (!isLocal(req)) return json(res, 403, { error: 'only from the hub laptop' });

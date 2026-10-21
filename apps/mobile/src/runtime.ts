@@ -3,6 +3,7 @@ import {
   MockSpeechRecognizer,
   PassengerSession,
   fetchHubStatus,
+  understandSpeech,
   type Buzzer,
   type PersistedSession,
   type Speaker,
@@ -90,6 +91,35 @@ const hubSpeech = Platform.OS === 'web' ? new HubSpeechRecognizer(() => hubUrl) 
 /** The real recognizer when this device can record and a hub can understand; otherwise the simulation. */
 export function currentSpeech(): SpeechRecognizer {
   return hubSpeech && hubUrl && MicRecorder.supported() ? hubSpeech : mockSpeech;
+}
+
+/**
+ * For the scripted demo on the stage: "hears" a given recording instead of
+ * the microphone. The recording goes through the real hub (Whisper, then
+ * matching), with the same progress display as live speech. `levels` (dB per
+ * 100 ms) drive the level meter while it plays.
+ */
+export function clipRecognizer(wav: ArrayBuffer, levels: number[]): SpeechRecognizer {
+  let timer: ReturnType<typeof setInterval> | undefined;
+  let lang: Parameters<SpeechRecognizer['start']>[0] = 'hi';
+  return {
+    simulated: false,
+    start(l, onLevel) {
+      lang = l;
+      let i = 0;
+      timer = setInterval(() => onLevel(levels.length ? levels[Math.min(i++, levels.length - 1)]! : 70), 100);
+    },
+    async stop(onProgress) {
+      clearInterval(timer);
+      const hub = hubUrl;
+      if (!hub) throw new Error('no cabin hub');
+      const r = await understandSpeech(hub, new Uint8Array(wav), { lang, mimeType: 'audio/wav', onProgress });
+      return { transcript: r.transcript, match: r.match };
+    },
+    cancel() {
+      clearInterval(timer);
+    },
+  };
 }
 
 // ── Reading replies aloud ─────────────────────────────────────────────────

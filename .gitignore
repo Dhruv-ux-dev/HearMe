@@ -11,3 +11,7 @@ coverage/
 apps/hub/.models/
 apps/hub/.cert/
 apps/hub/.eval/
+
+# HearMe hub: generated story voice (macOS say) and voice lab results
+apps/hub/.cache/
+apps/hub/.lab/
