@@ -9,6 +9,7 @@
     "dev": "tsx watch src/main.ts",
     "models": "tsx src/scripts/download-models.ts",
     "eval": "tsx src/scripts/eval.ts",
+    "lab-report": "tsx src/scripts/lab-report.ts",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "rescore": "tsx src/scripts/rescore.ts",

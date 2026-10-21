@@ -1,4 +1,4 @@
-import { Film, Info, Monitor, Printer, QrCode, Smartphone, Tablet, Theater, WifiOff, X } from 'lucide-react';
+import { Film, FlaskConical, Info, Monitor, Printer, QrCode, Smartphone, Tablet, Theater, WifiOff, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useHubStatus } from '../common/hub';
 import { themeVars } from '../common/theme';
@@ -57,6 +57,9 @@ export function Launcher() {
         </a>
         <a className="home-link" href="/demo.mp4" target="_blank" rel="noreferrer">
           <Film aria-hidden /> Recorded demo (75 s)
+        </a>
+        <a className="home-link" href="#/lab">
+          <FlaskConical aria-hidden /> Voice lab: test with real voices
         </a>
         <button className="home-link" onClick={() => setAbout(true)}>
           <Info aria-hidden /> About this prototype

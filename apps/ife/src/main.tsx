@@ -15,16 +15,17 @@ import { detectHub, hubBaseUrl } from './common/hub';
 import { ifeSeatFromUrl } from './common/webAdapters';
 import { CrewConsole } from './crew/CrewConsole';
 import { IfeApp } from './ife/IfeApp';
+import { VoiceLab } from './lab/VoiceLab';
 import { Launcher, MobilePreview } from './launcher/Launcher';
 import { Stage } from './stage/Stage';
 import './styles.css';
 import './styles-v2.css';
 
-type Route = 'launcher' | 'ife' | 'crew' | 'mobile' | 'stage';
+type Route = 'launcher' | 'ife' | 'crew' | 'mobile' | 'stage' | 'lab';
 
 function readRoute(): Route {
   const h = window.location.hash.replace(/^#\/?/, '');
-  return h === 'ife' || h === 'crew' || h === 'mobile' || h === 'stage' ? h : 'launcher';
+  return h === 'ife' || h === 'crew' || h === 'mobile' || h === 'stage' || h === 'lab' ? h : 'launcher';
 }
 
 // One IFE session per page load. The seatback keeps nothing between sessions.
@@ -47,7 +48,7 @@ function Root() {
     return () => window.removeEventListener('hashchange', on);
   }, []);
   useEffect(() => {
-    document.title = { launcher: 'HearMe', ife: 'HearMe · Seatback', crew: 'HearMe Crew', mobile: 'HearMe · Phone', stage: 'HearMe · Live demo' }[route];
+    document.title = { launcher: 'HearMe', ife: 'HearMe · Seatback', crew: 'HearMe Crew', mobile: 'HearMe · Phone', stage: 'HearMe · Live demo', lab: 'HearMe · Voice lab' }[route];
   }, [route]);
   const idle = Number(new URLSearchParams(window.location.search).get('idle'));
   switch (route) {
@@ -61,6 +62,8 @@ function Root() {
       return <MobilePreview />;
     case 'stage':
       return <Stage />;
+    case 'lab':
+      return <VoiceLab />;
     default:
       return <Launcher />;
   }

@@ -12,6 +12,7 @@
     "hub": "npm run start -w @hearme/hub",
     "models": "npm run models -w @hearme/hub",
     "eval": "npm run eval -w @hearme/hub",
+    "lab-report": "npm run lab-report -w @hearme/hub",
     "dev": "npm run dev -w @hearme/ife",
     "mobile": "npm run start -w @hearme/mobile",
     "mobile:web": "npm run web -w @hearme/mobile",

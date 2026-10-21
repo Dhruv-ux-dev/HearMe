@@ -2,12 +2,14 @@ import { createReadStream, existsSync, statSync } from 'node:fs';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { extname, join, normalize, resolve } from 'node:path';
 import { LANGUAGES, type HubStatus, type LangCode, type UnderstandResult, type UnderstandStreamLine, type UnderstandTarget } from '@hearme/shared';
+import { STORY_SENTENCES, parseLabTakeQuery, scoreTake, takesToCsv, type LabTake } from '@hearme/shared/lab';
 import type { AiEngine } from './ai';
 import { AudioError, decodeAudio, hasFfmpeg } from './audio';
 import { lookupBooking } from './booking';
 import { mobileconfig, pemToDer, type HubCertificate } from './cert';
+import { LabLog } from './lab';
 import { joinPage, qrSvg, seatCardsPage, trustPage } from './pages';
-import { STORY_SENTENCES, storyVoice } from './story';
+import { saveStoryVoice, storyVoice } from './story';
 import type { CabinRelay } from './relay';
 
 export interface PublicUrls {
@@ -42,6 +44,10 @@ export interface HandlerOptions {
   version: string;
   /** The HTTPS certificate in use (null when HTTPS is off). */
   certificate?: () => HubCertificate | null;
+  /** Voice lab results (default: apps/hub/.lab). */
+  lab?: LabLog;
+  /** Let other devices on the network use the voice lab (HEARME_LAB=1); the hub laptop always can. */
+  labFromLan?: boolean;
 }
 
 const MIME: Record<string, string> = {
@@ -115,15 +121,20 @@ function wantsStream(req: IncomingMessage): boolean {
 
 export function createHandler(opts: HandlerOptions) {
   const root = resolve(opts.staticDir);
+  const lab = opts.lab ?? new LabLog();
+  const labFromLan = opts.labFromLan ?? process.env.HEARME_LAB === '1';
+  const labOpen = (req: IncomingMessage) => labFromLan || isLocal(req);
+  const LAB_CLOSED = 'the voice lab is open on the hub laptop only; start the hub with HEARME_LAB=1 to record from other devices';
 
-  async function understandText(text: string, lang: LangCode, target: UnderstandTarget, asrMs: number, onMatching?: () => void): Promise<UnderstandResult> {
+  /** `announce`: tell the stage and crew (not for voice lab takes). */
+  async function understandText(text: string, lang: LangCode, target: UnderstandTarget, asrMs: number, onMatching?: () => void, announce = true): Promise<UnderstandResult> {
     if (text) onMatching?.();
     const t0 = Date.now();
     const result: UnderstandResult = { transcript: text, asrMs, matchMs: 0 };
     if (target === 'needs') result.match = await opts.ai.matchNeeds(text);
     else result.reply = await opts.ai.matchReply(text);
     result.matchMs = Date.now() - t0;
-    if (text) {
+    if (text && announce) {
       opts.relay.emitEvent({
         type: 'understood',
         at: Date.now(),
@@ -137,6 +148,45 @@ export function createHandler(opts: HandlerOptions) {
       });
     }
     return result;
+  }
+
+  /** Whisper, then matching; phones that ask for it get each stage as it happens (NDJSON). */
+  async function respondUnderstanding(
+    req: IncomingMessage,
+    res: ServerResponse,
+    samples: Float32Array,
+    lang: LangCode,
+    target: UnderstandTarget,
+    { announce = true, finish = (r: UnderstandResult): UnderstandResult => r } = {},
+  ): Promise<void> {
+    const stream = wantsStream(req);
+    const write = (line: UnderstandStreamLine) => {
+      if (stream && !res.writableEnded) res.write(`${JSON.stringify(line)}\n`);
+    };
+    if (stream) {
+      res.writeHead(200, { 'Content-Type': 'application/x-ndjson; charset=utf-8', 'Cache-Control': 'no-store', 'X-Accel-Buffering': 'no' });
+      write({ stage: 'received', seconds: Math.round((samples.length / 16000) * 10) / 10 });
+    }
+    try {
+      let started = Date.now();
+      const transcript = await opts.ai.transcribe(samples, lang, {
+        onQueued: (ahead) => write({ stage: 'queued', ahead }),
+        onStart: (estimateMs) => {
+          started = Date.now();
+          write({ stage: 'transcribing', estimateMs });
+          if (announce) opts.relay.emitEvent({ type: 'working', at: started, target, lang, estimateMs });
+        },
+      });
+      const result = finish(await understandText(transcript, lang, target, Date.now() - started, () => write({ stage: 'matching', transcript }), announce));
+      if (!stream) return json(res, 200, result);
+      write({ stage: 'done', result });
+      return void res.end();
+    } catch (e) {
+      if (!stream) throw e;
+      // Headers are already sent: report the failure in the stream.
+      write({ stage: 'error', status: e instanceof AudioError ? e.status : 500, error: e instanceof AudioError ? e.message : 'speech recognition failed' });
+      return void res.end();
+    }
   }
 
   async function api(req: IncomingMessage, res: ServerResponse, url: URL): Promise<void> {
@@ -164,41 +214,57 @@ export function createHandler(opts: HandlerOptions) {
       const target = parseTarget(url.searchParams.get('target'));
       const body = await readBody(req, MAX_AUDIO_BYTES);
       const samples = await decodeAudio(body, req.headers['content-type']);
-      const stream = wantsStream(req);
-      const write = (line: UnderstandStreamLine) => {
-        if (stream && !res.writableEnded) res.write(`${JSON.stringify(line)}\n`);
-      };
-      if (stream) {
-        res.writeHead(200, { 'Content-Type': 'application/x-ndjson; charset=utf-8', 'Cache-Control': 'no-store', 'X-Accel-Buffering': 'no' });
-        write({ stage: 'received', seconds: Math.round((samples.length / 16000) * 10) / 10 });
-      }
-      try {
-        const t0 = Date.now();
-        let started = t0;
-        const transcript = await opts.ai.transcribe(samples, lang, {
-          onQueued: (ahead) => write({ stage: 'queued', ahead }),
-          onStart: (estimateMs) => {
-            started = Date.now();
-            write({ stage: 'transcribing', estimateMs });
-            opts.relay.emitEvent({ type: 'working', at: started, target, lang, estimateMs });
-          },
-        });
-        const result = await understandText(transcript, lang, target, Date.now() - started, () => write({ stage: 'matching', transcript }));
-        if (!stream) return json(res, 200, result);
-        write({ stage: 'done', result });
-        return void res.end();
-      } catch (e) {
-        if (!stream) throw e;
-        // Headers are already sent: report the failure in the stream.
-        write({ stage: 'error', status: e instanceof AudioError ? e.status : 500, error: e instanceof AudioError ? e.message : 'speech recognition failed' });
-        return void res.end();
-      }
+      return respondUnderstanding(req, res, samples, lang, target);
+    }
+    if (path === '/api/lab/take' && req.method === 'POST') {
+      // Voice lab: the same pipeline as a phone, scored against what the speaker was asked to say, and logged.
+      if (!labOpen(req)) return json(res, 403, { error: LAB_CLOSED });
+      const info = parseLabTakeQuery(url.searchParams);
+      if (typeof info === 'string') return json(res, 400, { error: info });
+      if (!opts.ai.canTranscribe) return json(res, 503, { error: 'speech model is not ready yet' });
+      const body = await readBody(req, MAX_AUDIO_BYTES);
+      const received = Date.now();
+      const samples = await decodeAudio(body, req.headers['content-type']);
+      const { keepAudio, ...about } = info;
+      return respondUnderstanding(req, res, samples, about.lang, about.speaker === 'crew' ? 'replies' : 'needs', {
+        announce: false,
+        finish: (result) => {
+          const take: LabTake = {
+            id: LabLog.newId(),
+            at: new Date().toISOString(),
+            ...about,
+            seconds: Math.round((samples.length / 16000) * 10) / 10,
+            transcript: result.transcript,
+            ...scoreTake(about.speaker, about.expected, result),
+            asrMs: result.asrMs,
+            matchMs: result.matchMs,
+            hubMs: Date.now() - received,
+            model: opts.ai.status.asr.model,
+          };
+          return { ...result, take: lab.add(take, keepAudio ? samples : undefined) } as UnderstandResult;
+        },
+      });
+    }
+    if (path === '/api/lab/takes' && req.method === 'GET') {
+      if (!labOpen(req)) return json(res, 403, { error: LAB_CLOSED });
+      return json(res, 200, { takes: lab.list(), storyCanSave: isLocal(req) });
+    }
+    if (path === '/api/lab/takes.csv' && req.method === 'GET') {
+      if (!labOpen(req)) return json(res, 403, { error: LAB_CLOSED });
+      res.writeHead(200, { 'Content-Type': 'text/csv; charset=utf-8', 'Content-Disposition': 'attachment; filename="hearme-voice-lab.csv"', 'Cache-Control': 'no-store' });
+      // The byte-order mark makes spreadsheet apps read Devanagari, Thai and Japanese correctly.
+      return void res.end(`\uFEFF${takesToCsv(lab.list())}`);
+    }
+    const discard = /^\/api\/lab\/takes\/([\w-]{1,80})\/discard$/.exec(path);
+    if (discard && req.method === 'POST') {
+      if (!labOpen(req)) return json(res, 403, { error: LAB_CLOSED });
+      return lab.discard(discard[1]!) ? json(res, 200, { discarded: discard[1] }) : json(res, 404, { error: 'no such take' });
     }
     if (path === '/api/story' && req.method === 'GET') {
       // The scripted demo's sentence (and whether a recording of it exists on this hub).
       const lang = parseLang(url.searchParams.get('lang')) ?? 'hi';
       const voice = storyVoice(lang);
-      return json(res, 200, { lang, sentence: STORY_SENTENCES[lang] ?? null, voice: voice?.source ?? null });
+      return json(res, 200, { lang, sentence: STORY_SENTENCES[lang]?.text ?? null, voice: voice?.source ?? null });
     }
     if (path === '/api/story/voice' && req.method === 'GET') {
       const lang = parseLang(url.searchParams.get('lang')) ?? 'hi';
@@ -206,6 +272,16 @@ export function createHandler(opts: HandlerOptions) {
       if (!voice) return json(res, 404, { error: 'no recording of the story sentence on this hub' });
       res.writeHead(200, { 'Content-Type': 'audio/wav', 'Cache-Control': 'no-store', 'X-HearMe-Voice': voice.source });
       return void res.end(voice.wav);
+    }
+    if (path === '/api/story/voice' && req.method === 'POST') {
+      // A voice lab take becomes Sharda's voice in the stage story (changes the demo: hub laptop only).
+      if (!isLocal(req)) return json(res, 403, { error: 'only from the hub laptop' });
+      const lang = parseLang(url.searchParams.get('lang'));
+      if (!lang || !STORY_SENTENCES[lang]) return json(res, 400, { error: 'no story sentence in this language' });
+      const samples = await decodeAudio(await readBody(req, MAX_AUDIO_BYTES), req.headers['content-type']);
+      if (samples.length < 16000 * 0.8) return json(res, 400, { error: 'recording too short' });
+      const saved = saveStoryVoice(lang, samples);
+      return json(res, 200, { saved, seconds: Math.round((samples.length / 16000) * 10) / 10 });
     }
     if (path === '/api/warmup' && req.method === 'POST') {
       if (!isLocal(req)) return json(res, 403, { error: 'only from the hub laptop' });

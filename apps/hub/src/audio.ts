@@ -109,3 +109,24 @@ export async function decodeAudio(buf: Buffer, contentType: string | undefined):
   if (type.includes('wav') || buf.toString('ascii', 0, 4) === 'RIFF') return parseWav(buf);
   return viaFfmpeg(buf);
 }
+
+/** 16 kHz mono float samples → a 16-bit PCM WAV file (voice lab recordings, the story's voice). */
+export function encodeWav(samples: Float32Array, rate = 16000): Buffer {
+  const data = Buffer.alloc(samples.length * 2);
+  for (let i = 0; i < samples.length; i++) data.writeInt16LE(Math.round(Math.max(-1, Math.min(1, samples[i]!)) * 0x7fff), i * 2);
+  const head = Buffer.alloc(44);
+  head.write('RIFF', 0, 'ascii');
+  head.writeUInt32LE(36 + data.length, 4);
+  head.write('WAVE', 8, 'ascii');
+  head.write('fmt ', 12, 'ascii');
+  head.writeUInt32LE(16, 16);
+  head.writeUInt16LE(1, 20); // PCM
+  head.writeUInt16LE(1, 22); // mono
+  head.writeUInt32LE(rate, 24);
+  head.writeUInt32LE(rate * 2, 28);
+  head.writeUInt16LE(2, 32);
+  head.writeUInt16LE(16, 34);
+  head.write('data', 36, 'ascii');
+  head.writeUInt32LE(data.length, 40);
+  return Buffer.concat([head, data]);
+}

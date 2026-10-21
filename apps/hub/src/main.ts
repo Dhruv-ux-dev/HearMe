@@ -97,6 +97,7 @@ console.log(`
   Seatback (IFE) http://localhost:${HTTP_PORT}/?seat=23C#/ife
   Phone (LAN)    ${phone}
   Join page      ${urls().base}/join      Seat cards  ${urls().base}/seats
+  Voice lab      http://localhost:${HTTP_PORT}/#/lab${process.env.HEARME_LAB === '1' ? `   (phones: ${urls().base}/#/lab)` : '   (phones too: start with HEARME_LAB=1)'}
   HTTPS          ${certLine}${certificate?.caFingerprint ? `\n  Root SHA-256   ${certificate.caFingerprint}` : ''}
 `);
 if (certificate?.source === 'local-ca' && !mkcertCaRoot()) {

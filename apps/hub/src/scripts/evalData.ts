@@ -1,4 +1,4 @@
-import type { LangCode, ReplyId } from '@hearme/shared';
+import type { LangCode } from '@hearme/shared';
 
 /**
  * Evaluation phrases: natural requests a passenger might say, written
@@ -92,24 +92,6 @@ export const NEED_PHRASES: Record<LangCode, Record<string, [string, string]>> = 
   },
 };
 
-/** Things a Japanese crew member might say instead of tapping a reply. */
-export const CREW_PHRASES: [string, ReplyId][] = [
-  ['すぐ持ってきますね', 'bringing_now'],
-  ['今お持ちしますので', 'bringing_now'],
-  ['ちょっとお待ちくださいね', 'one_moment'],
-  ['少しお待ちいただけますか', 'one_moment'],
-  ['今そちらに行きます', 'coming_to_seat'],
-  ['すぐお席に伺いますね', 'coming_to_seat'],
-  ['申し訳ございません、それはご用意がないんです', 'not_available'],
-  ['今お医者さんを探しています', 'doctor_coming'],
-  ['席に座ってベルトを締めてください', 'stay_seated'],
-  ['お食事はもう少しでお持ちします', 'meal_soon'],
-  ['はい、どうぞ', 'here_you_go'],
-  ['ベルトサインが消えたらお持ちします', 'after_seatbelt'],
-  ['着いたら空港の係員が手伝います', 'staff_on_arrival'],
-  ['空港のスタッフに連絡しておきました', 'ground_informed'],
-];
-
 /** macOS voices used to synthesise test speech (`say -v`). */
 export const VOICES: Record<LangCode, string> = {
   en: 'Samantha',
@@ -120,94 +102,5 @@ export const VOICES: Record<LangCode, string> = {
   vi: 'Linh',
 };
 
-/**
- * Held-out phrases: written after the vocabulary and calibration were tuned
- * on NEED_PHRASES, and never used for tuning. One phrasing × 12 needs × 6
- * languages = 72. Report these numbers as the honest estimate.
- */
-export const HELDOUT_PHRASES: Record<LangCode, Record<string, string>> = {
-  en: {
-    water: 'Some water for me, please',
-    hot_water: 'Could you heat some water for me',
-    tea: "I'd love a hot tea",
-    blanket: 'Could I get a blanket to keep warm',
-    toilet: "Excuse me, where's the toilet",
-    medicine: 'I have to take my medication now',
-    unwell: 'I feel really sick',
-    meal: 'Is there any food available',
-    too_cold: 'It is really chilly in here',
-    sick_bag: 'I feel nauseous',
-    wheelchair_arrival: 'My mother needs a wheelchair after landing',
-    charger: 'Can I charge my mobile somewhere',
-  },
-  hi: {
-    water: 'पानी मिल सकता है?',
-    hot_water: 'मुझे गर्म पानी की ज़रूरत है',
-    tea: 'चाय मिल जाएगी क्या?',
-    blanket: 'मुझे ओढ़ने के लिए कंबल चाहिए',
-    toilet: 'टॉयलेट किधर है?',
-    medicine: 'मुझे दवाई लेनी है',
-    unwell: 'मेरी तबीयत खराब है',
-    meal: 'खाना कब आएगा?',
-    too_cold: 'बहुत सर्दी लग रही है',
-    sick_bag: 'मुझे उल्टी होने वाली है',
-    wheelchair_arrival: 'मुझे व्हीलचेयर की ज़रूरत होगी',
-    charger: 'मोबाइल चार्ज करना है',
-  },
-  ja: {
-    water: '水を一杯お願いします',
-    hot_water: 'お湯を少しいただけますか',
-    tea: '緑茶をお願いします',
-    blanket: 'ブランケットを貸してください',
-    toilet: 'トイレに行きたいです',
-    medicine: '薬を飲みたいです',
-    unwell: '具合が悪いです',
-    meal: '何か食べるものはありますか',
-    too_cold: '寒くて眠れません',
-    sick_bag: '気持ち悪くて吐きそうです',
-    wheelchair_arrival: '降りるときに車いすをお願いします',
-    charger: '携帯の充電はできますか',
-  },
-  th: {
-    water: 'ขอน้ำหน่อยครับ',
-    hot_water: 'ขอน้ำร้อนหนึ่งแก้ว',
-    tea: 'ขอชาหนึ่งถ้วย',
-    blanket: 'ขอผ้าห่มหน่อยค่ะ',
-    toilet: 'ขอไปห้องน้ำหน่อย',
-    medicine: 'ขอยาหน่อย',
-    unwell: 'ไม่ค่อยสบาย',
-    meal: 'มีอะไรให้กินไหม',
-    too_cold: 'หนาวจังเลย',
-    sick_bag: 'รู้สึกคลื่นไส้',
-    wheelchair_arrival: 'ต้องการรถเข็นที่ปลายทาง',
-    charger: 'ขอชาร์จแบตโทรศัพท์',
-  },
-  id: {
-    water: 'Minta air putih, ya',
-    hot_water: 'Bisa minta air panas?',
-    tea: 'Saya mau teh',
-    blanket: 'Bisa minta selimut?',
-    toilet: 'Saya mau ke toilet',
-    medicine: 'Saya harus minum obat sekarang',
-    unwell: 'Badan saya tidak enak',
-    meal: 'Kapan makan malam?',
-    too_cold: 'Dingin sekali di sini',
-    sick_bag: 'Saya merasa mual',
-    wheelchair_arrival: 'Saya butuh kursi roda setelah mendarat',
-    charger: 'Di mana saya bisa mengecas ponsel?',
-  },
-  vi: {
-    water: 'Cho tôi ít nước',
-    hot_water: 'Cho tôi xin nước nóng',
-    tea: 'Tôi muốn uống trà',
-    blanket: 'Cho tôi mượn cái chăn',
-    toilet: 'Nhà vệ sinh ở chỗ nào?',
-    medicine: 'Tôi cần uống thuốc bây giờ',
-    unwell: 'Tôi bị mệt',
-    meal: 'Khi nào có bữa ăn?',
-    too_cold: 'Lạnh quá',
-    sick_bag: 'Tôi thấy buồn nôn',
-    wheelchair_arrival: 'Tôi cần xe lăn sau khi hạ cánh',
-    charger: 'Tôi có thể sạc điện thoại ở đâu?',
-  },
-};
+// Held-out and crew phrases live in @hearme/shared/lab: the voice lab uses the same sentences.
+export { CREW_PHRASES, HELDOUT_PHRASES } from '@hearme/shared/lab';

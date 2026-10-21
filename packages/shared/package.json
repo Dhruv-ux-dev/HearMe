@@ -10,7 +10,8 @@
     ".": "./src/index.ts",
     "./react": "./src/react.ts",
     "./web": "./src/web/micRecorder.ts",
-    "./tts": "./src/web/tts.ts"
+    "./tts": "./src/web/tts.ts",
+    "./lab": "./src/lab/voiceLab.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

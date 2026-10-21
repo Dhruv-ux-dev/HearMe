@@ -3,6 +3,7 @@ import {
   CrewTablet,
   RemoteCrewTablet,
   REPLIES,
+  REPLY_SUGGEST_MIN,
   computeCrewMetrics,
   createBroadcastBus,
   defaultReplyFor,
@@ -527,7 +528,7 @@ function VoiceReply({ r, tablet }: { r: CrewRequest; tablet: CrewTabletApi }) {
     }
     setPhase('idle');
   };
-  const matched = result?.replyId && result.confidence >= 0.5 ? getReply(result.replyId) : null;
+  const matched = result?.replyId && result.confidence >= REPLY_SUGGEST_MIN ? getReply(result.replyId) : null;
   return (
     <div className="crew2-voice">
       <button className={`crew2-mic${phase === 'listening' ? ' on' : ''}`} onClick={phase === 'listening' ? () => void finish() : () => void start()} disabled={phase === 'thinking'}>

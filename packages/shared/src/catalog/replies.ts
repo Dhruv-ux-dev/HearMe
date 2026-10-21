@@ -19,6 +19,9 @@ export interface ReplyTemplate {
   crewSays?: string[];
 }
 
+/** Crew speech suggests a verified reply only at this match confidence or above; crew still confirm with one tap. */
+export const REPLY_SUGGEST_MIN = 0.5;
+
 export const REPLIES: ReplyTemplate[] = [
   {
     id: 'bringing_now',
