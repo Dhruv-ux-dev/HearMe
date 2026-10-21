@@ -1,7 +1,13 @@
 import { getAnnouncement, languageInfo, translator, type LangCode } from '@hearme/shared';
 import { useSession } from '@hearme/shared/react';
 import { StatusBar } from 'expo-status-bar';
-import { Hand, House, ListChecks, Megaphone, Plane, Settings, X } from 'lucide-react-native';
+import Hand from 'lucide-react-native/icons/hand';
+import House from 'lucide-react-native/icons/house';
+import ListChecks from 'lucide-react-native/icons/list-checks';
+import Megaphone from 'lucide-react-native/icons/megaphone';
+import Plane from 'lucide-react-native/icons/plane';
+import Settings from 'lucide-react-native/icons/settings';
+import X from 'lucide-react-native/icons/x';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, BackHandler, Platform, Pressable, Text, View } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';

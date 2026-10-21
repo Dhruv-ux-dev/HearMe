@@ -1,6 +1,6 @@
 /* HearMe offline cache: after the first visit the passenger app opens with no connection.
    Pages: network first, cached copy when offline. Assets: cache first. The cabin hub API is never cached. */
-const CACHE = 'hearme-mobile-v2';
+const CACHE = 'hearme-mobile-v3';
 
 self.addEventListener('install', (e) => {
   self.skipWaiting();

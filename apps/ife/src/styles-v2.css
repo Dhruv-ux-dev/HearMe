@@ -290,7 +290,7 @@
 }
 .stage-btn {
   background: var(--hm-coral);
-  color: #fff;
+  color: #0b1630;
 }
 .stage-btn.ghost {
   background: #152238;
@@ -707,11 +707,11 @@
 .crew2-cols span {
   text-align: center;
   font-size: 10px;
-  color: #6c7a96;
+  color: #9aa8c4;
 }
 .crew2-rownum {
   font-size: 11px;
-  color: #6c7a96;
+  color: #9aa8c4;
 }
 .crew2-seat {
   aspect-ratio: 1;

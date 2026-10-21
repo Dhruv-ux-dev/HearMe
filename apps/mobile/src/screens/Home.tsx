@@ -1,6 +1,10 @@
 import { COMMON_NEEDS, getNeed, isActive, replyText, requestTitle, translator, type LangCode, type PassengerRequest } from '@hearme/shared';
 import { useSession } from '@hearme/shared/react';
-import { HeartPulse, Keyboard, Lock, Plus, RotateCcw } from 'lucide-react-native';
+import HeartPulse from 'lucide-react-native/icons/heart-pulse';
+import Keyboard from 'lucide-react-native/icons/keyboard';
+import Lock from 'lucide-react-native/icons/lock';
+import Plus from 'lucide-react-native/icons/plus';
+import RotateCcw from 'lucide-react-native/icons/rotate-ccw';
 import type { ReactNode } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { NeedIcon } from '../components/Icon';

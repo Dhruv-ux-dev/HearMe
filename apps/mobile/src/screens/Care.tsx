@@ -12,7 +12,7 @@ import {
   type LangCode,
   type MedicalReport,
 } from '@hearme/shared';
-import { Check } from 'lucide-react-native';
+import Check from 'lucide-react-native/icons/check';
 import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import Svg, { Circle, Rect } from 'react-native-svg';

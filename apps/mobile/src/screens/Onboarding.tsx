@@ -12,7 +12,10 @@ import {
   type PassengerProfile,
   type ProfileTag,
 } from '@hearme/shared';
-import { Check, ChevronLeft, ScanQrCode, Ticket } from 'lucide-react-native';
+import Check from 'lucide-react-native/icons/check';
+import ChevronLeft from 'lucide-react-native/icons/chevron-left';
+import ScanQrCode from 'lucide-react-native/icons/scan-qr-code';
+import Ticket from 'lucide-react-native/icons/ticket';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';

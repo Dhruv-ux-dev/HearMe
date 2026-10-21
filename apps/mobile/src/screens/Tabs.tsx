@@ -24,7 +24,12 @@ import {
   type UtteranceMode,
 } from '@hearme/shared';
 import { useSession } from '@hearme/shared/react';
-import { Accessibility, ChevronLeft, ChevronRight, Megaphone, RotateCcw, Trash } from 'lucide-react-native';
+import Accessibility from 'lucide-react-native/icons/accessibility';
+import ChevronLeft from 'lucide-react-native/icons/chevron-left';
+import ChevronRight from 'lucide-react-native/icons/chevron-right';
+import Megaphone from 'lucide-react-native/icons/megaphone';
+import RotateCcw from 'lucide-react-native/icons/rotate-ccw';
+import Trash from 'lucide-react-native/icons/trash';
 import { useEffect, useReducer, useState } from 'react';
 import { Alert, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { NeedIcon } from '../components/Icon';

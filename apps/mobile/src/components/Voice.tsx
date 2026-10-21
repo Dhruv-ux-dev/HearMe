@@ -1,6 +1,7 @@
 import { decide, defaultMatcher, matchOnHub, translator, type LangCode, type MatchResult, type RequestSource } from '@hearme/shared';
 import { MicUnavailableError } from '@hearme/shared/web';
-import { Mic, Square } from 'lucide-react-native';
+import Mic from 'lucide-react-native/icons/mic';
+import Square from 'lucide-react-native/icons/square';
 import { useEffect, useRef, useState } from 'react';
 import { AccessibilityInfo, ActivityIndicator, Platform, Pressable, Text, View } from 'react-native';
 import { useNav } from '../nav';

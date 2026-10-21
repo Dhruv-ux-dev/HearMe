@@ -13,7 +13,15 @@ import {
   type NeedPurpose,
 } from '@hearme/shared';
 import { useSession } from '@hearme/shared/react';
-import { Check, Heart, HeartPulse, Lock, Search, Type, Vibrate, Volume2, X } from 'lucide-react-native';
+import Check from 'lucide-react-native/icons/check';
+import Heart from 'lucide-react-native/icons/heart';
+import HeartPulse from 'lucide-react-native/icons/heart-pulse';
+import Lock from 'lucide-react-native/icons/lock';
+import Search from 'lucide-react-native/icons/search';
+import Type from 'lucide-react-native/icons/type';
+import Vibrate from 'lucide-react-native/icons/vibrate';
+import Volume2 from 'lucide-react-native/icons/volume-2';
+import X from 'lucide-react-native/icons/x';
 import { useEffect, useState } from 'react';
 import { AccessibilityInfo, Modal, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';

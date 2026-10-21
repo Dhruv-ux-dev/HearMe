@@ -1,5 +1,10 @@
 import { describeStatus, translator, type LangCode, type PassengerRequest } from '@hearme/shared';
-import { Check, CircleAlert, Clock, Wifi, WifiOff, X } from 'lucide-react-native';
+import Check from 'lucide-react-native/icons/check';
+import CircleAlert from 'lucide-react-native/icons/circle-alert';
+import Clock from 'lucide-react-native/icons/clock';
+import Wifi from 'lucide-react-native/icons/wifi';
+import WifiOff from 'lucide-react-native/icons/wifi-off';
+import X from 'lucide-react-native/icons/x';
 import type { ReactNode } from 'react';
 import {
   Modal,

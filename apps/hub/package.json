@@ -13,7 +13,8 @@
     "test": "vitest run",
     "rescore": "tsx src/scripts/rescore.ts",
     "record-demo": "tsx src/scripts/record-demo.ts",
-    "train": "tsx src/scripts/train-head.ts"
+    "train": "tsx src/scripts/train-head.ts",
+    "a11y": "tsx src/scripts/a11y.ts"
   },
   "dependencies": {
     "@hearme/shared": "*",
@@ -26,6 +27,7 @@
     "@types/node": "^26.6.5",
     "@types/qrcode": "^1.5.6",
     "@types/ws": "^8.18.2",
+    "axe-core": "^4.14.0",
     "tsx": "^4.23.15",
     "typescript": "~6.0.3",
     "vitest": "^5.0.5"
