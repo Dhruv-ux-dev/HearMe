@@ -11,6 +11,7 @@
 import { CONFIDENCE_THRESHOLD, SemanticNeedMatcher, createKeywordMatcher, type MatchResult } from '@hearme/shared';
 import { createE5 } from '../ai';
 import { loadNeedHead } from '../head';
+import { loadLanguagePacks, withLanguagePacks } from '../langpacks';
 import { inferenceThreads } from '../models';
 
 const PHRASES: Record<string, Record<string, string>> = {
@@ -70,12 +71,15 @@ function score(results: { expected: string; m: MatchResult }[]) {
 }
 
 const e5 = await createE5(inferenceThreads());
-const keyword = createKeywordMatcher();
-const plain = await SemanticNeedMatcher.create(e5);
+const packs = loadLanguagePacks();
+const needs = withLanguagePacks(undefined, packs);
+const keyword = createKeywordMatcher(needs);
+const plain = await SemanticNeedMatcher.create(e5, needs);
 const head = loadNeedHead();
-const trained = await SemanticNeedMatcher.create(e5, undefined, head);
+const trained = await SemanticNeedMatcher.create(e5, needs, head);
 const table: Record<string, Record<string, string>> = {};
-for (const [lang, phrases] of Object.entries(PHRASES)) {
+for (const [name, phrases] of Object.entries(PHRASES)) {
+  const lang = packs.some((p) => name.includes(`(${p.code})`)) ? `${name} with language pack` : name;
   const items = Object.entries(phrases).map(([expected, text]) => ({ expected, text }));
   const run = async (match: (t: string) => MatchResult | Promise<MatchResult>) => {
     const out: { expected: string; m: MatchResult }[] = [];

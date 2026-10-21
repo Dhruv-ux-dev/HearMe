@@ -9,6 +9,7 @@ import {
   type ReplyId,
 } from '@hearme/shared';
 import { loadNeedHead } from './head';
+import { withLanguagePacks } from './langpacks';
 import { ASR_MODELS, EMBED_MODEL, MODEL_DIR, type AsrSize } from './models';
 
 /**
@@ -138,7 +139,7 @@ export class AiEngine {
   private asr: Transcriber | null = null;
   private needs: SemanticNeedMatcher | null = null;
   private replies: ReplyMatcher | null = null;
-  private keyword = createKeywordMatcher();
+  private keyword = createKeywordMatcher(withLanguagePacks());
   private queue: Promise<unknown> = Promise.resolve();
   private asrFailures = 0;
   readonly status: AiStatus;
@@ -155,7 +156,7 @@ export class AiEngine {
     this.status.embed.state = 'loading';
     try {
       const embedder = await (this.options.loadEmbedder ?? (() => createE5(this.options.threads)))();
-      this.needs = await SemanticNeedMatcher.create(embedder, undefined, loadNeedHead());
+      this.needs = await SemanticNeedMatcher.create(embedder, withLanguagePacks(), loadNeedHead());
       this.replies = await ReplyMatcher.create(embedder);
       this.status.embed.state = 'ready';
     } catch (e) {

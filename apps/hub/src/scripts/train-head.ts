@@ -29,6 +29,7 @@ import {
   type MatchResult,
 } from '@hearme/shared';
 import { createE5 } from '../ai';
+import { loadLanguagePacks } from '../langpacks';
 import { EMBED_MODEL, inferenceThreads } from '../models';
 import { HELDOUT_PHRASES, NEED_PHRASES } from './evalData';
 
@@ -99,6 +100,13 @@ function generate(): Example[] {
           for (const w of PURPOSE_PHRASES[p] ?? []) if (script(w) === script(k)) add(`${k} ${w}`, need.id);
         }
       }
+    }
+  }
+  // Language packs (data/languages/*.json): their keywords in their own templates.
+  for (const pack of loadLanguagePacks()) {
+    for (const [need, words] of Object.entries(pack.needs)) {
+      if (!NEEDS.some((n) => n.id === need)) continue;
+      for (const k of words) for (const t of pack.templates) add(t.replace('{k}', k), need);
     }
   }
   for (const [, needs] of Object.entries(NEED_PHRASES)) {

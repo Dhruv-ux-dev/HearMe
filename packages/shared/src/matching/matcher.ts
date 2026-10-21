@@ -89,7 +89,16 @@ function allKeywords(map: Partial<Record<string, string[]>> | undefined): string
  * "อยาก" (want) contains "ยา" (medicine). Drop them before matching.
  */
 function dropFalseFriends(input: string): string {
-  return input.toLowerCase().normalize('NFC').replace(/đâu/g, ' ').replace(/อยาก/g, ' ');
+  return (
+    input
+      .toLowerCase()
+      .normalize('NFC')
+      .replace(/đâu/g, ' ')
+      // Whisper hears Thai "ขอยา" (may I have medicine) as "ขออยาก", and "ชาร์จ" (charge) as "ชาติ" (nation).
+      .replace(/ขออยาก/g, 'ขอยา')
+      .replace(/ชาติ/g, 'ชาร์จ')
+      .replace(/อ?ยาก/g, ' ')
+  );
 }
 
 /** Languages whose speech transcripts get the sound-alike tier (English and Indonesian come out of Whisper clean). */

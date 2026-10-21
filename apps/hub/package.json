@@ -16,7 +16,8 @@
     "train": "tsx src/scripts/train-head.ts",
     "a11y": "tsx src/scripts/a11y.ts",
     "zeroshot": "tsx src/scripts/zeroshot.ts",
-    "chart": "tsx src/scripts/chart.ts"
+    "chart": "tsx src/scripts/chart.ts",
+    "add-language": "tsx src/scripts/add-language.ts"
   },
   "dependencies": {
     "@hearme/shared": "*",
