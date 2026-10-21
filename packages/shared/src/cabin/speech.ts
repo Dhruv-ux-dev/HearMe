@@ -16,7 +16,8 @@ import type { LangCode } from '../types';
 export interface SpeechRecognizer {
   readonly simulated: boolean;
   /** Starts listening. May reject (e.g. microphone permission denied). */
-  start(lang: LangCode, onLevel: (db: number) => void): void | Promise<void>;
+  /** `lang`: one of the 6 languages, or a language-pack code (e.g. "bn") the hub understands. */
+  start(lang: string, onLevel: (db: number) => void): void | Promise<void>;
   /** Stops and returns what was said; the hub also returns its match. */
   stop(): Promise<{ transcript: string; match?: MatchResult }>;
   cancel(): void;

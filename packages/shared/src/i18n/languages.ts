@@ -26,6 +26,17 @@ export const LANGUAGES: LanguageInfo[] = [
 /** The crew's working language on the demo route (Japanese carrier). */
 export const CREW_LANG: LangCode = 'ja';
 
+/** English name of any language code: the 6 built in, or any other (Bengali, Tamil…) through Intl. */
+export function languageName(code: string): string {
+  const known = LANGUAGES.find((l) => l.code === code);
+  if (known) return known.englishName;
+  try {
+    return new Intl.DisplayNames(['en'], { type: 'language' }).of(code) ?? code;
+  } catch {
+    return code;
+  }
+}
+
 export function languageInfo(code: LangCode): LanguageInfo {
   return LANGUAGES.find((l) => l.code === code) ?? LANGUAGES[1]!;
 }

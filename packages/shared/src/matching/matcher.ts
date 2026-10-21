@@ -1,5 +1,5 @@
 import { NEEDS, PURPOSE_PHRASES } from '../catalog/needs';
-import type { LangCode, Need, NeedPurpose } from '../types';
+import type { Need, NeedPurpose } from '../types';
 import { allowedEdits, fuzzyFind, soundAlike } from './phonetic';
 
 /**
@@ -102,12 +102,13 @@ function dropFalseFriends(input: string): string {
 }
 
 /** Languages whose speech transcripts get the sound-alike tier (English and Indonesian come out of Whisper clean). */
-const SOUND_ALIKE_LANGS: LangCode[] = ['hi', 'th', 'vi', 'ja'];
+/** English and Indonesian come out of Whisper clean; every other language (and language pack) gets the sound-alike tier. */
+const CLEAN_LANGS = new Set(['en', 'id']);
 
 interface AlikeKeyword {
   needId: string;
   kind: 'phrase' | 'hint';
-  lang: LangCode;
+  lang: string;
   /** Normalized spelling, and the same folded to how it sounds. */
   plain: string;
   keyword: string;
@@ -119,8 +120,9 @@ function alikeKeywords(needs: Need[]): AlikeKeyword[] {
   for (const need of needs) {
     for (const kind of ['phrase', 'hint'] as const) {
       const map = kind === 'phrase' ? need.phrases : need.hints;
-      for (const lang of SOUND_ALIKE_LANGS) {
-        for (const w of map?.[lang] ?? []) {
+      for (const [lang, words] of Object.entries(map ?? {}) as [string, string[] | undefined][]) {
+        if (CLEAN_LANGS.has(lang)) continue;
+        for (const w of words ?? []) {
           const plain = normalize(w).trim();
           const keyword = soundAlike(plain, lang);
           const edits = allowedEdits(keyword, lang);
@@ -160,7 +162,7 @@ export function createKeywordMatcher(needs: Need[] = NEEDS): IntentMatcher {
       const masked = text.split('');
       for (const h of kept) for (let i = h.start; i < h.end; i++) masked[i] = ' ';
       const rest = masked.join('');
-      const alikeText = new Map<LangCode, string>();
+      const alikeText = new Map<string, string>();
       type AlikeHit = AlikeKeyword & { start: number; end: number; found: number };
       const alikeHits: AlikeHit[] = [];
       for (const k of alike) {

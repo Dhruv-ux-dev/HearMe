@@ -31,7 +31,8 @@ export type HubEvent = {
   at: number;
   /** Who spoke: a passenger (matched to needs) or crew (matched to verified replies). */
   target: 'needs' | 'replies';
-  lang: LangCode;
+  /** One of the 6 languages, or a language-pack code such as "bn". */
+  lang: string;
   transcript: string;
   /** Best match (need id or reply id) and its confidence. */
   match?: string;
@@ -125,6 +126,7 @@ export function parsePassengerMessage(v: unknown): PassengerToCrew | null {
       const understanding = parseUnderstanding(v.understanding);
       const medical = parseMedical(v.medical);
       if (!tags || understanding === null || medical === null) return null;
+      if (v.spokenLang !== undefined && (typeof v.spokenLang !== 'string' || !/^[a-z]{2,3}$/.test(v.spokenLang))) return null;
       return {
         type: 'request.create',
         requestId: v.requestId,
@@ -138,6 +140,7 @@ export function parsePassengerMessage(v: unknown): PassengerToCrew | null {
         createdAt: v.createdAt,
         ...(understanding ? { understanding } : {}),
         ...(medical ? { medical } : {}),
+        ...(v.spokenLang ? { spokenLang: v.spokenLang } : {}),
       };
     }
     case 'request.cancel':

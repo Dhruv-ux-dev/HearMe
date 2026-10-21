@@ -10,6 +10,8 @@ import { isSeat, type LangCode, type PassengerProfile, type ProfileTag } from '@
 interface ManifestEntry {
   seat: string;
   lang: LangCode;
+  /** Language-pack language the passenger speaks, when there are no screens in it yet. */
+  speechLang?: string;
   name?: string;
   tags: ProfileTag[];
   ssr?: string[];
@@ -23,7 +25,7 @@ export function lookupBooking(seat: string): PassengerProfile | null {
   if (!isSeat(seat)) return null;
   const e = manifest.find((p) => p.seat === seat);
   if (!e) return null;
-  return { lang: e.lang, seat: e.seat, name: e.name, tags: e.tags, shareTagsWithCrew: true };
+  return { lang: e.lang, seat: e.seat, name: e.name, tags: e.tags, shareTagsWithCrew: true, ...(e.speechLang ? { speechLang: e.speechLang } : {}) };
 }
 
 export function manifestSeats(): string[] {

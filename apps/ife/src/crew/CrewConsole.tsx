@@ -12,6 +12,7 @@ import {
   getReply,
   isUrgentMedical,
   languageInfo,
+  languageName,
   lookupBookingOnHub,
   medicalSummaryLines,
   t,
@@ -341,9 +342,9 @@ function Heard({ e }: { e: HubEvent }) {
   return (
     <div className="crew2-heard" lang="en">
       <span className="crew2-heard__label">
-        <Activity aria-hidden /> Last heard ({languageInfo(e.lang).englishName}, {(e.asrMs / 1000).toFixed(1)} s)
+        <Activity aria-hidden /> Last heard ({languageName(e.lang)}, {(e.asrMs / 1000).toFixed(1)} s)
       </span>
-      <q lang={languageInfo(e.lang).bcp47}>{e.transcript}</q>
+      <q lang={e.lang}>{e.transcript}</q>
       {need && (
         <span>
           → {need.label.en} · {Math.round(e.confidence * 100)}%
@@ -381,7 +382,7 @@ function RequestCard({ r, active, onClick }: { r: CrewRequest; active: boolean; 
         </small>
       </span>
       <span className="crew2-card__meta" lang="en">
-        <span className="crew2-lang">{LANG_JA[r.lang]}</span>
+        <span className="crew2-lang">{r.spokenLang ? languageName(r.spokenLang) : LANG_JA[r.lang]}</span>
         <span className={`crew2-age${r.status === 'new' && Date.now() - r.receivedAt > 60_000 ? ' late' : ''}`}>{r.status === 'new' ? ago(r.receivedAt) : r.status === 'replied' ? 'answered' : r.status}</span>
       </span>
     </button>
@@ -449,7 +450,15 @@ function Detail({ r, tablet, viaHub }: { r: CrewRequest; tablet: CrewTabletApi; 
 
       <div className="crew2-tags">
         <span className="crew2-tag lang">
-          {LANG_JA[r.lang]} <span lang="en">{languageInfo(r.lang).englishName}</span>
+          {r.spokenLang ? (
+            <span lang="en">
+              {languageName(r.spokenLang)} (language pack) · replies in {languageInfo(r.lang).englishName}
+            </span>
+          ) : (
+            <>
+              {LANG_JA[r.lang]} <span lang="en">{languageInfo(r.lang).englishName}</span>
+            </>
+          )}
         </span>
         {r.tags.map((tag) => (
           <span key={tag} className="crew2-tag">

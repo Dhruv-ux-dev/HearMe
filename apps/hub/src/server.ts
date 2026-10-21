@@ -84,7 +84,13 @@ function parseTarget(v: unknown): UnderstandTarget {
 export function createHandler(opts: HandlerOptions) {
   const root = resolve(opts.staticDir);
 
-  async function understandText(text: string, lang: LangCode, target: UnderstandTarget, asrMs: number): Promise<UnderstandResult> {
+  /** One of the 6 languages, or a language pack's code (understood, but no screens yet). */
+  const parseAnyLang = (v: unknown): string | null =>
+    parseLang(v) ?? (typeof v === 'string' && opts.ai.languagePacks().some((p) => p.code === v) ? v : null);
+  /** Only the laptop running the hub (the demo stage) may change models or reload languages. */
+  const fromHubLaptop = (req: IncomingMessage) => ['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(req.socket.remoteAddress ?? '');
+
+  async function understandText(text: string, lang: string, target: UnderstandTarget, asrMs: number): Promise<UnderstandResult> {
     const t0 = Date.now();
     const result: UnderstandResult = { transcript: text, asrMs, matchMs: 0 };
     if (target === 'needs') result.match = await opts.ai.matchNeeds(text);
@@ -123,7 +129,7 @@ export function createHandler(opts: HandlerOptions) {
       return json(res, 200, status);
     }
     if (path === '/api/understand' && req.method === 'POST') {
-      const lang = parseLang(url.searchParams.get('lang'));
+      const lang = parseAnyLang(url.searchParams.get('lang'));
       if (!lang) return json(res, 400, { error: 'unknown language' });
       if (!opts.ai.canTranscribe) return json(res, 503, { error: 'speech model is not ready yet' });
       const body = await readBody(req, MAX_AUDIO_BYTES);
@@ -132,10 +138,19 @@ export function createHandler(opts: HandlerOptions) {
       const transcript = await opts.ai.transcribe(samples, lang);
       return json(res, 200, await understandText(transcript, lang, parseTarget(url.searchParams.get('target')), Date.now() - t0));
     }
+    if (path === '/api/languages' && req.method === 'GET') {
+      return json(res, 200, {
+        builtIn: LANGUAGES.map((l) => ({ code: l.code, name: l.englishName })),
+        packs: opts.ai.languagePacks().map((p) => ({ code: p.code, name: p.name, draft: p.draft ?? 'human', needs: Object.keys(p.needs).length, speech: !!p.whisper })),
+      });
+    }
+    if (path === '/api/languages/reload' && req.method === 'POST') {
+      if (!fromHubLaptop(req)) return json(res, 403, { error: 'only from the hub laptop' });
+      await opts.ai.reloadLanguages();
+      return json(res, 200, { packs: opts.ai.languagePacks().map((p) => p.code) });
+    }
     if (path === '/api/asr' && req.method === 'POST') {
-      // Only the laptop running the hub (the demo stage) may change the speech model.
-      const from = req.socket.remoteAddress ?? '';
-      if (!['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(from)) return json(res, 403, { error: 'only from the hub laptop' });
+      if (!fromHubLaptop(req)) return json(res, 403, { error: 'only from the hub laptop' });
       const size = url.searchParams.get('size');
       if (size !== 'small' && size !== 'base') return json(res, 400, { error: 'size must be small or base' });
       void opts.ai.switchAsr(size);
@@ -149,7 +164,7 @@ export function createHandler(opts: HandlerOptions) {
       } catch {
         return json(res, 400, { error: 'invalid JSON' });
       }
-      const lang = parseLang(input.lang);
+      const lang = parseAnyLang(input.lang);
       if (!lang || typeof input.text !== 'string' || input.text.length > 300) return json(res, 400, { error: 'invalid request' });
       return json(res, 200, await understandText(input.text.trim(), lang, parseTarget(input.target), 0));
     }

@@ -69,7 +69,7 @@ export async function fetchHubStatus(hubUrl: string, timeoutMs = 2500): Promise<
 export async function understandSpeech(
   hubUrl: string,
   audio: ArrayBuffer | Uint8Array | Blob,
-  options: { lang: LangCode; target?: UnderstandTarget; mimeType?: string; timeoutMs?: number },
+  options: { lang: string; target?: UnderstandTarget; mimeType?: string; timeoutMs?: number },
 ): Promise<UnderstandResult> {
   const { lang, target = 'needs', mimeType = 'audio/L16;rate=16000;channels=1', timeoutMs = 30_000 } = options;
   return withTimeout(timeoutMs, async (signal) => {
@@ -88,7 +88,7 @@ export async function understandSpeech(
 export async function matchOnHub(
   hubUrl: string,
   text: string,
-  options: { lang: LangCode; target?: UnderstandTarget; timeoutMs?: number },
+  options: { lang: string; target?: UnderstandTarget; timeoutMs?: number },
 ): Promise<UnderstandResult | null> {
   const { lang, target = 'needs', timeoutMs = 4000 } = options;
   try {

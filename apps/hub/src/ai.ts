@@ -9,7 +9,7 @@ import {
   type ReplyId,
 } from '@hearme/shared';
 import { loadNeedHead } from './head';
-import { withLanguagePacks } from './langpacks';
+import { fromDevanagari, loadLanguagePacks, withLanguagePacks, type LanguagePack } from './langpacks';
 import { ASR_MODELS, EMBED_MODEL, MODEL_DIR, type AsrSize } from './models';
 
 /**
@@ -20,7 +20,8 @@ import { ASR_MODELS, EMBED_MODEL, MODEL_DIR, type AsrSize } from './models';
  */
 
 export interface Transcriber {
-  transcribe(samples: Float32Array, lang: LangCode): Promise<string>;
+  /** `lang`: one of the 6 language codes, or Whisper's name for another language (e.g. "bengali"). */
+  transcribe(samples: Float32Array, lang: string): Promise<string>;
   /** Frees the model's memory (used when switching models). */
   dispose?(): Promise<void>;
 }
@@ -75,7 +76,7 @@ function withTimeout<T>(work: Promise<T>, ms: number): Promise<T> {
   });
 }
 
-async function loadTransformers() {
+export async function loadTransformers() {
   const t = await import('@huggingface/transformers');
   t.env.cacheDir = MODEL_DIR;
   t.env.localModelPath = MODEL_DIR;
@@ -93,7 +94,7 @@ export async function createWhisper(size: AsrSize, threads: number): Promise<Tra
     async transcribe(samples, lang) {
       // Long clips are cut to 20 s: requests are short, and this bounds the work per request.
       const clip = samples.length > 16000 * 20 ? samples.subarray(0, 16000 * 20) : samples;
-      const out = (await asr(clip, { language: WHISPER_LANG[lang], task: 'transcribe', max_new_tokens: 64 })) as { text: string };
+      const out = (await asr(clip, { language: WHISPER_LANG[lang as LangCode] ?? lang, task: 'transcribe', max_new_tokens: 64 })) as { text: string };
       return out.text.trim();
     },
     dispose: () => asr.dispose(),
@@ -139,7 +140,9 @@ export class AiEngine {
   private asr: Transcriber | null = null;
   private needs: SemanticNeedMatcher | null = null;
   private replies: ReplyMatcher | null = null;
-  private keyword = createKeywordMatcher(withLanguagePacks());
+  private packs = loadLanguagePacks();
+  private keyword = createKeywordMatcher(withLanguagePacks(undefined, this.packs));
+  private embedder: Embedder | null = null;
   private queue: Promise<unknown> = Promise.resolve();
   private asrFailures = 0;
   readonly status: AiStatus;
@@ -156,7 +159,8 @@ export class AiEngine {
     this.status.embed.state = 'loading';
     try {
       const embedder = await (this.options.loadEmbedder ?? (() => createE5(this.options.threads)))();
-      this.needs = await SemanticNeedMatcher.create(embedder, withLanguagePacks(), loadNeedHead());
+      this.embedder = embedder;
+      this.needs = await SemanticNeedMatcher.create(embedder, withLanguagePacks(undefined, this.packs), loadNeedHead());
       this.replies = await ReplyMatcher.create(embedder);
       this.status.embed.state = 'ready';
     } catch (e) {
@@ -184,15 +188,30 @@ export class AiEngine {
    * failures in a row the model is reloaded in the background; meanwhile
    * passengers can still tap and type.
    */
-  async transcribe(samples: Float32Array, lang: LangCode): Promise<string> {
+  /** Language packs in use (data/languages/*.json). */
+  languagePacks(): LanguagePack[] {
+    return this.packs;
+  }
+
+  /** Re-read the language packs and the trained classifier without restarting (after npm run add-language). */
+  async reloadLanguages(): Promise<void> {
+    const packs = loadLanguagePacks();
+    const needs = withLanguagePacks(undefined, packs);
+    if (this.embedder) this.needs = await SemanticNeedMatcher.create(this.embedder, needs, loadNeedHead());
+    this.keyword = createKeywordMatcher(needs);
+    this.packs = packs;
+  }
+
+  async transcribe(samples: Float32Array, lang: string): Promise<string> {
     const asr = this.asr;
     if (!asr) throw new Error('speech model not loaded');
     const voiced = trimSilence(samples);
     if (!voiced) return '';
     try {
-      const text = await this.serial(() => withTimeout(asr.transcribe(voiced, lang), 30_000));
+      const pack = this.packs.find((p) => p.code === lang);
+      const text = await this.serial(() => withTimeout(asr.transcribe(voiced, pack?.whisper ?? lang), 30_000));
       this.asrFailures = 0;
-      return text;
+      return fromDevanagari(text, pack?.script);
     } catch (e) {
       if (++this.asrFailures >= 2) void this.loadAsr(this.options.asrSize);
       throw e;

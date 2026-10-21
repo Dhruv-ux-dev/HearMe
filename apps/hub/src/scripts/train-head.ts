@@ -108,6 +108,9 @@ function generate(): Example[] {
       if (!NEEDS.some((n) => n.id === need)) continue;
       for (const k of words) for (const t of pack.templates) add(t.replace('{k}', k), need);
     }
+    for (const [need, sentences] of Object.entries(pack.examples ?? {})) {
+      if (NEEDS.some((n) => n.id === need)) for (const e of sentences) add(e, need);
+    }
   }
   for (const [, needs] of Object.entries(NEED_PHRASES)) {
     for (const [need, phrases] of Object.entries(needs)) for (const p of Array.isArray(phrases) ? phrases : [phrases]) add(p, need);

@@ -20,6 +20,8 @@ const DEVANAGARI_SAME: Record<string, string> = {
 const THAI_SAME: Record<string, string> = {
   'ข': 'ค', 'ฃ': 'ค', 'ฅ': 'ค', 'ฆ': 'ค', 'ฉ': 'ช', 'ฌ': 'ช', 'ศ': 'ซ', 'ษ': 'ซ', 'ส': 'ซ', 'ญ': 'ย', 'ฎ': 'ด', 'ฏ': 'ต',
   'ฐ': 'ท', 'ฑ': 'ท', 'ฒ': 'ท', 'ถ': 'ท', 'ธ': 'ท', 'ณ': 'น', 'ผ': 'พ', 'ภ': 'พ', 'ฝ': 'ฟ', 'ห': 'ฮ', 'ฬ': 'ล',
+  // Vowel length is often misheard: long and short forms count as the same sound.
+  'ี': 'ิ', 'ู': 'ุ', 'ื': 'ึ',
 };
 
 const mapChars = (s: string, table: Record<string, string>) => [...s].map((c) => table[c] ?? c).join('');
@@ -65,7 +67,13 @@ function foldHinglish(s: string): string {
 const toHiragana = (s: string) => s.replace(/[ァ-ヶ]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0x60));
 
 /** Sound-alike form of already-normalized text, for the language a keyword belongs to. */
-export function soundAlike(normalized: string, lang: LangCode): string {
+/** Other Indian scripts (Bengali, Tamil, …) line up letter for letter with Devanagari, so they share its folding. */
+function indicToDevanagari(s: string): string {
+  return s.replace(/[\u0980-\u0D7F]/g, (c) => String.fromCharCode(0x0900 + ((c.charCodeAt(0) - 0x0980) % 0x80)));
+}
+
+/** `lang`: one of the 6 languages, or a language-pack code (Indian scripts fold like Hindi). */
+export function soundAlike(normalized: string, lang: LangCode | string): string {
   switch (lang) {
     case 'hi':
       return foldHinglish(foldDevanagari(normalized));
@@ -76,14 +84,14 @@ export function soundAlike(normalized: string, lang: LangCode): string {
     case 'ja':
       return toHiragana(normalized);
     default:
-      return normalized;
+      return /[\u0980-\u0D7F]/.test(normalized) ? foldDevanagari(indicToDevanagari(normalized)) : normalized;
   }
 }
 
 const LATIN = /^[a-z0-9 ]+$/;
 
 /** How many edits a keyword of this length may differ by. Short words must match exactly (as sounds). */
-export function allowedEdits(keyword: string, lang: LangCode): number {
+export function allowedEdits(keyword: string, lang: LangCode | string): number {
   const n = [...keyword].length;
   if (lang === 'ja') return 0;
   if (LATIN.test(keyword)) return n >= 9 ? 2 : n >= 5 ? 1 : n >= 4 ? 0 : -1;
