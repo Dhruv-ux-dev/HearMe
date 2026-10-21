@@ -11,7 +11,8 @@
     "eval": "tsx src/scripts/eval.ts",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "rescore": "tsx src/scripts/rescore.ts"
+    "rescore": "tsx src/scripts/rescore.ts",
+    "record-demo": "tsx src/scripts/record-demo.ts"
   },
   "dependencies": {
     "@hearme/shared": "*",

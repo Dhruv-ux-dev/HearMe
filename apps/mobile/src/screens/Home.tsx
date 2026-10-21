@@ -1,6 +1,6 @@
 import { COMMON_NEEDS, getNeed, isActive, replyText, requestTitle, translator, type LangCode, type PassengerRequest } from '@hearme/shared';
 import { useSession } from '@hearme/shared/react';
-import { Keyboard, Lock, Plus, RotateCcw } from 'lucide-react-native';
+import { HeartPulse, Keyboard, Lock, Plus, RotateCcw } from 'lucide-react-native';
 import type { ReactNode } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { NeedIcon } from '../components/Icon';
@@ -49,6 +49,8 @@ export function Home({ lang }: { lang: LangCode }) {
           <Tile dashed label={tr('home.more')} onPress={() => nav.open({ kind: 'picker', category: 'drinks' })} icon={(c, s) => <Plus color={c} size={s} />} />
         </View>
 
+        {/* Feeling unwell goes straight to Care Mode: no hunting through categories when it matters most. */}
+        <Btn variant="secondary" label={tr('care.open')} onPress={() => nav.open({ kind: 'care' })} icon={(c, s) => <HeartPulse color={c} size={s} />} />
         <Btn variant="ghost" label={tr('home.private')} onPress={() => nav.open({ kind: 'picker', category: 'private' })} icon={(c, s) => <Lock color={c} size={s} />} />
       </ScrollView>
 
