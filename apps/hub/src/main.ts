@@ -89,11 +89,14 @@ if (lan.length) console.log(await QRCode.toString(phone, { type: 'terminal', sma
 if (process.env.HEARME_NO_AI === '1') {
   console.log('  AI models: off (HEARME_NO_AI=1). Taps, typing (keyword matching) and the crew console still work.\n');
 } else {
-  console.log(`  Loading AI models (speech: ${ai.status.asr.model}) …`);
+  console.log(`  Loading and warming up the AI models (speech: ${ai.status.asr.model}) …`);
+  const t0 = Date.now();
   ai.start().then(() => {
     const s = ai.status;
-    console.log(`  Meaning model: ${s.embed.state}${s.embed.error ? ` (${s.embed.error})` : ''}`);
-    console.log(`  Speech model:  ${s.asr.state}${s.asr.error ? ` (${s.asr.error}) — run: npm run models` : ''}\n`);
+    const warm = (ms?: number) => (ms ? `, warmed up in ${(ms / 1000).toFixed(1)} s` : '');
+    console.log(`  Meaning model: ${s.embed.state}${warm(s.embed.warmupMs)}${s.embed.error ? ` (${s.embed.error})` : ''}`);
+    console.log(`  Speech model:  ${s.asr.state}${warm(s.asr.warmupMs)}${s.asr.error ? ` (${s.asr.error}) — run: npm run models` : ''}`);
+    if (s.asr.state === 'ready') console.log(`  Ready after ${((Date.now() - t0) / 1000).toFixed(0)} s: the first request will be as fast as the rest.\n`);
   });
 }
 

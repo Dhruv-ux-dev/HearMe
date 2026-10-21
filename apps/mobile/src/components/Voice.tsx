@@ -1,4 +1,4 @@
-import { decide, defaultMatcher, matchOnHub, translator, type LangCode, type MatchResult, type RequestSource } from '@hearme/shared';
+import { decide, defaultMatcher, matchOnHub, translator, type LangCode, type MatchResult, type RequestSource, type UnderstandProgress } from '@hearme/shared';
 import { MicUnavailableError } from '@hearme/shared/web';
 import Mic from 'lucide-react-native/icons/mic';
 import Square from 'lucide-react-native/icons/square';
@@ -10,6 +10,12 @@ import { useTheme } from '../theme';
 import { T } from './ui';
 
 type Phase = 'idle' | 'listening' | 'processing';
+
+/** Live progress of one recording on the hub, with when the current stage began. */
+interface Progress {
+  p: UnderstandProgress;
+  since: number;
+}
 
 const MIN_HOLD_MS = 400;
 
@@ -53,6 +59,8 @@ export function HoldToSpeak({ lang }: { lang: LangCode }) {
   const [db, setDb] = useState(0);
   const [tapMode, setTapMode] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [progress, setProgress] = useState<Progress | null>(null);
+  const [, setTick] = useState(0);
   const speech = currentSpeech();
   const startedAt = useRef(0);
   /** True while a pointer gesture is in progress; activations without one come from screen readers or keyboards. */
@@ -76,9 +84,14 @@ export function HoldToSpeak({ lang }: { lang: LangCode }) {
   const finish = async () => {
     if (phaseRef.current !== 'listening') return;
     setPhase('processing');
+    setProgress({ p: { stage: 'sending' }, since: Date.now() });
     try {
-      const { transcript, match } = await speech.stop();
+      const { transcript, match } = await speech.stop((p) => {
+        setProgress({ p, since: Date.now() });
+        if (p.stage === 'matching' && p.transcript) AccessibilityInfo.announceForAccessibility(tr('speech.heard', { text: p.transcript }));
+      });
       setPhase('idle');
+      setProgress(null);
       if (!transcript.trim()) {
         setError(tr('speech.tooShort'));
         return;
@@ -86,9 +99,17 @@ export function HoldToSpeak({ lang }: { lang: LangCode }) {
       await route(transcript, 'speech', lang, match);
     } catch {
       setPhase('idle');
+      setProgress(null);
       setError(tr('speech.error'));
     }
   };
+
+  // Redraw the estimate a few times a second while Whisper works.
+  useEffect(() => {
+    if (phase !== 'processing') return;
+    const t = setInterval(() => setTick((x) => x + 1), 250);
+    return () => clearInterval(t);
+  }, [phase]);
 
   /** Pointer released: a real hold finishes; a quick tap switches to tap-to-finish. */
   const release = () => {
@@ -144,10 +165,13 @@ export function HoldToSpeak({ lang }: { lang: LangCode }) {
           accessibilityLabel={phase === 'listening' ? tr('speech.listening') : tr('speech.processing')}
           style={{ backgroundColor: th.p.surface, borderRadius: th.radius.md, borderWidth: 2, borderColor: th.p.primary, padding: th.space.md, gap: th.space.sm }}
         >
+          <Steps step={phase === 'listening' ? 0 : progress?.p.stage === 'matching' ? 2 : 1} lang={lang} />
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
               {phase === 'processing' ? <ActivityIndicator color={th.p.primary} /> : <Mic color={th.p.primary} size={20} />}
-              <T bold>{phase === 'listening' ? tr('speech.listening') : tr('speech.processing')}</T>
+              <T bold style={{ flexShrink: 1 }}>
+                {phase === 'listening' ? tr('speech.listening') : stageText(progress, tr)}
+              </T>
             </View>
             {phase === 'listening' && speech.simulated && (
               <View style={{ backgroundColor: th.p.warningSoft, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 2 }}>
@@ -155,6 +179,12 @@ export function HoldToSpeak({ lang }: { lang: LangCode }) {
               </View>
             )}
           </View>
+          {phase === 'processing' && <EstimateBar progress={progress} />}
+          {phase === 'processing' && progress?.p.stage === 'matching' && progress.p.transcript && (
+            <T lang={lang} style={{ fontStyle: 'italic' }}>
+              {tr('speech.heard', { text: progress.p.transcript })}
+            </T>
+          )}
           {phase === 'listening' && !th.reduceMotion && (
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, height: 36 }} importantForAccessibility="no-hide-descendants">
               {bars.map((b, i) => (
@@ -190,7 +220,7 @@ export function HoldToSpeak({ lang }: { lang: LangCode }) {
           alignItems: 'center',
           justifyContent: 'center',
           gap: th.space.sm,
-          opacity: pressed && phase === 'idle' ? 0.9 : 1,
+          opacity: phase === 'processing' ? 0.55 : pressed && phase === 'idle' ? 0.9 : 1,
         })}
       >
         {phase === 'listening' ? <Square color={th.p.onNavy} size={th.fs(22)} /> : <Mic color={th.p.onPrimary} size={th.fs(26)} />}
@@ -198,6 +228,80 @@ export function HoldToSpeak({ lang }: { lang: LangCode }) {
           {phase === 'listening' ? (tapMode ? tr('speech.tapToFinish') : tr('speech.listening')) : tr('home.holdToSpeak')}
         </Text>
       </Pressable>
+    </View>
+  );
+}
+
+/** What the passenger is waiting for, in their language, with the time left when the hub gave an estimate. */
+function stageText(progress: Progress | null, tr: ReturnType<typeof translator>): string {
+  const p = progress?.p;
+  if (!p || !progress) return tr('speech.processing');
+  switch (p.stage) {
+    case 'sending':
+      // Older hubs do not stream their stages; after a moment just say we are understanding.
+      return Date.now() - progress.since > 700 ? tr('speech.processing') : tr('speech.sending');
+    case 'queued':
+      return tr('speech.queued');
+    case 'transcribing': {
+      const left = Math.ceil((p.estimateMs - (Date.now() - progress.since)) / 1000);
+      return left >= 1 ? `${tr('speech.processing')} ${tr('speech.secondsLeft', { s: left })}` : tr('speech.almost');
+    }
+    case 'matching':
+    case 'done':
+      return tr('speech.matching');
+  }
+}
+
+/** Listen → Understand → Picture, so the passenger can see where their request is. */
+function Steps({ step, lang }: { step: 0 | 1 | 2; lang: LangCode }) {
+  const th = useTheme();
+  const tr = translator(lang);
+  const labels = [tr('speech.stepListen'), tr('speech.stepUnderstand'), tr('speech.stepPicture')];
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }} accessibilityRole="progressbar" accessibilityValue={{ min: 1, max: 3, now: step + 1, text: labels[step] }}>
+      {labels.map((label, i) => {
+        const done = i < step;
+        const on = i === step;
+        return (
+          <View key={label} style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexShrink: 1 }}>
+            {i > 0 && <View style={{ width: 12, height: 2, backgroundColor: done || on ? th.p.primary : th.p.border }} />}
+            <View
+              style={{
+                paddingHorizontal: 8,
+                paddingVertical: 3,
+                borderRadius: 999,
+                backgroundColor: on ? th.p.primary : done ? th.p.primarySoft : th.p.surfaceAlt,
+                borderWidth: th.hc ? 1 : 0,
+                borderColor: th.p.border,
+              }}
+            >
+              <Text maxFontSizeMultiplier={1.3} style={{ fontSize: th.fs(12), fontWeight: '700', color: on ? th.p.onPrimary : done ? th.p.primary : th.p.textMuted }}>
+                {done ? '✓ ' : ''}
+                {label}
+              </Text>
+            </View>
+          </View>
+        );
+      })}
+    </View>
+  );
+}
+
+/** Fills towards the hub's typical time, slowing near the end; never claims to be done before it is. */
+function EstimateBar({ progress }: { progress: Progress | null }) {
+  const th = useTheme();
+  const p = progress?.p;
+  let fraction = 0.08;
+  if (p && progress) {
+    if (p.stage === 'transcribing') {
+      const x = (Date.now() - progress.since) / Math.max(500, p.estimateMs);
+      fraction = 0.1 + 0.8 * (1 - Math.exp(-2.2 * x)); // approaches 90% while waiting
+    } else if (p.stage === 'matching' || p.stage === 'done') fraction = 0.95;
+    else if (p.stage === 'queued') fraction = 0.08;
+  }
+  return (
+    <View importantForAccessibility="no-hide-descendants" style={{ height: 8, borderRadius: 4, backgroundColor: th.p.surfaceAlt, overflow: 'hidden' }}>
+      <View style={{ width: `${Math.round(fraction * 100)}%`, height: '100%', backgroundColor: th.p.primary, borderRadius: 4 }} />
     </View>
   );
 }

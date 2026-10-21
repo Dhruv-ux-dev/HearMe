@@ -30,7 +30,7 @@ interface Item {
   dir: 'to-crew' | 'to-passenger' | 'hub';
   title: string;
   detail?: string;
-  tone?: 'urgent' | 'ok' | 'info';
+  tone?: 'urgent' | 'ok' | 'info' | 'working';
 }
 
 function describe(m: CabinMessage, state: CrewTabletState | null): Item | null {
@@ -80,6 +80,16 @@ function describe(m: CabinMessage, state: CrewTabletState | null): Item | null {
 
 function describeEvent(e: HubEvent): Item {
   const lang = languageInfo(e.lang).englishName;
+  if (e.type === 'working') {
+    return {
+      id: `work-${e.at}`,
+      at: e.at,
+      dir: 'hub',
+      title: `Whisper is listening to a ${lang} ${e.target === 'needs' ? 'request' : 'crew reply'} on this laptop…`,
+      detail: `Usually about ${(e.estimateMs / 1000).toFixed(1)} s, offline`,
+      tone: 'working',
+    };
+  }
   const target = e.target === 'needs' ? (e.match ? getNeed(e.match)?.label.en : undefined) : e.match ? getReply(e.match as ReplyId).text.en : undefined;
   return {
     id: `ev-${e.at}`,
@@ -88,6 +98,14 @@ function describeEvent(e: HubEvent): Item {
     title: `Whisper heard (${lang}, ${(e.asrMs / 1000).toFixed(1)} s): “${e.transcript}”`,
     detail: target ? `${e.target === 'needs' ? 'Means' : 'Closest verified reply'}: ${target} · ${Math.round(e.confidence * 100)}% sure${e.confidence < 0.85 && e.target === 'needs' ? ' → asks with pictures' : ''}` : 'No match',
   };
+}
+
+/** "warming up…" while the practice run happens, then the typical time per request. */
+function modelLabel(m?: { state: string; typicalMs?: number }): string {
+  if (!m) return '…';
+  if (m.state === 'warming') return 'warming up…';
+  if (m.state === 'ready' && m.typicalMs) return `ready · ~${m.typicalMs < 1000 ? `${m.typicalMs} ms` : `${(m.typicalMs / 1000).toFixed(1)} s`}`;
+  return m.state;
 }
 
 export function Stage() {
@@ -112,7 +130,10 @@ export function Stage() {
     const off = bus.onFrame((f: ServerFrame) => {
       if (f.kind === 'crewState') crewState.current = f.state;
       else if (f.kind === 'cabin') push(describe(f.msg, crewState.current));
-      else if (f.kind === 'event') push(describeEvent(f.event));
+      else if (f.kind === 'event') {
+        if (f.event.type === 'understood') setItems((list) => list.filter((it) => it.tone !== 'working'));
+        push(describeEvent(f.event));
+      }
     });
     return () => {
       off();
@@ -185,10 +206,10 @@ export function Stage() {
             onClick={switchSpeech}
             disabled={status?.asr.state === 'loading'}
           >
-            {fast ? <Zap aria-hidden /> : <Mic aria-hidden />} Whisper {fast ? 'base (fast)' : 'small'} {status?.asr.state ?? '…'}
+            {fast ? <Zap aria-hidden /> : <Mic aria-hidden />} Whisper {fast ? 'base (fast)' : 'small'} {modelLabel(status?.asr)}
           </button>
           <span className={`stage-chip${ready(status?.embed.state) ? ' ok' : ''}`} title={status?.embed.model}>
-            <Cpu aria-hidden /> e5 matching {status?.embed.state ?? '…'}
+            <Cpu aria-hidden /> e5 matching {modelLabel(status?.embed)}
           </span>
           <span className="stage-chip ok">
             <WifiOff aria-hidden /> no internet needed

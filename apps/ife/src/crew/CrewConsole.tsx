@@ -23,6 +23,7 @@ import {
   type PassengerProfile,
   type ProfileTag,
   type ReplyId,
+  type UnderstandProgress,
 } from '@hearme/shared';
 import { useExternal } from '@hearme/shared/react';
 import { MicRecorder, MicUnavailableError, recordAndUnderstand } from '@hearme/shared/web';
@@ -103,7 +104,7 @@ function Console({ tablet, viaHub }: { tablet: CrewTabletApi; viaHub: boolean })
   const state = useExternal(tablet);
   const [selected, setSelected] = useState<string | null>(null);
   const [info, setInfo] = useState(false);
-  const [heard, setHeard] = useState<HubEvent | null>(null);
+  const [heard, setHeard] = useState<Extract<HubEvent, { type: 'understood' }> | null>(null);
   const [connected, setConnected] = useState(true);
   const [heat, setHeat] = useState(false);
   const [seatInfo, setSeatInfo] = useState<string | null>(null);
@@ -127,7 +128,7 @@ function Console({ tablet, viaHub }: { tablet: CrewTabletApi; viaHub: boolean })
     if (!(tablet instanceof RemoteCrewTablet)) return;
     setConnected(tablet.isConnected());
     const a = tablet.onConnection(setConnected);
-    const b = tablet.onEvent((e) => e.target === 'needs' && setHeard(e));
+    const b = tablet.onEvent((e) => e.type === 'understood' && e.target === 'needs' && setHeard(e));
     return () => {
       a();
       b();
@@ -336,7 +337,7 @@ function Metric({ label, value, alert }: { label: string; value: string; alert?:
   );
 }
 
-function Heard({ e }: { e: HubEvent }) {
+function Heard({ e }: { e: Extract<HubEvent, { type: 'understood' }> }) {
   const need = e.match ? getNeed(e.match) : undefined;
   return (
     <div className="crew2-heard" lang="en">
@@ -492,6 +493,13 @@ function VoiceReply({ r, tablet }: { r: CrewRequest; tablet: CrewTabletApi }) {
   const [phase, setPhase] = useState<'idle' | 'listening' | 'thinking'>('idle');
   const [result, setResult] = useState<{ transcript: string; replyId: ReplyId | null; confidence: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [progress, setProgress] = useState<{ p: UnderstandProgress; since: number } | null>(null);
+  const [, redraw] = useState(0);
+  useEffect(() => {
+    if (phase !== 'thinking') return;
+    const t = setInterval(() => redraw((x) => x + 1), 250);
+    return () => clearInterval(t);
+  }, [phase]);
   useEffect(() => {
     setResult(null);
     setError(null);
@@ -510,8 +518,9 @@ function VoiceReply({ r, tablet }: { r: CrewRequest; tablet: CrewTabletApi }) {
   };
   const finish = async () => {
     setPhase('thinking');
+    setProgress(null);
     try {
-      const res = await recordAndUnderstand(rec.current, hubBaseUrl(), 'ja', 'replies');
+      const res = await recordAndUnderstand(rec.current, hubBaseUrl(), 'ja', 'replies', (p) => setProgress({ p, since: Date.now() }));
       setResult({ transcript: res.transcript, replyId: res.reply?.replyId ?? null, confidence: res.reply?.confidence ?? 0 });
     } catch {
       setError('Could not understand. Tap a reply instead.');
@@ -523,8 +532,13 @@ function VoiceReply({ r, tablet }: { r: CrewRequest; tablet: CrewTabletApi }) {
     <div className="crew2-voice">
       <button className={`crew2-mic${phase === 'listening' ? ' on' : ''}`} onClick={phase === 'listening' ? () => void finish() : () => void start()} disabled={phase === 'thinking'}>
         {phase === 'listening' ? <Square aria-hidden /> : <Mic aria-hidden />}
-        {phase === 'listening' ? '話し終わったらタップ · Tap when done' : phase === 'thinking' ? '認識中… · Understanding…' : '日本語で話して返信 · Reply by voice'}
+        {phase === 'listening' ? '話し終わったらタップ · Tap when done' : phase === 'thinking' ? thinkingText(progress) : '日本語で話して返信 · Reply by voice'}
       </button>
+      {phase === 'thinking' && progress?.p.stage === 'matching' && (
+        <p className="crew2-note">
+          聞き取り · Heard: <q>{progress.p.transcript}</q>
+        </p>
+      )}
       {error && (
         <p className="crew2-note" lang="en">
           {error}
@@ -549,4 +563,16 @@ function VoiceReply({ r, tablet }: { r: CrewRequest; tablet: CrewTabletApi }) {
       )}
     </div>
   );
+}
+
+/** Crew see the same honest wait as passengers: queued, Whisper with the time left, then matching. */
+function thinkingText(progress: { p: UnderstandProgress; since: number } | null): string {
+  const p = progress?.p;
+  if (p?.stage === 'queued') return '順番待ち… · Another request first…';
+  if (p?.stage === 'transcribing' && progress) {
+    const left = Math.ceil((p.estimateMs - (Date.now() - progress.since)) / 1000);
+    return left >= 1 ? `認識中… あと約${left}秒 · Understanding… ~${left} s` : 'まもなく… · Almost done…';
+  }
+  if (p?.stage === 'matching') return '返信を照合中… · Matching a verified reply…';
+  return '認識中… · Understanding…';
 }

@@ -1,5 +1,6 @@
 import type { MatchResult } from '../matching/matcher';
 import type { LangCode } from '../types';
+import type { UnderstandProgress } from './hubClient';
 
 /**
  * Speech input adapter.
@@ -17,8 +18,11 @@ export interface SpeechRecognizer {
   readonly simulated: boolean;
   /** Starts listening. May reject (e.g. microphone permission denied). */
   start(lang: LangCode, onLevel: (db: number) => void): void | Promise<void>;
-  /** Stops and returns what was said; the hub also returns its match. */
-  stop(): Promise<{ transcript: string; match?: MatchResult }>;
+  /**
+   * Stops and returns what was said; the hub also returns its match.
+   * `onProgress` reports each stage of understanding (for a progress display).
+   */
+  stop(onProgress?: (p: UnderstandProgress) => void): Promise<{ transcript: string; match?: MatchResult }>;
   cancel(): void;
 }
 
@@ -49,13 +53,20 @@ export class MockSpeechRecognizer implements SpeechRecognizer {
     this.meter = setInterval(() => onLevel(Math.round(76 + Math.random() * 10)), 120);
   }
 
-  stop(): Promise<{ transcript: string }> {
+  stop(onProgress?: (p: UnderstandProgress) => void): Promise<{ transcript: string }> {
     this.cancel();
     const sample = SAMPLE_UTTERANCES[this.lang];
     const useNoisy = this.mode === 'noisy' || (this.mode === 'alternate' && this.turn % 2 === 0);
     this.turn += 1;
     const transcript = useNoisy ? sample.noisy : sample.clear;
-    return new Promise((resolve) => setTimeout(() => resolve({ transcript }), this.processingDelayMs));
+    // The same stages as the real hub, so the progress display behaves the same in the simulation.
+    onProgress?.({ stage: 'transcribing', estimateMs: this.processingDelayMs });
+    return new Promise((resolve) =>
+      setTimeout(() => {
+        onProgress?.({ stage: 'matching', transcript });
+        resolve({ transcript });
+      }, this.processingDelayMs),
+    );
   }
 
   cancel(): void {

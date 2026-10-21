@@ -1,4 +1,4 @@
-import { floatToPcm16, levelDb, resampleTo16k, understandSpeech, type UnderstandResult, type UnderstandTarget } from '../cabin/hubClient';
+import { floatToPcm16, levelDb, resampleTo16k, understandSpeech, type UnderstandProgress, type UnderstandResult, type UnderstandTarget } from '../cabin/hubClient';
 import type { SpeechRecognizer } from '../cabin/speech';
 import type { LangCode } from '../types';
 
@@ -107,10 +107,11 @@ export async function recordAndUnderstand(
   hubUrl: string,
   lang: LangCode,
   target: UnderstandTarget,
+  onProgress?: (p: UnderstandProgress) => void,
 ): Promise<UnderstandResult & { seconds: number }> {
   const { pcm, seconds } = recorder.stop();
   if (seconds < 0.3) return { transcript: '', asrMs: 0, matchMs: 0, seconds };
-  const result = await understandSpeech(hubUrl, pcm, { lang, target });
+  const result = await understandSpeech(hubUrl, pcm, { lang, target, onProgress });
   return { ...result, seconds };
 }
 
@@ -128,13 +129,13 @@ export class HubSpeechRecognizer implements SpeechRecognizer {
     await this.recorder.start(onLevel);
   }
 
-  async stop() {
+  async stop(onProgress?: (p: UnderstandProgress) => void) {
     const hub = this.hubUrl();
     if (!hub) {
       this.recorder.cancel();
       return { transcript: '' };
     }
-    const r = await recordAndUnderstand(this.recorder, hub, this.lang, 'needs');
+    const r = await recordAndUnderstand(this.recorder, hub, this.lang, 'needs', onProgress);
     return { transcript: r.transcript, match: r.match };
   }
 

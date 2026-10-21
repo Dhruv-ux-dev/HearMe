@@ -504,6 +504,25 @@
   background: #3a1620;
   border-left-color: #ff4d4f;
 }
+.stage-item.working {
+  border-left-color: #f5c451;
+  background: linear-gradient(90deg, #1d2a42 0%, #23314d 50%, #1d2a42 100%);
+  background-size: 200% 100%;
+  animation: stage-in 0.35s ease-out, stage-working 1.6s linear infinite;
+}
+.stage-item.working .stage-item__dir {
+  color: #f5c451;
+}
+@keyframes stage-working {
+  to {
+    background-position: -200% 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .stage-item.working {
+    animation: none;
+  }
+}
 @keyframes stage-in {
   from {
     opacity: 0;

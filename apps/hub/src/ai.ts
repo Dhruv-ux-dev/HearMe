@@ -19,7 +19,8 @@ import { ASR_MODELS, EMBED_MODEL, MODEL_DIR, type AsrSize } from './models';
  */
 
 export interface Transcriber {
-  transcribe(samples: Float32Array, lang: LangCode): Promise<string>;
+  /** `maxNewTokens` caps decoding (the warm-up uses a few tokens; requests use up to 64). */
+  transcribe(samples: Float32Array, lang: LangCode, opts?: { maxNewTokens?: number }): Promise<string>;
   /** Frees the model's memory (used when switching models). */
   dispose?(): Promise<void>;
 }
@@ -89,10 +90,10 @@ export async function createWhisper(size: AsrSize, threads: number): Promise<Tra
     session_options: { intraOpNumThreads: threads, interOpNumThreads: 1 },
   });
   return {
-    async transcribe(samples, lang) {
+    async transcribe(samples, lang, opts) {
       // Long clips are cut to 20 s: requests are short, and this bounds the work per request.
       const clip = samples.length > 16000 * 20 ? samples.subarray(0, 16000 * 20) : samples;
-      const out = (await asr(clip, { language: WHISPER_LANG[lang], task: 'transcribe', max_new_tokens: 64 })) as { text: string };
+      const out = (await asr(clip, { language: WHISPER_LANG[lang], task: 'transcribe', max_new_tokens: opts?.maxNewTokens ?? 64 })) as { text: string };
       return out.text.trim();
     },
     dispose: () => asr.dispose(),
@@ -121,10 +122,71 @@ export async function createE5(threads: number): Promise<Embedder> {
   };
 }
 
-export interface AiStatus {
-  asr: { model: string; state: ModelState; error?: string };
-  embed: { model: string; state: ModelState; error?: string };
+/**
+ * A deterministic, speech-like practice clip for warming Whisper up: a
+ * gliding voice pitch with harmonics, chopped into syllables. It never leaves
+ * the hub and its transcript is thrown away. The first inference of an ONNX
+ * session is several times slower than the rest (memory arenas, kernel
+ * selection); doing it at start-up means the first passenger does not pay for it.
+ */
+export function warmupClip(seconds = 2, rate = 16000): Float32Array {
+  const out = new Float32Array(Math.round(seconds * rate));
+  let phase = 0;
+  for (let i = 0; i < out.length; i++) {
+    const t = i / rate;
+    const f0 = 125 + 25 * Math.sin(2 * Math.PI * 0.8 * t);
+    phase += (2 * Math.PI * f0) / rate;
+    let v = 0;
+    for (let h = 1; h <= 10; h++) {
+      const f = f0 * h;
+      // Two broad "formant" bumps around 700 Hz and 1.2 kHz.
+      const formant = Math.exp(-(((f - 700) / 300) ** 2)) + 0.7 * Math.exp(-(((f - 1200) / 400) ** 2)) + 0.15;
+      v += (formant * Math.sin(h * phase)) / h;
+    }
+    const syllables = Math.max(0, Math.sin(2 * Math.PI * 3.5 * t));
+    out[i] = 0.12 * v * syllables;
+  }
+  return out;
 }
+
+/** One short request per language: warms the tokenizer, the e5 index lookup and the trained classifier. */
+const WARMUP_PHRASES: Record<LangCode, string> = {
+  hi: 'मुझे पानी चाहिए',
+  en: 'I need some water',
+  ja: 'お水をください',
+  th: 'ขอน้ำหน่อย',
+  id: 'Minta air putih',
+  vi: 'Cho tôi nước',
+};
+
+export interface ModelStatus {
+  model: string;
+  state: ModelState;
+  error?: string;
+  /** How long the warm-up run took. */
+  warmupMs?: number;
+  /** Median of recent real runs. */
+  typicalMs?: number;
+}
+
+export interface AiStatus {
+  asr: ModelStatus;
+  embed: ModelStatus;
+}
+
+/** Called while a recording waits for and then goes through Whisper. */
+export interface TranscribeHooks {
+  /** Other jobs are ahead of this one on the hub. */
+  onQueued?(ahead: number): void;
+  /** Whisper has started on this recording; `estimateMs` is the typical time. */
+  onStart?(estimateMs: number): void;
+}
+
+const median = (xs: number[]) => {
+  if (!xs.length) return undefined;
+  const s = [...xs].sort((a, b) => a - b);
+  return Math.round(s[Math.floor(s.length / 2)]!);
+};
 
 export interface AiEngineOptions {
   asrSize: AsrSize;
@@ -140,7 +202,10 @@ export class AiEngine {
   private replies: ReplyMatcher | null = null;
   private keyword = createKeywordMatcher();
   private queue: Promise<unknown> = Promise.resolve();
+  private pending = 0;
   private asrFailures = 0;
+  private asrTimes: number[] = [];
+  private matchTimes: number[] = [];
   readonly status: AiStatus;
 
   constructor(private options: AiEngineOptions) {
@@ -150,24 +215,92 @@ export class AiEngine {
     };
   }
 
-  /** Load models one after the other (lower peak memory). Never throws. */
+  /**
+   * Load models one after the other (lower peak memory), then warm each one up
+   * with a practice run so the first passenger request is as fast as the rest.
+   * Requests that arrive meanwhile wait in the queue. Never throws.
+   */
   async start(): Promise<void> {
     this.status.embed.state = 'loading';
     try {
       const embedder = await (this.options.loadEmbedder ?? (() => createE5(this.options.threads)))();
       this.needs = await SemanticNeedMatcher.create(embedder, undefined, loadNeedHead());
       this.replies = await ReplyMatcher.create(embedder);
+      this.status.embed.state = 'warming';
+      await this.warmEmbed();
       this.status.embed.state = 'ready';
     } catch (e) {
-      this.status.embed = { ...this.status.embed, state: 'error', error: String(e) };
+      this.status.embed = { ...this.status.embed, state: this.needs ? 'ready' : 'error', error: String(e) };
     }
     this.status.asr.state = 'loading';
+    let asr: Transcriber;
     try {
-      this.asr = await (this.options.loadAsr ?? (() => createWhisper(this.options.asrSize, this.options.threads)))();
-      this.status.asr.state = 'ready';
+      asr = await (this.options.loadAsr ?? (() => createWhisper(this.options.asrSize, this.options.threads)))();
     } catch (e) {
       this.status.asr = { ...this.status.asr, state: 'error', error: String(e) };
+      return;
     }
+    this.asr = asr;
+    this.status.asr.state = 'warming';
+    // Through the queue, so a request arriving now waits for the warm model instead of running cold beside it.
+    await this.serial(() => this.warmAsr(asr)).catch((e: unknown) => {
+      this.asrFailures += 1;
+      this.status.asr.error = `warm-up failed: ${String(e)}`;
+    });
+    this.status.asr.state = 'ready';
+  }
+
+  /**
+   * Warm both models again (for example right before a live demo, after the
+   * laptop slept). Returns how long each took. Waits behind running requests.
+   */
+  async warmup(): Promise<{ asrMs?: number; embedMs?: number }> {
+    const out: { asrMs?: number; embedMs?: number } = {};
+    if (this.needs) out.embedMs = await this.warmEmbed();
+    const asr = this.asr;
+    if (asr) out.asrMs = await this.serial(() => this.warmAsr(asr));
+    return out;
+  }
+
+  /** Practice run on the speech model; records how long it took. */
+  private async warmAsr(asr: Transcriber): Promise<number> {
+    const t0 = Date.now();
+    await withTimeout(asr.transcribe(warmupClip(), 'en', { maxNewTokens: 8 }), 90_000);
+    const ms = Date.now() - t0;
+    this.status.asr.warmupMs = ms;
+    return ms;
+  }
+
+  /** One match per language and one crew reply, through the normal queue. */
+  private async warmEmbed(): Promise<number> {
+    const needs = this.needs;
+    const replies = this.replies;
+    const t0 = Date.now();
+    for (const text of Object.values(WARMUP_PHRASES)) if (needs) await this.serial(() => needs.match(text));
+    if (replies) await this.serial(() => replies.match('すぐにお持ちします'));
+    const ms = Date.now() - t0;
+    this.status.embed.warmupMs = ms;
+    return ms;
+  }
+
+  /** Jobs waiting for (or running on) the models right now. */
+  get queueLength(): number {
+    return this.pending;
+  }
+
+  /** What a recording typically takes in Whisper here: recent median, else the warm-up run, else a guess. */
+  estimateAsrMs(): number {
+    const typical = median(this.asrTimes);
+    if (typical) return typical;
+    // The warm-up decodes only 8 tokens; a real request decodes more.
+    if (this.status.asr.warmupMs) return Math.round(this.status.asr.warmupMs * 1.4);
+    return this.options.asrSize === 'base' ? 1200 : 3000;
+  }
+
+  private record(list: number[], ms: number, key: 'asr' | 'embed'): void {
+    list.push(ms);
+    if (list.length > 15) list.shift();
+    this.status[key].typicalMs = median(list);
   }
 
   get canTranscribe(): boolean {
@@ -183,13 +316,20 @@ export class AiEngine {
    * failures in a row the model is reloaded in the background; meanwhile
    * passengers can still tap and type.
    */
-  async transcribe(samples: Float32Array, lang: LangCode): Promise<string> {
+  async transcribe(samples: Float32Array, lang: LangCode, hooks: TranscribeHooks = {}): Promise<string> {
     const asr = this.asr;
     if (!asr) throw new Error('speech model not loaded');
     const voiced = trimSilence(samples);
     if (!voiced) return '';
+    if (this.pending > 0) hooks.onQueued?.(this.pending);
     try {
-      const text = await this.serial(() => withTimeout(asr.transcribe(voiced, lang), 30_000));
+      const text = await this.serial(async () => {
+        hooks.onStart?.(this.estimateAsrMs());
+        const t0 = Date.now();
+        const out = await withTimeout((this.asr ?? asr).transcribe(voiced, lang), 30_000);
+        this.record(this.asrTimes, Date.now() - t0, 'asr');
+        return out;
+      });
       this.asrFailures = 0;
       return text;
     } catch (e) {
@@ -216,9 +356,13 @@ export class AiEngine {
     try {
       const load = this.options.loadAsr && size === previousSize ? this.options.loadAsr : () => createWhisper(size, this.options.threads);
       const next = await load();
+      // Warm the new model before it takes over; the previous one keeps serving meanwhile.
+      this.status.asr = { model: ASR_MODELS[size], state: 'warming' };
+      const warmupMs = await this.warmAsr(next).catch(() => undefined);
       this.asr = next;
       this.options.asrSize = size;
-      this.status.asr = { model: ASR_MODELS[size], state: 'ready' };
+      if (size !== previousSize) this.asrTimes = [];
+      this.status.asr = { model: ASR_MODELS[size], state: 'ready', warmupMs, typicalMs: median(this.asrTimes) };
       if (previous && previous !== next) await previous.dispose?.().catch(() => undefined);
     } catch (e) {
       this.status.asr = previous
@@ -231,7 +375,12 @@ export class AiEngine {
   matchNeeds(text: string): Promise<MatchResult> {
     const needs = this.needs;
     if (!needs) return Promise.resolve(this.keyword.match(text));
-    return this.serial(() => withTimeout(needs.match(text), 10_000)).catch(() => this.keyword.match(text));
+    return this.serial(async () => {
+      const t0 = Date.now();
+      const m = await withTimeout(needs.match(text), 10_000);
+      this.record(this.matchTimes, Date.now() - t0, 'embed');
+      return m;
+    }).catch(() => this.keyword.match(text));
   }
 
   /** Crew speech → closest verified reply (null when unsure or unavailable). */
@@ -243,7 +392,10 @@ export class AiEngine {
   }
 
   private serial<T>(run: () => Promise<T>): Promise<T> {
-    const next = this.queue.then(run, run);
+    this.pending += 1;
+    const next = this.queue.then(run, run).finally(() => {
+      this.pending -= 1;
+    });
     this.queue = next.catch(() => undefined);
     return next;
   }

@@ -10,16 +10,51 @@ export interface HubStatus {
   ok: true;
   name: 'hearme-hub';
   version: string;
-  asr: { model: string; state: ModelState };
-  embed: { model: string; state: ModelState };
+  asr: ModelInfo;
+  embed: ModelInfo;
   /** True when this hub can decode compressed audio (ffmpeg installed). */
   ffmpeg: boolean;
   /** Where other devices can reach the hub (LAN address, HTTPS when available). */
   urls?: { base: string; lan: string[] };
   clients?: number;
+  /** Speech/matching jobs waiting on the hub right now. */
+  queue?: number;
 }
 
-export type ModelState = 'off' | 'loading' | 'ready' | 'error';
+/**
+ * 'warming': loaded, running a first practice inference so the first real
+ * request is as fast as the rest. Requests are accepted and wait behind it.
+ */
+export type ModelState = 'off' | 'loading' | 'warming' | 'ready' | 'error';
+
+export interface ModelInfo {
+  model: string;
+  state: ModelState;
+  /** How long the warm-up run took, in ms. */
+  warmupMs?: number;
+  /** Median time of recent real runs (speech: one request), in ms. */
+  typicalMs?: number;
+}
+
+/**
+ * What a passenger sees while their speech is being understood:
+ *  sending → (queued) → transcribing (Whisper, with an estimate) → matching (shows what was heard) → done.
+ */
+export type UnderstandProgress =
+  | { stage: 'sending' }
+  | { stage: 'queued'; ahead: number }
+  | { stage: 'transcribing'; estimateMs: number }
+  | { stage: 'matching'; transcript: string }
+  | { stage: 'done' };
+
+/** One line of the hub's streamed (NDJSON) answer to /api/understand. */
+export type UnderstandStreamLine =
+  | { stage: 'received'; seconds: number }
+  | { stage: 'queued'; ahead: number }
+  | { stage: 'transcribing'; estimateMs: number }
+  | { stage: 'matching'; transcript: string }
+  | { stage: 'done'; result: UnderstandResult }
+  | { stage: 'error'; status: number; error: string };
 
 export type UnderstandTarget = 'needs' | 'replies';
 
@@ -65,23 +100,63 @@ export async function fetchHubStatus(hubUrl: string, timeoutMs = 2500): Promise<
  * Send recorded speech to the hub: Whisper turns it into text on the crew
  * tablet, then it is matched to a need (passengers) or a verified reply (crew).
  * `audio` is 16 kHz mono 16-bit PCM, or a compressed recording with its MIME type.
+ * With `onProgress`, the hub streams each stage (queued, transcribing with an
+ * estimate, the transcript before matching) so the wait can be shown honestly.
  */
 export async function understandSpeech(
   hubUrl: string,
   audio: ArrayBuffer | Uint8Array | Blob,
-  options: { lang: LangCode; target?: UnderstandTarget; mimeType?: string; timeoutMs?: number },
+  options: { lang: LangCode; target?: UnderstandTarget; mimeType?: string; timeoutMs?: number; onProgress?: (p: UnderstandProgress) => void },
 ): Promise<UnderstandResult> {
-  const { lang, target = 'needs', mimeType = 'audio/L16;rate=16000;channels=1', timeoutMs = 30_000 } = options;
+  const { lang, target = 'needs', mimeType = 'audio/L16;rate=16000;channels=1', timeoutMs = 30_000, onProgress } = options;
+  onProgress?.({ stage: 'sending' });
   return withTimeout(timeoutMs, async (signal) => {
     const res = await fetch(join(hubUrl, `api/understand?lang=${lang}&target=${target}`), {
       method: 'POST',
-      headers: { 'Content-Type': mimeType },
+      headers: { 'Content-Type': mimeType, ...(onProgress ? { Accept: 'application/x-ndjson, application/json' } : {}) },
       body: audio as BodyInit,
       signal,
     });
     if (!res.ok) throw new Error(`hub ${res.status}`);
-    return (await res.json()) as UnderstandResult;
+    // Older hubs (and non-streaming callers) get one JSON answer.
+    if (!(res.headers.get('content-type') ?? '').includes('ndjson')) return (await res.json()) as UnderstandResult;
+    const result = await readUnderstandStream(res, onProgress ?? (() => undefined));
+    onProgress?.({ stage: 'done' });
+    return result;
   });
+}
+
+/** Parse the hub's NDJSON progress stream; resolves with the final result. Works without streaming bodies (React Native). */
+export async function readUnderstandStream(res: Response, onProgress: (p: UnderstandProgress) => void): Promise<UnderstandResult> {
+  let result: UnderstandResult | null = null;
+  const handle = (line: string) => {
+    if (!line.trim()) return;
+    const msg = JSON.parse(line) as UnderstandStreamLine;
+    if (msg.stage === 'error') throw new Error(`hub ${msg.status}: ${msg.error}`);
+    if (msg.stage === 'done') result = msg.result;
+    else if (msg.stage !== 'received') onProgress(msg);
+  };
+  const body = res.body as ReadableStream<Uint8Array> | null | undefined;
+  if (body && typeof body.getReader === 'function') {
+    const reader = body.getReader();
+    const decoder = new TextDecoder();
+    let buffered = '';
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffered += decoder.decode(value, { stream: true });
+      let nl: number;
+      while ((nl = buffered.indexOf('\n')) >= 0) {
+        handle(buffered.slice(0, nl));
+        buffered = buffered.slice(nl + 1);
+      }
+    }
+    handle(buffered + decoder.decode());
+  } else {
+    (await res.text()).split('\n').forEach(handle);
+  }
+  if (!result) throw new Error('hub stream ended without a result');
+  return result;
 }
 
 /** Match typed text on the hub (meaning-based). Returns null if the hub cannot help. */

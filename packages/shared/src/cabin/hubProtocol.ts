@@ -25,20 +25,29 @@ export type ClientFrame =
   | { kind: 'cabin'; msg: PassengerToCrew }
   | { kind: 'crew'; cmd: CrewCommand };
 
-/** What the hub tells the demo stage (meaning only: never audio). */
-export type HubEvent = {
-  type: 'understood';
-  at: number;
-  /** Who spoke: a passenger (matched to needs) or crew (matched to verified replies). */
-  target: 'needs' | 'replies';
-  lang: LangCode;
-  transcript: string;
-  /** Best match (need id or reply id) and its confidence. */
-  match?: string;
-  confidence: number;
-  asrMs: number;
-  matchMs: number;
-};
+/** What the hub tells the demo stage and crew consoles (meaning only: never audio). */
+export type HubEvent =
+  | {
+      type: 'understood';
+      at: number;
+      /** Who spoke: a passenger (matched to needs) or crew (matched to verified replies). */
+      target: 'needs' | 'replies';
+      lang: LangCode;
+      transcript: string;
+      /** Best match (need id or reply id) and its confidence. */
+      match?: string;
+      confidence: number;
+      asrMs: number;
+      matchMs: number;
+    }
+  | {
+      /** Whisper has started on a recording (shown live while the passenger waits). */
+      type: 'working';
+      at: number;
+      target: 'needs' | 'replies';
+      lang: LangCode;
+      estimateMs: number;
+    };
 
 export type ServerFrame =
   | { kind: 'cabin'; msg: CabinMessage }

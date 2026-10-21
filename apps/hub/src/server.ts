@@ -1,7 +1,7 @@
 import { createReadStream, existsSync, statSync } from 'node:fs';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { extname, join, normalize, resolve } from 'node:path';
-import { LANGUAGES, type HubStatus, type LangCode, type UnderstandResult, type UnderstandTarget } from '@hearme/shared';
+import { LANGUAGES, type HubStatus, type LangCode, type UnderstandResult, type UnderstandStreamLine, type UnderstandTarget } from '@hearme/shared';
 import type { AiEngine } from './ai';
 import { AudioError, decodeAudio, hasFfmpeg } from './audio';
 import { lookupBooking } from './booking';
@@ -81,10 +81,21 @@ function parseTarget(v: unknown): UnderstandTarget {
   return v === 'replies' ? 'replies' : 'needs';
 }
 
+/** Only the laptop running the hub (the demo stage, scripts) may change models or warm them. */
+export function isLocal(req: IncomingMessage): boolean {
+  return ['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(req.socket.remoteAddress ?? '');
+}
+
+/** Phones ask for a streamed answer so they can show each stage while Whisper works. */
+function wantsStream(req: IncomingMessage): boolean {
+  return String(req.headers.accept ?? '').includes('application/x-ndjson');
+}
+
 export function createHandler(opts: HandlerOptions) {
   const root = resolve(opts.staticDir);
 
-  async function understandText(text: string, lang: LangCode, target: UnderstandTarget, asrMs: number): Promise<UnderstandResult> {
+  async function understandText(text: string, lang: LangCode, target: UnderstandTarget, asrMs: number, onMatching?: () => void): Promise<UnderstandResult> {
+    if (text) onMatching?.();
     const t0 = Date.now();
     const result: UnderstandResult = { transcript: text, asrMs, matchMs: 0 };
     if (target === 'needs') result.match = await opts.ai.matchNeeds(text);
@@ -110,15 +121,17 @@ export function createHandler(opts: HandlerOptions) {
     const path = url.pathname;
     if (path === '/api/status' && req.method === 'GET') {
       const urls = opts.urls();
+      const { asr, embed } = opts.ai.status;
       const status: HubStatus & { urls: PublicUrls; clients: number } = {
         ok: true,
         name: 'hearme-hub',
         version: opts.version,
-        asr: { model: opts.ai.status.asr.model, state: opts.ai.status.asr.state },
-        embed: { model: opts.ai.status.embed.model, state: opts.ai.status.embed.state },
+        asr: { model: asr.model, state: asr.state, warmupMs: asr.warmupMs, typicalMs: asr.typicalMs ?? (asr.state === 'ready' ? opts.ai.estimateAsrMs() : undefined) },
+        embed: { model: embed.model, state: embed.state, warmupMs: embed.warmupMs, typicalMs: embed.typicalMs },
         ffmpeg: hasFfmpeg(),
         urls,
         clients: opts.relay.clientCount,
+        queue: opts.ai.queueLength,
       };
       return json(res, 200, status);
     }
@@ -126,16 +139,46 @@ export function createHandler(opts: HandlerOptions) {
       const lang = parseLang(url.searchParams.get('lang'));
       if (!lang) return json(res, 400, { error: 'unknown language' });
       if (!opts.ai.canTranscribe) return json(res, 503, { error: 'speech model is not ready yet' });
+      const target = parseTarget(url.searchParams.get('target'));
       const body = await readBody(req, MAX_AUDIO_BYTES);
       const samples = await decodeAudio(body, req.headers['content-type']);
-      const t0 = Date.now();
-      const transcript = await opts.ai.transcribe(samples, lang);
-      return json(res, 200, await understandText(transcript, lang, parseTarget(url.searchParams.get('target')), Date.now() - t0));
+      const stream = wantsStream(req);
+      const write = (line: UnderstandStreamLine) => {
+        if (stream && !res.writableEnded) res.write(`${JSON.stringify(line)}\n`);
+      };
+      if (stream) {
+        res.writeHead(200, { 'Content-Type': 'application/x-ndjson; charset=utf-8', 'Cache-Control': 'no-store', 'X-Accel-Buffering': 'no' });
+        write({ stage: 'received', seconds: Math.round((samples.length / 16000) * 10) / 10 });
+      }
+      try {
+        const t0 = Date.now();
+        let started = t0;
+        const transcript = await opts.ai.transcribe(samples, lang, {
+          onQueued: (ahead) => write({ stage: 'queued', ahead }),
+          onStart: (estimateMs) => {
+            started = Date.now();
+            write({ stage: 'transcribing', estimateMs });
+            opts.relay.emitEvent({ type: 'working', at: started, target, lang, estimateMs });
+          },
+        });
+        const result = await understandText(transcript, lang, target, Date.now() - started, () => write({ stage: 'matching', transcript }));
+        if (!stream) return json(res, 200, result);
+        write({ stage: 'done', result });
+        return void res.end();
+      } catch (e) {
+        if (!stream) throw e;
+        // Headers are already sent: report the failure in the stream.
+        write({ stage: 'error', status: e instanceof AudioError ? e.status : 500, error: e instanceof AudioError ? e.message : 'speech recognition failed' });
+        return void res.end();
+      }
+    }
+    if (path === '/api/warmup' && req.method === 'POST') {
+      if (!isLocal(req)) return json(res, 403, { error: 'only from the hub laptop' });
+      return json(res, 200, await opts.ai.warmup());
     }
     if (path === '/api/asr' && req.method === 'POST') {
       // Only the laptop running the hub (the demo stage) may change the speech model.
-      const from = req.socket.remoteAddress ?? '';
-      if (!['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(from)) return json(res, 403, { error: 'only from the hub laptop' });
+      if (!isLocal(req)) return json(res, 403, { error: 'only from the hub laptop' });
       const size = url.searchParams.get('size');
       if (size !== 'small' && size !== 'base') return json(res, 400, { error: 'size must be small or base' });
       void opts.ai.switchAsr(size);
