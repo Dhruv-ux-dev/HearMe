@@ -269,7 +269,7 @@ async function main() {
 
     // 6. End
     await caption('');
-    await card('Every message is meaning, not audio: verified phrases in both languages.', 'npm run demo · github.com/Dhruv-ux-dev/jetro-hackathon');
+    await card('Every message is meaning, not audio: verified phrases in both languages.', 'npm run demo · github.com/Dhruv-ux-dev/HearMe');
     await sleep(4000);
     await cdp.send('Page.stopScreencast');
     const stopped = Date.now() / 1000;

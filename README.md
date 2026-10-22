@@ -19,8 +19,8 @@ A working prototype of *HearMe · Idea Submission* by Nidhish Bansal, Dhruv Mitt
 ## Get it running
 
 ```bash
-git clone https://github.com/Dhruv-ux-dev/jetro-hackathon.git
-cd jetro-hackathon
+git clone https://github.com/Dhruv-ux-dev/HearMe.git
+cd HearMe
 npm install
 npm run demo -- --check   # what is missing, if anything
 npm run demo              # first run downloads the offline AI models (~480 MB), then opens the demo stage
