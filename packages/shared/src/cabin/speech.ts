@@ -1,4 +1,5 @@
 import type { MatchResult } from '../matching/matcher';
+import type { UnderstoodRequests } from '../matching/requests';
 import { fallbackLang } from '../i18n/languages';
 import type { LangCode } from '../types';
 import type { UnderstandProgress } from './hubClient';
@@ -24,7 +25,7 @@ export interface SpeechRecognizer {
    * Stops and returns what was said; the hub also returns its match.
    * `onProgress` reports each stage of understanding (for a progress display).
    */
-  stop(onProgress?: (p: UnderstandProgress) => void): Promise<{ transcript: string; match?: MatchResult }>;
+  stop(onProgress?: (p: UnderstandProgress) => void): Promise<{ transcript: string; match?: MatchResult; many?: UnderstoodRequests }>;
   cancel(): void;
 }
 

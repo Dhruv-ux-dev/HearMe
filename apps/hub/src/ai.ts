@@ -8,6 +8,9 @@ import {
   type MatchResult,
   type ModelState,
   type ReplyId,
+  type UnderstoodRequests,
+  mayHoldSeveral,
+  understandRequests,
 } from '@hearme/shared';
 import { loadNeedHead } from './head';
 import { fromDevanagari, loadLanguagePacks, withLanguagePacks, type LanguagePack } from './langpacks';
@@ -407,6 +410,12 @@ export class AiEngine {
       this.record(this.matchTimes, Date.now() - t0, 'embed');
       return m;
     }).catch(() => this.keyword.match(text));
+  }
+
+  /** A sentence with several requests or a refusal, each part matched on its own; undefined for a single request. */
+  async understandMany(text: string): Promise<UnderstoodRequests | undefined> {
+    if (!mayHoldSeveral(text)) return undefined;
+    return understandRequests(text, (part) => this.matchNeeds(part), this.keyword);
   }
 
   /** Crew speech → closest verified reply (null when unsure or unavailable). */

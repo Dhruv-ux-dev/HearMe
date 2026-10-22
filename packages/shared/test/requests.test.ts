@@ -1,33 +1,41 @@
 import { describe, expect, it } from 'vitest';
-import { defaultMatcher, splitRequests, understandRequests } from '../src';
+import { LOCALE_PACKS, defaultMatcher, mayHoldSeveral, splitRequests, understandRequests } from '../src';
+import { HELDOUT_PHRASES } from '../src/lab/phrases';
+import { REQUEST_CASES } from '../src/lab/requestCases';
 
 const understand = (text: string) => understandRequests(text, (t) => defaultMatcher.match(t), defaultMatcher);
-const ids = (r: { requests: { needId: string }[] }) => r.requests.map((x) => x.needId).sort();
+const sorted = (a: string[]) => [...a].sort();
 
-describe('several requests in one sentence, and refusals', () => {
-  it('Hindi: not cold water; hot water for medicine; and a blanket', async () => {
-    const r = await understand('मुझे ठंडा पानी नहीं चाहिए, दवाई लेने के लिए गरम पानी चाहिए, और हो सके तो एक कंबल भी दे दीजिए।');
-    expect(ids(r)).toEqual(['blanket', 'hot_water']);
-    expect(r.requests.find((x) => x.needId === 'hot_water')?.purposeId).toBe('for_medicine');
-    expect(r.refused).toContain('water');
+describe('several requests in one sentence, and refusals, in every language', () => {
+  it.each(REQUEST_CASES.map((c) => [`${c.lang}: ${c.text}`, c] as const))('%s', async (_, c) => {
+    const r = await understand(c.text);
+    expect(sorted(r.requests.map((x) => x.needId))).toEqual(sorted(c.want));
+    expect(sorted(r.refused)).toEqual(sorted(c.refused ?? []));
+    if (c.purpose) expect(r.requests.find((x) => x.needId === c.purpose![0])?.purposeId).toBe(c.purpose[1]);
   });
 
-  it.each([
-    ["I don't want cold water. I need hot water for my medicine and a blanket, please", ['blanket', 'hot_water'], 'water'],
-    ['冷たい水はいらない。お湯と毛布をください', ['blanket', 'hot_water'], 'water'],
-    ['ไม่เอาน้ำเปล่า ขอน้ำร้อน และผ้าห่มหน่อย', ['blanket', 'hot_water'], 'water'],
-    ['Saya tidak mau air dingin, minta air panas dan selimut', ['blanket', 'hot_water'], undefined],
-    ['Tôi không cần nước lạnh, cho tôi nước nóng và chăn', ['blanket', 'hot_water'], undefined],
-    ['hot water instead of tea', ['hot_water'], 'tea'],
-  ])('%s', async (text, want, notWanted) => {
-    const r = await understand(text);
-    expect(ids(r)).toEqual(want);
-    if (notWanted) expect(r.refused).toContain(notWanted);
+  it('drops quotes and punctuation-only parts', () => {
+    expect(splitRequests('“चाय चाहिए”')).toEqual([{ text: 'चाय चाहिए', refused: false, negated: false }]);
+    expect(splitRequests('"Tea, please."').map((p) => p.text)).toEqual(['Tea', 'please']);
   });
 
-  it('keeps a simple request as one part, and does not mistake "unwell" for a refusal', async () => {
+  it('keeps a simple request as one part', () => {
     expect(splitRequests('मुझे दवाई के लिए गरम पानी चाहिए')).toHaveLength(1);
-    expect((await understand('ไม่สบาย')).refused).toEqual([]);
-    expect((await understand("I'm not feeling well")).refused).toEqual([]);
+    expect(mayHoldSeveral('मुझे दवाई के लिए गरम पानी चाहिए')).toBe(false);
+    expect(mayHoldSeveral('खाना मत भेजिए')).toBe(true);
+  });
+});
+
+describe('single requests stay single, and are never read as refusals', () => {
+  const singles = [
+    ...Object.entries(HELDOUT_PHRASES).flatMap(([lang, byNeed]) => Object.entries(byNeed ?? {}).map(([needId, text]) => ({ lang, needId, text }))),
+    ...LOCALE_PACKS.flatMap((p) => Object.entries(p.examples ?? {}).flatMap(([needId, list]) => list.map((text) => ({ lang: p.code, needId, text })))),
+  ];
+
+  it.each(singles.map((s) => [`${s.lang} ${s.needId}: ${s.text}`, s] as const))('%s', async (_, s) => {
+    const r = await understand(s.text);
+    expect(r.refused).toEqual([]);
+    // One request stays one: no tea read into Punjabi ਚਾਹੀਦਾ ("need"), no medicine when it is only the reason for hot water.
+    expect(r.requests.length).toBeLessThanOrEqual(1);
   });
 });

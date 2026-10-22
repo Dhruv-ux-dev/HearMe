@@ -118,6 +118,10 @@ function dropFalseFriends(input: string): string {
       .replace(/ขออยาก/g, 'ขอยา')
       .replace(/ชาติ/g, 'ชาร์จ')
       .replace(/อ?ยาก/g, ' ')
+      // "want" that starts with "tea": Punjabi ਚਾਹੀਦਾ (ਚਾਹ), Bengali চাই (চা), Hinglish chaiye (chai).
+      .replace(/ਚਾਹੀਦ\S*|ਚਾਹੁੰਦ\S*/gu, ' ')
+      .replace(/(?<=^|\s)চাই\S*/gu, ' ')
+      .replace(/\bchai(?:ye|ie|yee)\b/g, ' ')
   );
 }
 

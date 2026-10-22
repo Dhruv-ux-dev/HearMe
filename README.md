@@ -144,18 +144,21 @@ Crew replies are read aloud on the passenger's phone in their language, with the
 
 ---
 
-### Several requests in one sentence
+### Several requests in one sentence, and refusals
 
-*"मुझे ठंडा पानी नहीं चाहिए, दवाई लेने के लिए गरम पानी चाहिए, और हो सके तो एक कंबल भी दे दीजिए"* means "not cold water; hot water for my medicine; and a blanket if possible". HearMe now reads it that way. The sentence is split at punctuation and "and"-words, and each part is matched on its own.
+*"मुझे ठंडा पानी नहीं चाहिए, दवाई लेने के लिए थोड़ा गरम पानी और एक कंबल चाहिए, लेकिन खाना मत भेजिए"* means "not cold water; hot water to take my medicine, and a blanket; but don't send food". HearMe reads it that way. The sentence is split at punctuation and at "and"/"but" words in every language, and each part is matched on its own.
 
-- **Refusals:** parts that refuse something ("नहीं चाहिए", "don't want", "いらない", "ไม่เอา", "tidak mau", "không cần", "instead of") rule that need out.
-- **Fillers:** "please" or "excuse me" on its own is ignored.
-- **Reasons:** a feeling answered by another request ("it's cold" + blanket) is treated as the reason, not a second request.
-- **Review:** the phone shows every request with a tick box, and refused items crossed out. Each ticked request reaches the crew as its own card.
+- **Refusing verbs, in all 10 languages:** "नहीं चाहिए", "मत भेजिए", Hinglish "nahi bhejo", "don't bring", "いらない", "ไม่เอา", "jangan", "không cần" (also typed without accents), "চাই না", "வேண்டாம்", "ਨਾ ਭੇਜੋ", "नको". Every need in that part is ruled out.
+- **A bare "not X":** "चाय नहीं", "no ice", "ไม่ใช่ชา". This rules out only food, drinks, a blanket or a pillow, because "no wifi" or "TV नहीं चल रहा" is a complaint.
+- **"Instead of" and "without":** these split into a wanted and a refused side ("coffee without milk", "बिना बर्फ़ के पानी", "ミルクなしで").
+- **Not refusals:** phrases that carry their own negation are requests: "no meat" is a vegetarian meal, and "not feeling well" is unwell. "I can't sleep without a pillow" still asks for the pillow.
+- **One request stays one:** fillers ("please") are ignored. A feeling answered by another request is its reason. "Headache tablets" is medicine, not medicine plus unwell. Punjabi ਚਾਹੀਦਾ and Bengali চাই ("need") are no longer read as tea (ਚਾਹ, চা). "To take medicine" is understood in the four pack languages too.
+- **Review:** the phone lists every request with a tick box, and refused items crossed out. A crossed-out item can be ticked back in case HearMe misheard the "not". The stage shows one line per sentence: *Means: Hot water (to take medicine) + Blanket · not wanted: Water, Food*.
 
-Results through the hub's matcher (`npm run multi -w @hearme/hub`):
-- 10 of 10 multi-request sentences in 6 languages came out exactly right.
-- None of the 216 single-request phrasings was mistaken for several requests.
+Measured on 79 test sentences in 10 languages (`packages/shared/src/lab/requestCases.ts`), written by the team, not by native speakers:
+- **Keywords alone** (`npm test`, the phone with no hub): before this change 35 of 79 were exactly right; now 79 of 79.
+- **The hub's full matcher** (`npm run multi -w @hearme/hub`): 79 of 79.
+- **Single requests:** of 336 single-request phrasings (tuning, held-out and pack examples), none is now split into several or read as a refusal. Before, 13 of the 192 checked with keywords were.
 
 ## Measured results
 

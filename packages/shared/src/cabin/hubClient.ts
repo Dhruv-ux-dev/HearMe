@@ -1,5 +1,6 @@
 import type { LangCode, PassengerProfile, ReplyId } from '../types';
 import type { MatchResult } from '../matching/matcher';
+import type { UnderstoodRequests } from '../matching/requests';
 
 /**
  * HTTP side of the cabin hub (same origin as its WebSocket). Used by phones,
@@ -68,6 +69,8 @@ export interface UnderstandResult {
   matchMs: number;
   /** For target 'needs'. */
   match?: MatchResult;
+  /** For target 'needs', when the sentence holds several requests or refuses something: each part matched on its own. */
+  many?: UnderstoodRequests;
   /** For target 'replies' (crew speech → closest verified reply). */
   reply?: { replyId: ReplyId | null; confidence: number };
 }

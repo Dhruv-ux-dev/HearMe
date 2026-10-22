@@ -135,8 +135,11 @@ export function createHandler(opts: HandlerOptions) {
     if (text) onMatching?.();
     const t0 = Date.now();
     const result: UnderstandResult = { transcript: text, asrMs, matchMs: 0 };
-    if (target === 'needs') result.match = await opts.ai.matchNeeds(text);
-    else result.reply = await opts.ai.matchReply(text);
+    if (target === 'needs') {
+      result.match = await opts.ai.matchNeeds(text);
+      const many = await opts.ai.understandMany(text);
+      if (many) result.many = many;
+    } else result.reply = await opts.ai.matchReply(text);
     result.matchMs = Date.now() - t0;
     if (text && announce) {
       opts.relay.emitEvent({
@@ -149,6 +152,9 @@ export function createHandler(opts: HandlerOptions) {
         confidence: target === 'needs' ? (result.match?.confidence ?? 0) : (result.reply?.confidence ?? 0),
         asrMs,
         matchMs: result.matchMs,
+        ...(result.many
+          ? { requests: result.many.requests.map(({ needId, purposeId }) => ({ needId, ...(purposeId ? { purposeId } : {}) })), refused: result.many.refused }
+          : {}),
       });
     }
     return result;

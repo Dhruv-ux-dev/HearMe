@@ -136,7 +136,7 @@ export class HubSpeechRecognizer implements SpeechRecognizer {
       return { transcript: '' };
     }
     const r = await recordAndUnderstand(this.recorder, hub, this.lang, 'needs', onProgress);
-    return { transcript: r.transcript, match: r.match };
+    return { transcript: r.transcript, match: r.match, ...(r.many ? { many: r.many } : {}) };
   }
 
   cancel(): void {

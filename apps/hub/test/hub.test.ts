@@ -11,7 +11,7 @@ import {
   type Embedder,
   type WebSocketLike,
 } from '@hearme/shared';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import WebSocket, { WebSocketServer } from 'ws';
 import { AiEngine, hasSpeech, trimSilence } from '../src/ai';
 import { CabinRelay } from '../src/relay';
@@ -161,6 +161,23 @@ describe('cabin hub', () => {
     expect(b.profile).toMatchObject({ lang: 'hi', seat: '23C' });
     expect((await fetch(`${base}/api/booking?seat=99Z`)).status).toBe(404);
     expect((await fetch(`${base}/api/understand?lang=zz`, { method: 'POST', body: 'x' })).status).toBe(400);
+  });
+
+  it('understands several requests and refusals in one sentence, and tells the stage once', async () => {
+    const emit = vi.spyOn(relay, 'emitEvent');
+    const text = '“मुझे ठंडा पानी नहीं चाहिए, दवाई लेने के लिए थोड़ा गरम पानी और एक कंबल चाहिए, लेकिन खाना मत भेजिए।”';
+    const m = await (await fetch(`${base}/api/match`, { method: 'POST', body: JSON.stringify({ text, lang: 'hi' }) })).json();
+    expect(m.many.requests.map((r: { needId: string }) => r.needId).sort()).toEqual(['blanket', 'hot_water']);
+    expect(m.many.refused.sort()).toEqual(['meal', 'water']);
+    expect(emit).toHaveBeenCalledTimes(1);
+    expect(emit.mock.calls[0]![0]).toMatchObject({
+      type: 'understood',
+      requests: expect.arrayContaining([{ needId: 'hot_water', purposeId: 'for_medicine' }, { needId: 'blanket' }]),
+      refused: expect.arrayContaining(['meal', 'water']),
+    });
+    // One request carries no list.
+    const one = await (await fetch(`${base}/api/match`, { method: 'POST', body: JSON.stringify({ text: 'blanket please', lang: 'en' }) })).json();
+    expect(one.many).toBeUndefined();
   });
 
   it('lists language packs and understands their language (Bengali: typed, with a Bengali booking)', async () => {

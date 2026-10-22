@@ -37,6 +37,9 @@ export type HubEvent =
       transcript: string;
       /** Best match (need id or reply id) and its confidence. */
       match?: string;
+      /** Several requests in one sentence, or a refusal: what will be asked for, and what was ruled out. */
+      requests?: { needId: string; purposeId?: NeedPurpose['id'] }[];
+      refused?: string[];
       confidence: number;
       asrMs: number;
       matchMs: number;

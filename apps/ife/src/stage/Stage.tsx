@@ -104,6 +104,18 @@ function describeEvent(e: HubEvent): Item {
   };
 }
 
+/** A sentence with several requests or a refusal: every request, and what was ruled out ("not wanted: Food"). */
+function withRequests(item: Item, e: HubEvent): Item {
+  if (e.type !== 'understood' || (!e.requests?.length && !e.refused?.length)) return item;
+  const label = (id: string) => getNeed(id)?.label.en ?? id;
+  const wanted = (e.requests ?? []).map((r) => `${label(r.needId)}${r.purposeId ? ` (${getPurpose(r.purposeId)?.label.en ?? r.purposeId})` : ''}`);
+  const refused = (e.refused ?? []).map(label);
+  return {
+    ...item,
+    detail: [wanted.length ? `Means: ${wanted.join(' + ')}` : 'Nothing to send', refused.length ? `not wanted: ${refused.join(', ')}` : ''].filter(Boolean).join(' · '),
+  };
+}
+
 /** "warming up…" while the practice run happens, then the typical time per request. */
 function modelLabel(m?: { state: string; typicalMs?: number }): string {
   if (!m) return '…';
@@ -170,7 +182,7 @@ export function Stage() {
       else if (f.kind === 'cabin') push(describe(f.msg, crewState.current));
       else if (f.kind === 'event') {
         if (f.event.type === 'understood') setItems((list) => list.filter((it) => it.tone !== 'working'));
-        push(describeEvent(f.event));
+        push(withRequests(describeEvent(f.event), f.event));
       }
     });
     return () => {

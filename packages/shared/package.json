@@ -11,7 +11,8 @@
     "./react": "./src/react.ts",
     "./web": "./src/web/micRecorder.ts",
     "./tts": "./src/web/tts.ts",
-    "./lab": "./src/lab/voiceLab.ts"
+    "./lab": "./src/lab/voiceLab.ts",
+    "./lab/requests": "./src/lab/requestCases.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

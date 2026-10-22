@@ -114,7 +114,7 @@ export function clipRecognizer(wav: ArrayBuffer, levels: number[]): SpeechRecogn
       const hub = hubUrl;
       if (!hub) throw new Error('no cabin hub');
       const r = await understandSpeech(hub, new Uint8Array(wav), { lang, mimeType: 'audio/wav', onProgress });
-      return { transcript: r.transcript, match: r.match };
+      return { transcript: r.transcript, match: r.match, ...(r.many ? { many: r.many } : {}) };
     },
     cancel() {
       clearInterval(timer);

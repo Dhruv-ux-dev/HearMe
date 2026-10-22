@@ -70,10 +70,12 @@ function ReviewManySheet({ lang, o }: { lang: LangCode; o: Extract<Overlay, { ki
   const [on, setOn] = useState(() => new Set(o.items.filter((i) => i.confidence >= CONFIDENCE_THRESHOLD).map((i) => i.needId)));
   const [error, setError] = useState<string | null>(null);
   const toggle = (id: string) => setOn((s) => (s.has(id) ? new Set([...s].filter((x) => x !== id)) : new Set([...s, id])));
+  // What was refused can still be ticked, in case HearMe misheard the "not".
+  const choices: typeof o.items = [...o.items, ...o.refused.filter((id) => !o.items.some((i) => i.needId === id)).map((needId) => ({ needId, confidence: 0 }))];
   const send = () => {
     if (!on.size) return;
     let failed = false;
-    for (const i of o.items) {
+    for (const i of choices) {
       if (!on.has(i.needId)) continue;
       const res = session.submit({ needId: i.needId, purposeId: i.purposeId, source: o.source, understanding: { confidence: i.confidence, viaPictures: false } });
       if (!res.ok) failed = true;
@@ -86,10 +88,10 @@ function ReviewManySheet({ lang, o }: { lang: LangCode; o: Extract<Overlay, { ki
   return (
     <Sheet
       visible
-      title={tr('review.many', { n: o.items.length })}
+      title={o.items.length ? tr('review.many', { n: o.items.length }) : tr('review.notWanted')}
       onClose={nav.close}
       closeLabel={tr('common.close')}
-      footer={<Btn big label={tr('review.sendAll', { n: on.size })} onPress={send} />}
+      footer={on.size ? <Btn big label={tr('review.sendAll', { n: on.size })} onPress={send} /> : <Btn big label={tr('common.close')} onPress={nav.close} />}
     >
       {o.items.map((i) => {
         const need = getNeed(i.needId);
@@ -117,12 +119,25 @@ function ReviewManySheet({ lang, o }: { lang: LangCode; o: Extract<Overlay, { ki
       })}
       {o.refused.length > 0 && (
         <View style={{ gap: 4 }}>
-          <T bold>{tr('review.notWanted')}</T>
-          {o.refused.map((id) => (
-            <Text key={id} style={{ color: th.p.textMuted, textDecorationLine: 'line-through', fontSize: th.fs(16) }}>
-              {needLabelOf(id, lang)}
-            </Text>
-          ))}
+          {o.items.length > 0 && <T bold>{tr('review.notWanted')}</T>}
+          {o.refused.map((id) => {
+            const checked = on.has(id);
+            return (
+              <Pressable
+                key={id}
+                onPress={() => toggle(id)}
+                accessibilityRole="checkbox"
+                accessibilityState={{ checked }}
+                accessibilityLabel={needLabelOf(id, lang)}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: th.space.sm, paddingVertical: 6 }}
+              >
+                <View style={{ width: 24, height: 24, borderRadius: 6, borderWidth: 2, borderColor: th.p.border, alignItems: 'center', justifyContent: 'center', backgroundColor: checked ? th.p.primary : 'transparent' }}>
+                  {checked && <Check size={16} color="#fff" />}
+                </View>
+                <Text style={{ color: checked ? th.p.text : th.p.textMuted, textDecorationLine: checked ? 'none' : 'line-through', fontSize: th.fs(16) }}>{needLabelOf(id, lang)}</Text>
+              </Pressable>
+            );
+          })}
         </View>
       )}
       {error && (

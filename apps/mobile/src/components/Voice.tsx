@@ -1,4 +1,18 @@
-import { decide, defaultMatcher, matchOnHub, translator, type LangCode, type MatchResult, type RequestSource, type SpeechRecognizer, type UnderstandProgress, splitRequests, understandRequests } from '@hearme/shared';
+import {
+  CONFIDENCE_THRESHOLD,
+  decide,
+  defaultMatcher,
+  matchOnHub,
+  mayHoldSeveral,
+  translator,
+  type LangCode,
+  type MatchResult,
+  type RequestSource,
+  type SpeechRecognizer,
+  type UnderstandProgress,
+  type UnderstoodRequests,
+  understandRequests,
+} from '@hearme/shared';
 import { MicUnavailableError } from '@hearme/shared/web';
 import Mic from 'lucide-react-native/icons/mic';
 import Square from 'lucide-react-native/icons/square';
@@ -21,33 +35,29 @@ const MIN_HOLD_MS = 400;
 
 /**
  * Route what the passenger said or typed: confident → review; unsure →
- * "Did you mean?" pictures. Uses the hub's meaning-based match when there is
- * one (speech always comes with it), otherwise the on-device keyword matcher.
+ * "Did you mean?" pictures; several requests or a refusal ("खाना मत भेजिए")
+ * → one sheet that lists them. Uses the hub's meaning-based match when there
+ * is one (speech always comes with it), otherwise the on-device keyword matcher.
  */
 export function useRouteTranscript() {
   const nav = useNav();
-  return async (transcript: string, source: RequestSource, lang: LangCode, hubMatch?: MatchResult) => {
+  return async (transcript: string, source: RequestSource, lang: LangCode, fromHub?: { match?: MatchResult | undefined; many?: UnderstoodRequests | undefined }) => {
     const hub = getHubUrl();
-    // Several requests in one sentence, or something refused ("not cold water"): match each part.
-    const parts = splitRequests(transcript);
-    if (parts.length > 1 || parts.some((p) => p.refused)) {
-      const matchPart = async (t: string) => (hub ? (await matchOnHub(hub, t, { lang }))?.match : undefined) ?? defaultMatcher.match(t);
-      const many = await understandRequests(transcript, matchPart, defaultMatcher);
-      if (many.requests.length >= 2 || (many.requests.length === 1 && many.refused.length > 0)) {
+    // One call: the hub matches the sentence, and each part of it when it holds several requests or refuses something.
+    const understood = fromHub?.match ? fromHub : hub ? ((await matchOnHub(hub, transcript, { lang })) ?? undefined) : undefined;
+    if (mayHoldSeveral(transcript)) {
+      const many = understood?.many ?? (await understandRequests(transcript, (t) => defaultMatcher.match(t), defaultMatcher));
+      if (many.requests.length >= 2 || many.refused.length > 0) {
         nav.open({ kind: 'reviewMany', items: many.requests, refused: many.refused, source, transcript });
         return;
       }
-      if (many.requests.length === 0 && many.refused.length > 0) {
-        // Only a refusal: ask with pictures, leaving out what was refused.
-        const d = decide(hubMatch ?? defaultMatcher.match(transcript));
-        const options = (d.kind === 'confident' ? [d.needId] : d.options).filter((id) => !many.refused.includes(id));
-        nav.open({ kind: 'ask', options, purposeId: d.purposeId, source, transcript, confidence: 0, evidence: d.evidence, matchedWord: d.matchedWord });
+      const only = many.requests[0];
+      if (only && only.confidence >= CONFIDENCE_THRESHOLD) {
+        nav.open({ kind: 'review', needId: only.needId, purposeId: only.purposeId, source, understanding: { confidence: only.confidence, viaPictures: false } });
         return;
       }
     }
-    let match = hubMatch;
-    if (!match && hub) match = (await matchOnHub(hub, transcript, { lang }))?.match;
-    const d = decide(match ?? defaultMatcher.match(transcript));
+    const d = decide(understood?.match ?? defaultMatcher.match(transcript));
     if (d.kind === 'confident') {
       nav.open({ kind: 'review', needId: d.needId, purposeId: d.purposeId, source, understanding: { confidence: d.confidence, viaPictures: false } });
     } else {
@@ -108,7 +118,7 @@ export function HoldToSpeak({ lang }: { lang: LangCode }) {
     setPhase('processing');
     setProgress({ p: { stage: 'sending' }, since: Date.now() });
     try {
-      const { transcript, match } = await speech.stop((p) => {
+      const { transcript, match, many } = await speech.stop((p) => {
         setProgress({ p, since: Date.now() });
         if (p.stage === 'matching' && p.transcript) AccessibilityInfo.announceForAccessibility(tr('speech.heard', { text: p.transcript }));
       });
@@ -118,7 +128,7 @@ export function HoldToSpeak({ lang }: { lang: LangCode }) {
         setError(tr('speech.tooShort'));
         return '';
       }
-      await route(transcript, 'speech', lang, match);
+      await route(transcript, 'speech', lang, { match, many });
       return transcript;
     } catch {
       setPhase('idle');
