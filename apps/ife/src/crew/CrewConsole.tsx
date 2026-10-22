@@ -3,6 +3,7 @@ import {
   t,
   ago,
   ANNOUNCEMENTS,
+  announceCrewConsole,
   computeCrewMetrics,
   createBroadcastBus,
   type CrewRequest,
