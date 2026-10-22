@@ -53,7 +53,7 @@ export function CareScreen({ lang, onBack, onSend }: { lang: LangCode; onBack: (
             })}
           </svg>
           <button className={`ife-toggle${r.areas.includes('back') ? ' on' : ''}`} aria-pressed={r.areas.includes('back')} onClick={() => set({ areas: toggle(r.areas, 'back') })}>
-            {r.areas.includes('back') && <Check aria-hidden />} {areaLabel('back')}
+            {r.areas.includes('back') && <Check aria-hidden />} {tr('care.myBack')}
           </button>
           {r.areas.length > 0 && <p className="ife-care__chosen">{r.areas.map(areaLabel).join(' · ')}</p>}
         </div>
@@ -61,14 +61,12 @@ export function CareScreen({ lang, onBack, onSend }: { lang: LangCode; onBack: (
           <h2>{tr('care.pain')}</h2>
           <div className="ife-care__pain" role="radiogroup" aria-label={tr('care.pain')}>
             {PAIN_COLORS.map((c, n) => (
-              <button key={n} role="radio" aria-checked={r.pain === n} className={r.pain === n ? 'on' : ''} style={{ ['--pain' as string]: c }} onClick={() => set({ pain: n })}>
+              <button key={n} role="radio" aria-checked={r.pain === n} className={r.pain === n ? 'on' : ''} style={{ ['--pain' as string]: c }} onClick={() => set({ pain: r.pain === n ? null : n })}>
                 {n}
               </button>
             ))}
           </div>
-          <p className="ife-care__painword">
-            {r.pain}/10 · {painWord(r.pain, lang)}
-          </p>
+          <p className="ife-care__painword">{r.pain === null ? tr('care.notRated') : `${r.pain}/10 · ${painWord(r.pain, lang)}`}</p>
           <h2>{tr('care.symptoms')}</h2>
           <div className="ife-care__chips">
             {SYMPTOMS.map((s) => (
