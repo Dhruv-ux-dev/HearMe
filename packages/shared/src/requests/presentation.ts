@@ -1,5 +1,6 @@
 import { getNeed, getPurpose } from '../catalog/needs';
 import { getReply } from '../catalog/replies';
+import { needLabel, purposeLabel, replyTextOf } from '../i18n/resolve';
 import { t, type StringKey } from '../i18n/strings';
 import type { LangCode, PassengerRequest } from '../types';
 
@@ -37,13 +38,13 @@ export function describeStatus(r: PassengerRequest, lang: LangCode): StatusView 
 /** "Hot water · to take medicine" in the given language. */
 export function requestTitle(r: Pick<PassengerRequest, 'needId' | 'purposeId'>, lang: LangCode): string {
   const need = getNeed(r.needId);
-  const base = need ? need.label[lang] : r.needId;
+  const base = need ? needLabel(need, lang) : r.needId;
   const purpose = getPurpose(r.purposeId);
-  return purpose ? `${base} · ${purpose.label[lang]}` : base;
+  return purpose ? `${base} · ${purposeLabel(purpose, lang)}` : base;
 }
 
 export function replyText(r: PassengerRequest, lang: LangCode): string | undefined {
-  return r.reply ? getReply(r.reply.replyId).text[lang] : undefined;
+  return r.reply ? replyTextOf(getReply(r.reply.replyId), lang) : undefined;
 }
 
 /** Relative time like "12s" / "3 min", language-neutral enough for the prototype. */

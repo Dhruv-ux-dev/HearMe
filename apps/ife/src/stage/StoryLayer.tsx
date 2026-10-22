@@ -320,6 +320,22 @@ const TRY: Record<LangCode, [string, string][]> = {
     ['Tôi thấy chóng mặt', 'I feel dizzy'],
     ['Cho tôi xin nước', 'Some water, please'],
   ],
+  bn: [
+    ['আমার একটা কম্বল লাগবে', 'I need a blanket'],
+    ['শৌচাগার কোন দিকে?', 'Where is the toilet?'],
+  ],
+  ta: [
+    ['எனக்கு ஒரு போர்வை வேண்டும்', 'I need a blanket'],
+    ['கழிப்பறை எங்கே?', 'Where is the toilet?'],
+  ],
+  pa: [
+    ['ਮੈਨੂੰ ਇੱਕ ਕੰਬਲ ਚਾਹੀਦਾ ਹੈ', 'I need a blanket'],
+    ['ਬਾਥਰੂਮ ਕਿੱਥੇ ਹੈ?', 'Where is the toilet?'],
+  ],
+  mr: [
+    ['मला एक ब्लँकेट पाहिजे', 'I need a blanket'],
+    ['स्वच्छतागृह कुठे आहे?', 'Where is the toilet?'],
+  ],
 };
 
 /** "Judge, try it": the stage phone in the judge's language, their own phone by QR, and a one-person crew. */

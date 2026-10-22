@@ -1,14 +1,24 @@
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { NEEDS, type Need } from '@hearme/shared';
+import { NEEDS, localePack, type Need } from '@hearme/shared';
 
 /**
- * Language packs: a new language for *understanding* requests is a data file,
- * not code. apps/hub/data/languages/<code>.json lists keywords for each need
- * and a few request templates; `npm run add-language -w @hearme/hub -- <code>`
- * checks it, retrains the need classifier with it and measures the result.
- * Screens and verified replies still need translating separately.
+ * Keyword-only drafts of a *new* language, dropped in as
+ * apps/hub/data/languages/<code>.json: keywords for each need plus a few
+ * request templates. `npm run add-language -w @hearme/hub -- <code>` checks
+ * one, retrains the need classifier with it and measures the result, so a
+ * language can be tried on the hub in an afternoon.
+ *
+ * This is the first half of adding a language, not the whole of it: a draft
+ * here is only ever used to *understand* speech and typing, and the screens
+ * stay in the fallback language. Once its wording is written and corrected it
+ * graduates to a full pack in `packages/shared/src/i18n/packs/<code>.ts`,
+ * which also carries screen text and verified replies and ships in the phone
+ * bundle — that is how Bengali and Tamil moved out of this directory.
+ *
+ * A draft for a language that already has a full pack is ignored, so a stale
+ * machine draft cannot overwrite corrected wording.
  */
 export interface LanguagePack {
   code: string;
@@ -34,7 +44,12 @@ export function loadLanguagePacks(): LanguagePack[] {
   if (!existsSync(PACK_DIR)) return [];
   return readdirSync(PACK_DIR)
     .filter((f) => f.endsWith('.json'))
-    .map((f) => JSON.parse(readFileSync(join(PACK_DIR, f), 'utf8')) as LanguagePack);
+    .map((f) => JSON.parse(readFileSync(join(PACK_DIR, f), 'utf8')) as LanguagePack)
+    .filter((p) => {
+      if (!localePack(p.code)) return true;
+      console.warn(`[langpacks] ignoring data/languages/${p.code}.json: ${p.code} has a full pack in @hearme/shared (i18n/packs/${p.code}.ts)`);
+      return false;
+    });
 }
 
 /** Needs with each pack's keywords added under the pack's language code. */

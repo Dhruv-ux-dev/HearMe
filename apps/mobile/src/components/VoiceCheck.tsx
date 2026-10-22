@@ -1,4 +1,4 @@
-import { getReply, languageInfo, translator, type LangCode } from '@hearme/shared';
+import { getReply, type LangCode, languageInfo, translator, replyTextOf } from '@hearme/shared';
 import { useSession } from '@hearme/shared/react';
 import Check from 'lucide-react-native/icons/check';
 import Volume2 from 'lucide-react-native/icons/volume-2';
@@ -23,16 +23,26 @@ export function VoiceCheck({ lang, inSettings }: { lang: LangCode; inSettings?: 
   const tr = translator(lang);
   const prefs = useSession(session, (s) => s.prefs);
   const info = languageInfo(lang);
-  const sample = getReply('bringing_now').text[lang];
+  const sample = replyTextOf(getReply('bringing_now'), lang);
   const [step, setStep] = useState<Step>(prefs.voiceCheck === 'ok' && !inSettings ? 'ok' : prefs.voiceCheck === 'no_voice' ? 'no_voice' : 'idle');
+  /**
+   * Phones often ship no voice for a pack language, and browsers cannot always
+   * tell us in advance (`hasVoice` returns null). Rather than let the passenger
+   * assume replies will be spoken, say up front that they may not be — without
+   * claiming they will not, which we do not know.
+   */
+  const [mayBeSilent, setMayBeSilent] = useState(false);
 
   // If the device clearly has no voice for this language, say so before they try.
   useEffect(() => {
     let alive = true;
     void replyVoice.hasVoice(info.bcp47).then((has) => {
-      if (alive && has === false) {
+      if (!alive) return;
+      if (has === false) {
         setStep('no_voice');
         if (session.getState().prefs.voiceCheck !== 'no_voice') session.setPrefs({ voiceCheck: 'no_voice' });
+      } else if (has === null && info.coverage.tts === 'rare') {
+        setMayBeSilent(true);
       }
     });
     return () => {
@@ -74,6 +84,7 @@ export function VoiceCheck({ lang, inSettings }: { lang: LangCode; inSettings?: 
         </T>
       </View>
       {step === 'idle' && <T muted>{tr('voice.checkHint')}</T>}
+      {step === 'idle' && mayBeSilent && <T color={th.p.warning}>{tr('voice.mayHaveNoVoice', { language: info.nativeName })}</T>}
       {(step === 'playing' || step === 'ask') && (
         <T lang={info.bcp47} style={{ fontStyle: 'italic' }}>
           “{sample}”

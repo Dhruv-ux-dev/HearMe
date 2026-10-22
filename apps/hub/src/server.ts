@@ -1,7 +1,7 @@
 import { createReadStream, existsSync, statSync } from 'node:fs';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { extname, join, normalize, resolve } from 'node:path';
-import { LANGUAGES, type HubStatus, type LangCode, type UnderstandResult, type UnderstandStreamLine, type UnderstandTarget } from '@hearme/shared';
+import { LANGUAGES, isLangCode, translatedKeys, type HubStatus, type LangCode, type UnderstandResult, type UnderstandStreamLine, type UnderstandTarget } from '@hearme/shared';
 import { STORY_SENTENCES, parseLabTakeQuery, scoreTake, takesToCsv, type LabTake } from '@hearme/shared/lab';
 import type { AiEngine } from './ai';
 import { AudioError, decodeAudio, hasFfmpeg } from './audio';
@@ -295,15 +295,47 @@ export function createHandler(opts: HandlerOptions) {
       return json(res, 200, await opts.ai.warmup());
     }
     if (path === '/api/languages' && req.method === 'GET') {
+      // One row per language with its coverage, layer by layer, so a phone or
+      // a judge can see what is real before choosing it. `extraPacks` are
+      // keyword-only drafts dropped into data/languages/ by `add-language`:
+      // understood, but with no screens of their own.
       return json(res, 200, {
-        builtIn: LANGUAGES.map((l) => ({ code: l.code, name: l.englishName })),
-        packs: opts.ai.languagePacks().map((p) => ({ code: p.code, name: p.name, draft: p.draft ?? 'human', needs: Object.keys(p.needs).length, speech: !!p.whisper })),
+        languages: LANGUAGES.map((l) => ({
+          code: l.code,
+          name: l.englishName,
+          nativeName: l.nativeName,
+          bcp47: l.bcp47,
+          core: l.core,
+          fallback: l.fallback,
+          coverage: l.coverage,
+          note: l.note ?? null,
+          uiStrings: translatedKeys(l.code).length,
+        })),
+        extraPacks: opts.ai
+          .languagePacks()
+          .filter((p) => !isLangCode(p.code))
+          .map((p) => ({ code: p.code, name: p.name, draft: p.draft ?? 'human', needs: Object.keys(p.needs).length, speech: !!p.whisper })),
+        // Kept for older phone bundles that have not been rebuilt yet.
+        builtIn: LANGUAGES.filter((l) => l.core).map((l) => ({ code: l.code, name: l.englishName })),
+        packs: [
+          ...LANGUAGES.filter((l) => !l.core).map((l) => ({ code: l.code, name: l.englishName, draft: 'human' as const, needs: 40, speech: l.coverage.speech !== 'none' })),
+          ...opts.ai
+            .languagePacks()
+            .filter((p) => !isLangCode(p.code))
+            .map((p) => ({ code: p.code, name: p.name, draft: p.draft ?? 'human', needs: Object.keys(p.needs).length, speech: !!p.whisper })),
+        ],
       });
     }
     if (path === '/api/languages/reload' && req.method === 'POST') {
       if (!isLocal(req)) return json(res, 403, { error: 'only from the hub laptop' });
       await opts.ai.reloadLanguages();
-      return json(res, 200, { packs: opts.ai.languagePacks().map((p) => p.code) });
+      // `drafts` are the data/languages/*.json files that were re-read; `languages`
+      // is everything the hub now understands, built-in packs included.
+      return json(res, 200, {
+        drafts: opts.ai.languagePacks().map((p) => p.code),
+        languages: LANGUAGES.map((l) => l.code),
+        packs: opts.ai.languagePacks().map((p) => p.code),
+      });
     }
     if (path === '/api/asr' && req.method === 'POST') {
       // Only the laptop running the hub (the demo stage) may change the speech model.

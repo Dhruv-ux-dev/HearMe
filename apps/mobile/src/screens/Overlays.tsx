@@ -1,20 +1,31 @@
 import {
   CATEGORIES,
-  CONFIDENCE_THRESHOLD,
   CATEGORY_LABELS,
+  CONFIDENCE_THRESHOLD,
   CREW_LANG,
+  evidenceStringKey,
   getNeed,
   getPurpose,
   getReply,
+  type LangCode,
   languageInfo,
+  localized,
+  needLabel,
+  needLabelOf,
+  type NeedPurpose,
   needsInCategory,
+  purposeLabelOf,
+  replyTextOf,
   requestTitle,
   translator,
-  type LangCode,
-  type NeedPurpose,
 } from '@hearme/shared';
 import { useSession } from '@hearme/shared/react';
+import BellRing from 'lucide-react-native/icons/bell-ring';
 import Check from 'lucide-react-native/icons/check';
+import HelpCircle from 'lucide-react-native/icons/circle-question-mark';
+import LayoutGrid from 'lucide-react-native/icons/layout-grid';
+import Mic from 'lucide-react-native/icons/mic';
+import Pencil from 'lucide-react-native/icons/pencil';
 import Heart from 'lucide-react-native/icons/heart';
 import HeartPulse from 'lucide-react-native/icons/heart-pulse';
 import Lock from 'lucide-react-native/icons/lock';
@@ -43,7 +54,7 @@ export function Overlays({ lang, seat }: { lang: LangCode; seat: string }) {
       {o?.kind === 'reviewMany' && <ReviewManySheet lang={lang} o={o} />}
       {o?.kind === 'picker' && <PickerSheet lang={lang} category={o.category} />}
       {o?.kind === 'ask' && <AskSheet lang={lang} o={o} />}
-      {o?.kind === 'typed' && <TypedSheet lang={lang} />}
+      {o?.kind === 'typed' && <TypedSheet lang={lang} draft={o.draft} />}
       {o?.kind === 'showCard' && <ShowCard lang={lang} seat={seat} needId={o.needId} />}
       {o?.kind === 'care' && <CareSheet lang={lang} />}
       <ReplyModal lang={lang} />
@@ -90,13 +101,13 @@ function ReviewManySheet({ lang, o }: { lang: LangCode; o: Extract<Overlay, { ki
             onPress={() => toggle(i.needId)}
             accessibilityRole="checkbox"
             accessibilityState={{ checked }}
-            accessibilityLabel={need.label[lang]}
+            accessibilityLabel={needLabel(need, lang)}
             style={{ flexDirection: 'row', alignItems: 'center', gap: th.space.md, padding: th.space.md, borderRadius: th.radius.md, borderWidth: 2, borderColor: checked ? th.p.primary : th.p.border, backgroundColor: checked ? th.p.primarySoft : th.p.surface }}
           >
             <NeedIcon name={need.icon} color={th.p.primary} size={th.fs(36)} />
             <View style={{ flex: 1 }}>
-              <T v="title">{need.label[lang]}</T>
-              {i.purposeId && <T muted>{getPurpose(i.purposeId)?.label[lang]}</T>}
+              <T v="title">{needLabel(need, lang)}</T>
+              {i.purposeId && <T muted>{purposeLabelOf(i.purposeId, lang)}</T>}
             </View>
             <View style={{ width: 30, height: 30, borderRadius: 8, borderWidth: 2, borderColor: th.p.primary, alignItems: 'center', justifyContent: 'center', backgroundColor: checked ? th.p.primary : 'transparent' }}>
               {checked && <Check size={20} color="#fff" />}
@@ -109,7 +120,7 @@ function ReviewManySheet({ lang, o }: { lang: LangCode; o: Extract<Overlay, { ki
           <T bold>{tr('review.notWanted')}</T>
           {o.refused.map((id) => (
             <Text key={id} style={{ color: th.p.textMuted, textDecorationLine: 'line-through', fontSize: th.fs(16) }}>
-              {getNeed(id)?.label[lang] ?? id}
+              {needLabelOf(id, lang)}
             </Text>
           ))}
         </View>
@@ -152,8 +163,8 @@ function ReviewSheet({ lang, o }: { lang: LangCode; o: Extract<Overlay, { kind: 
           <NeedIcon name={need.icon} color={th.p.primary} size={th.fs(48)} />
         </View>
         <View style={{ flex: 1, gap: 4 }}>
-          <T v="heading">{need.label[lang]}</T>
-          {purpose && <T muted>{getPurpose(purpose)?.label[lang]}</T>}
+          <T v="heading">{needLabel(need, lang)}</T>
+          {purpose && <T muted>{purposeLabelOf(purpose, lang)}</T>}
           {lang !== CREW_LANG && (
             <T v="caption" muted lang="ja-JP">
               {tr('reply.from')}: {requestTitle({ needId: need.id, purposeId: purpose }, CREW_LANG)}
@@ -203,7 +214,7 @@ function ReviewSheet({ lang, o }: { lang: LangCode; o: Extract<Overlay, { kind: 
                 >
                   {on && <Check size={20} color={th.p.primary} />}
                   <T bold color={on ? th.p.primary : th.p.text}>
-                    {getPurpose(p)?.label[lang]}
+                    {purposeLabelOf(p, lang)}
                   </T>
                 </Pressable>
               );
@@ -250,7 +261,7 @@ function PickerSheet({ lang, category: initial }: { lang: LangCode; category: (t
               }}
             >
               {c === 'private' && <Lock size={18} color={on ? (th.hc ? '#000' : th.p.onNavy) : th.p.text} />}
-              <Text style={{ color: on ? (th.hc ? '#000' : th.p.onNavy) : th.p.text, fontWeight: '700', fontSize: th.fs(th.t.body) }}>{CATEGORY_LABELS[c][lang]}</Text>
+              <Text style={{ color: on ? (th.hc ? '#000' : th.p.onNavy) : th.p.text, fontWeight: '700', fontSize: th.fs(th.t.body) }}>{localized(CATEGORY_LABELS[c], lang)}</Text>
             </Pressable>
           );
         })}
@@ -262,7 +273,7 @@ function PickerSheet({ lang, category: initial }: { lang: LangCode; category: (t
             key={n.id}
             onPress={() => nav.open({ kind: 'review', needId: n.id, source: 'tap' })}
             accessibilityRole="button"
-            accessibilityLabel={n.label[lang]}
+            accessibilityLabel={needLabel(n, lang)}
             style={({ pressed }) => ({
               minHeight: 72,
               borderRadius: th.radius.md,
@@ -277,7 +288,7 @@ function PickerSheet({ lang, category: initial }: { lang: LangCode; category: (t
           >
             <NeedIcon name={n.icon} color={th.p.primary} size={th.fs(30)} />
             <T v="bodyLarge" bold style={{ flex: 1 }}>
-              {n.label[lang]}
+              {needLabel(n, lang)}
             </T>
           </Pressable>
         ))}
@@ -287,16 +298,37 @@ function PickerSheet({ lang, category: initial }: { lang: LangCode; category: (t
 }
 
 /** "Did you mean this?" — the PDF's low-confidence path: ask with pictures. */
+/**
+ * "Did you mean?" — the step HearMe takes instead of guessing.
+ *
+ * It shows three things the passenger needs in order to recover with as few
+ * taps as possible: what was heard, *why* HearMe is unsure (in words, from the
+ * matcher's own evidence — not a percentage), and the pictures it is choosing
+ * between. Below those are the three ways out: say it again, correct the words
+ * it heard (the transcript is carried over so nothing is retyped), or look
+ * through all the pictures. Calling the crew is last, and it says plainly that
+ * HearMe failed rather than pretending the request went through.
+ */
 function AskSheet({ lang, o }: { lang: LangCode; o: Extract<Overlay, { kind: 'ask' }> }) {
   const th = useTheme();
   const nav = useNav();
   const tr = translator(lang);
-  useEffect(() => AccessibilityInfo.announceForAccessibility(tr('speech.didYouMean')), [tr]);
+  const reason = tr(evidenceStringKey(o.evidence), { word: o.matchedWord ?? '' });
+  useEffect(() => AccessibilityInfo.announceForAccessibility(`${tr('speech.didYouMean')} ${reason}`), [tr, reason]);
   return (
     <Sheet visible title={tr('speech.didYouMean')} onClose={nav.close} closeLabel={tr('common.close')}>
-      <View style={{ backgroundColor: th.p.surfaceAlt, borderRadius: th.radius.md, padding: th.space.md }}>
-        <T muted style={{ fontStyle: 'italic' }}>
-          “{o.transcript}”
+      {!!o.transcript && (
+        <View style={{ backgroundColor: th.p.surfaceAlt, borderRadius: th.radius.md, padding: th.space.md }}>
+          <T muted style={{ fontStyle: 'italic' }} lang={lang}>
+            “{o.transcript}”
+          </T>
+        </View>
+      )}
+      {/* Why we are asking, in the passenger's language. */}
+      <View style={{ flexDirection: 'row', gap: th.space.sm, alignItems: 'flex-start' }}>
+        <HelpCircle color={th.p.warning} size={th.fs(20)} aria-hidden />
+        <T style={{ flex: 1 }} lang={lang}>
+          {reason}
         </T>
       </View>
       <View style={{ gap: th.space.sm }}>
@@ -316,7 +348,7 @@ function AskSheet({ lang, o }: { lang: LangCode; o: Extract<Overlay, { kind: 'as
                 })
               }
               accessibilityRole="button"
-              accessibilityLabel={n.label[lang]}
+              accessibilityLabel={needLabel(n, lang)}
               style={({ pressed }) => ({
                 minHeight: 76,
                 borderRadius: th.radius.md,
@@ -333,17 +365,38 @@ function AskSheet({ lang, o }: { lang: LangCode; o: Extract<Overlay, { kind: 'as
                 <NeedIcon name={n.icon} color={th.p.primary} size={th.fs(30)} />
               </View>
               <T v="bodyLarge" bold style={{ flex: 1 }}>
-                {n.label[lang]}
+                {needLabel(n, lang)}
               </T>
             </Pressable>
           );
         })}
       </View>
-      <Btn
-        variant="ghost"
-        label={tr('speech.noneCallCrew')}
-        onPress={() => nav.open({ kind: 'review', needId: 'call_crew', source: o.source, understanding: { confidence: o.confidence, viaPictures: true } })}
-      />
+      {/* Ways out, cheapest first. Nothing here throws away what was already said. */}
+      <View style={{ gap: th.space.sm, borderTopWidth: 1, borderTopColor: th.p.border, paddingTop: th.space.md }}>
+        {o.source === 'speech' && (
+          <Btn
+            variant="ghost"
+            label={tr('ask.sayAgain')}
+            // Back to the home screen, where the hold-to-speak button is.
+            onPress={() => {
+              nav.close();
+              nav.setTab('home');
+            }}
+            icon={(c, sz) => <Mic color={c} size={sz} />}
+          />
+        )}
+        {!!o.transcript && (
+          <Btn variant="ghost" label={tr('ask.fixWords')} onPress={() => nav.open({ kind: 'typed', draft: o.transcript })} icon={(c, sz) => <Pencil color={c} size={sz} />} />
+        )}
+        <Btn variant="ghost" label={tr('ask.showAll')} onPress={() => nav.open({ kind: 'picker', category: 'drinks' })} icon={(c, sz) => <LayoutGrid color={c} size={sz} />} />
+        <Btn
+          variant="ghost"
+          label={tr('speech.noneCallCrew')}
+          onPress={() => nav.open({ kind: 'review', needId: 'call_crew', source: o.source, understanding: { confidence: o.confidence, viaPictures: true } })}
+          icon={(c, sz) => <BellRing color={c} size={sz} />}
+          hint={tr('ask.cannotUnderstand')}
+        />
+      </View>
       {o.source === 'speech' && currentSpeech().simulated && (
         <T v="caption" muted>
           {tr('speech.simulated')}
@@ -353,12 +406,14 @@ function AskSheet({ lang, o }: { lang: LangCode; o: Extract<Overlay, { kind: 'as
   );
 }
 
-function TypedSheet({ lang }: { lang: LangCode }) {
+function TypedSheet({ lang, draft }: { lang: LangCode; draft?: string }) {
   const th = useTheme();
   const nav = useNav();
   const route = useRouteTranscript();
   const tr = translator(lang);
-  const [text, setText] = useState('');
+  // Opened from "Fix what I heard": the transcript is already there, so the
+  // passenger corrects a word instead of starting the whole request again.
+  const [text, setText] = useState(draft ?? '');
   const [error, setError] = useState(false);
   const find = () => {
     if (!text.trim()) {
@@ -368,7 +423,7 @@ function TypedSheet({ lang }: { lang: LangCode }) {
     void route(text, 'typed', lang);
   };
   return (
-    <Sheet visible title={tr('home.typeInstead')} onClose={nav.close} closeLabel={tr('common.close')} footer={<Btn big label={tr('speech.findMatch')} onPress={find} icon={(c, s) => <Search color={c} size={s} />} />}>
+    <Sheet visible title={draft ? tr('ask.fixWords') : tr('home.typeInstead')} onClose={nav.close} closeLabel={tr('common.close')} footer={<Btn big label={tr('speech.findMatch')} onPress={find} icon={(c, s) => <Search color={c} size={s} />} />}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
         <Type size={20} color={th.p.textMuted} />
         <T muted style={{ flex: 1 }}>
@@ -383,6 +438,7 @@ function TypedSheet({ lang }: { lang: LangCode }) {
         }}
         onSubmitEditing={find}
         autoFocus
+        selectTextOnFocus={!!draft}
         multiline
         maxLength={200}
         placeholder={tr('speech.typePlaceholder')}
@@ -428,7 +484,7 @@ export function ShowCard({ lang, seat, needId }: { lang: LangCode; seat: string;
             {need.label.ja}
           </Text>
           <Text style={{ fontSize: 30, fontWeight: '700', color: '#16202E', textAlign: 'center' }}>{need.label.en}</Text>
-          {lang !== 'en' && lang !== 'ja' && <Text style={{ fontSize: 26, color: '#4A5465', textAlign: 'center' }}>{need.label[lang]}</Text>}
+          {lang !== 'en' && lang !== 'ja' && <Text style={{ fontSize: 26, color: '#4A5465', textAlign: 'center' }}>{needLabel(need, lang)}</Text>}
         </View>
         <View style={{ padding: th.space.lg }}>
           <Btn big variant="navy" label={tr('common.close')} onPress={nav.close} icon={(c, s) => <X color={c} size={s} />} />
@@ -445,7 +501,7 @@ function ReplyModal({ lang }: { lang: LangCode }) {
   const id = useSession(session, (s) => s.replyToShow);
   const r = useSession(session, (s) => s.requests.find((x) => x.id === s.replyToShow));
   const prefs = useSession(session, (s) => s.prefs);
-  const text = r?.reply ? getReply(r.reply.replyId).text[lang] : '';
+  const text = r?.reply ? replyTextOf(getReply(r.reply.replyId), lang) : '';
   const voice = prefs.replyChannels.includes('voice');
   const buzz = prefs.replyChannels.includes('buzz');
   const info = languageInfo(lang);

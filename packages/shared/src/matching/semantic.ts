@@ -119,25 +119,33 @@ export function combineMatches(kw: MatchResult, sem: { ranked: { id: string; sco
   const kwTop = kw.candidates[0]?.needId;
   const semCandidates: MatchCandidate[] = sem.ranked.slice(0, 5).map((r) => ({ needId: r.id, score: Math.round(r.score * 1000) / 1000 }));
 
+  const word = kw.matchedWord ? { matchedWord: kw.matchedWord } : {};
   if (kwTop && kw.confidence >= CONFIDENCE_THRESHOLD) {
     // A keyword says one thing, the meaning model fairly surely another ("heat some water" has
     // the word "water"): show both as pictures rather than send the wrong one.
     if (semTop && semTop !== kwTop && sem.confidence >= disagreement) {
-      return { candidates: mergeCandidates(kw.candidates, semCandidates), confidence: round(Math.min(kw.confidence, CONFIDENCE_THRESHOLD - 0.01)), purposeId: kw.purposeId };
+      return {
+        candidates: mergeCandidates(kw.candidates, semCandidates),
+        confidence: round(Math.min(kw.confidence, CONFIDENCE_THRESHOLD - 0.01)),
+        purposeId: kw.purposeId,
+        evidence: 'disagree',
+        ...word,
+      };
     }
     const boost = kwTop === semTop ? 0.05 : 0;
-    return { ...kw, confidence: Math.min(0.99, kw.confidence + boost) };
+    return { ...kw, confidence: Math.min(0.99, kw.confidence + boost), evidence: kwTop === semTop ? 'both_agree' : kw.evidence };
   }
   if (kwTop && kwTop === semTop) {
     const confidence = Math.min(0.99, Math.max(kw.confidence, sem.confidence) + 0.1);
-    return { candidates: mergeCandidates(kw.candidates, semCandidates), confidence: round(confidence), purposeId: kw.purposeId };
+    return { candidates: mergeCandidates(kw.candidates, semCandidates), confidence: round(confidence), purposeId: kw.purposeId, evidence: 'both_agree', ...word };
   }
   // They disagree: the more certain of the two leads the options.
   if (kwTop && kw.confidence > sem.confidence) {
-    return { candidates: mergeCandidates(kw.candidates, semCandidates), confidence: kw.confidence, purposeId: kw.purposeId };
+    return { candidates: mergeCandidates(kw.candidates, semCandidates), confidence: kw.confidence, purposeId: kw.purposeId, evidence: semTop ? 'disagree' : kw.evidence, ...word };
   }
   const merged = mergeCandidates(semCandidates, kw.candidates);
-  return { candidates: merged, confidence: sem.confidence, purposeId: kw.purposeId };
+  // The meaning model is leading and the words contributed nothing: say so.
+  return { candidates: merged, confidence: sem.confidence, purposeId: kw.purposeId, evidence: kwTop ? 'disagree' : semTop ? 'meaning' : 'nothing', ...word };
 }
 
 function mergeCandidates(first: MatchCandidate[], second: MatchCandidate[]): MatchCandidate[] {

@@ -42,9 +42,10 @@ describe('keyword intent matcher (stand-in for multilingual-e5)', () => {
   });
 
   it.each(Object.keys(SAMPLE_UTTERANCES) as LangCode[])('sample utterances for %s: clear → confident hot water, noisy → ask', (lang) => {
-    const clear = decide(m(SAMPLE_UTTERANCES[lang].clear));
+    const sample = SAMPLE_UTTERANCES[lang]!;
+    const clear = decide(m(sample.clear));
     expect(clear).toMatchObject({ kind: 'confident', needId: 'hot_water', purposeId: 'for_medicine' });
-    expect(decide(m(SAMPLE_UTTERANCES[lang].noisy)).kind).toBe('ask');
+    expect(decide(m(sample.noisy)).kind).toBe('ask');
   });
 
   it('normalises punctuation and case', () => {

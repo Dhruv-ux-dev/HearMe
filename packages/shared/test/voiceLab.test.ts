@@ -24,10 +24,19 @@ describe('voice lab prompts', () => {
     expect(labPrompts('crew', 'own-words', 'ja')).toHaveLength(11);
   });
 
-  it('asks in own words for language packs, which have no sentences to read yet', () => {
+  it('gives pack languages sentences to read, like the core ones', () => {
     const bn = labPrompts('passenger', 'read', 'bn');
     expect(bn).toHaveLength(12);
-    expect(bn.every((p) => p.text === '')).toBe(true);
+    expect(bn.every((p) => p.text !== '')).toBe(true);
+    expect(bn.find((p) => p.expected === 'water')?.text).toContain('জল');
+    // Own words still means no sentence shown, in any language.
+    expect(labPrompts('passenger', 'own-words', 'pa').every((p) => p.text === '')).toBe(true);
+  });
+
+  it('asks in own words for a language with no held-out set (an add-language draft)', () => {
+    const draft = labPrompts('passenger', 'read', 'tl');
+    expect(draft).toHaveLength(12);
+    expect(draft.every((p) => p.text === '')).toBe(true);
   });
 });
 
@@ -76,11 +85,18 @@ describe('what the lab page sends', () => {
     expect(parseLabTakeQuery(q({ speaker: 'crew', lang: 'ja', expected: 'bringing_now' }))).toMatchObject({ speaker: 'crew' });
   });
 
-  it('accepts a language pack the hub can hear, for own-words takes only', () => {
+  it('accepts a pack language for reading and for own words', () => {
     const q = (patch: Partial<LabTakeInfo>) => new URLSearchParams(labTakeQuery({ ...info, ...patch }));
-    expect(parseLabTakeQuery(q({ lang: 'bn', mode: 'own-words', prompt: '' }), ['bn', 'ta'])).toMatchObject({ lang: 'bn' });
-    expect(parseLabTakeQuery(q({ lang: 'bn', mode: 'read' }), ['bn'])).toMatch(/own words/);
-    expect(parseLabTakeQuery(q({ lang: 'bn', mode: 'own-words' }))).toMatch(/required/);
+    expect(parseLabTakeQuery(q({ lang: 'bn', mode: 'own-words', prompt: '' }))).toMatchObject({ lang: 'bn' });
+    expect(parseLabTakeQuery(q({ lang: 'bn', mode: 'read' }))).toMatchObject({ lang: 'bn', mode: 'read' });
+    expect(parseLabTakeQuery(q({ lang: 'pa', mode: 'read' }))).toMatchObject({ lang: 'pa' });
+  });
+
+  it('a hub-only draft language can still be recorded, in own words', () => {
+    const q = (patch: Partial<LabTakeInfo>) => new URLSearchParams(labTakeQuery({ ...info, ...patch }));
+    expect(parseLabTakeQuery(q({ lang: 'tl', mode: 'own-words', prompt: '' }), ['tl'])).toMatchObject({ lang: 'tl' });
+    expect(parseLabTakeQuery(q({ lang: 'tl', mode: 'read' }), ['tl'])).toMatch(/own words/);
+    expect(parseLabTakeQuery(q({ lang: 'tl', mode: 'own-words' }))).toMatch(/required/);
   });
 });
 

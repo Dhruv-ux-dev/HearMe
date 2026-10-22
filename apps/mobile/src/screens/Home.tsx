@@ -1,4 +1,4 @@
-import { COMMON_NEEDS, getNeed, isActive, replyText, requestTitle, translator, type LangCode, type PassengerRequest } from '@hearme/shared';
+import { COMMON_NEEDS, getNeed, isActive, type LangCode, needLabel, type PassengerRequest, translator, replyText, requestTitle } from '@hearme/shared';
 import { useSession } from '@hearme/shared/react';
 import HeartPulse from 'lucide-react-native/icons/heart-pulse';
 import Keyboard from 'lucide-react-native/icons/keyboard';
@@ -55,7 +55,7 @@ export function Home({ lang }: { lang: LangCode }) {
 
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: th.space.md }}>
           {COMMON_NEEDS.slice(0, 7).map((n) => (
-            <Tile key={n.id} label={n.label[lang]} onPress={() => nav.open({ kind: 'review', needId: n.id, source: 'tap' })} icon={(c, s) => <NeedIcon name={n.icon} color={c} size={s} />} />
+            <Tile key={n.id} label={needLabel(n, lang)} onPress={() => nav.open({ kind: 'review', needId: n.id, source: 'tap' })} icon={(c, s) => <NeedIcon name={n.icon} color={c} size={s} />} />
           ))}
           <Tile dashed label={tr('home.more')} onPress={() => nav.open({ kind: 'picker', category: 'drinks' })} icon={(c, s) => <Plus color={c} size={s} />} />
         </View>

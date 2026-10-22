@@ -1,9 +1,18 @@
 import type { LangCode, Localized } from '../types';
+import { fallbackLang } from './languages';
+import { isReservedKey } from './coverage';
+import { localePack } from './packs';
 
 /**
  * Interface text. Translations are prototype drafts and must be reviewed by
  * native speakers before any real use. Safety wording lives separately in
  * `catalog/safety.ts` and must come from airline-approved, human-checked text.
+ *
+ * The six core languages are written out below. Pack languages (Bengali,
+ * Tamil, Punjabi, Marathi) supply their strings from `i18n/packs/`, and `t`
+ * resolves them in that order: the pack, then the pack's core fallback
+ * language, then English — so an untranslated string appears in a language the
+ * passenger was told to expect instead of coming out blank.
  */
 const S = {
   'app.tagline': {
@@ -183,6 +192,14 @@ const S = {
     id: 'Naikkan volume atau pasang earphone, lalu coba lagi. Jika tetap tidak ada suara, balasan tampil dengan huruf besar dan ponsel bergetar.',
     vi: 'Hãy tăng âm lượng hoặc cắm tai nghe rồi thử lại. Nếu vẫn không có tiếng, câu trả lời sẽ hiện chữ lớn và điện thoại rung.',
   },
+  'voice.mayHaveNoVoice': {
+    en: 'Many phones have no {language} voice. If the test is silent, replies will come as big text and the phone will vibrate.',
+    hi: 'कई फ़ोन में {language} की आवाज़ नहीं होती। अगर जाँच में कुछ न सुनाई दे, तो जवाब बड़े अक्षरों में आएँगे और फ़ोन कंपन करेगा।',
+    ja: '{language}の音声が入っていない端末が多くあります。テストで音が出ない場合は、返信は大きな文字と振動でお知らせします。',
+    th: 'โทรศัพท์หลายรุ่นไม่มีเสียง{language} ถ้าทดสอบแล้วไม่มีเสียง คำตอบจะมาเป็นตัวหนังสือใหญ่และเครื่องจะสั่น',
+    id: 'Banyak ponsel tidak memiliki suara {language}. Jika tes tidak bersuara, balasan akan tampil sebagai teks besar dan ponsel bergetar.',
+    vi: 'Nhiều điện thoại không có giọng {language}. Nếu thử mà không có tiếng, câu trả lời sẽ hiện bằng chữ lớn và điện thoại sẽ rung.',
+  },
   'voice.noVoice': {
     en: 'This phone has no {language} voice, so replies show in big text and the phone vibrates. You can add a voice in the phone’s text-to-speech settings.',
     hi: 'इस फ़ोन में {language} आवाज़ नहीं है, इसलिए जवाब बड़े अक्षरों में दिखेंगे और फ़ोन वाइब्रेट करेगा। आप फ़ोन की टेक्स्ट-टू-स्पीच सेटिंग में आवाज़ जोड़ सकते हैं।',
@@ -222,6 +239,90 @@ const S = {
     th: 'อ่านออกเสียงเป็นภาษา{language}แล้ว',
     id: 'Dibacakan dalam {language}',
     vi: 'Đã đọc bằng {language}',
+  },
+  // ── Why HearMe is asking (the Confidence Loop) ─────────────────────────
+  // Each line describes the matching that actually happened, so the passenger
+  // is told the reason they are being asked instead of a bare percentage.
+  'ask.exactWords': {
+    en: 'I heard “{word}”, but not clearly enough to be sure. Which one?',
+    hi: 'मैंने “{word}” सुना, पर पूरा यकीन नहीं है। कौन सा?',
+    ja: '「{word}」と聞こえましたが、確かではありません。どれですか？',
+    th: 'ได้ยิน “{word}” แต่ยังไม่แน่ใจ อันไหนคะ/ครับ?',
+    id: 'Saya mendengar “{word}”, tapi belum yakin. Yang mana?',
+    vi: 'Tôi nghe “{word}” nhưng chưa chắc. Cái nào?',
+  },
+  'ask.soundsLike': {
+    en: 'That sounded like “{word}”. Did I hear it right?',
+    hi: 'यह “{word}” जैसा सुनाई दिया। क्या मैंने ठीक सुना?',
+    ja: '「{word}」のように聞こえました。合っていますか？',
+    th: 'เสียงคล้าย “{word}” ฟังถูกไหมคะ/ครับ?',
+    id: 'Bunyinya seperti “{word}”. Apakah saya dengar dengan benar?',
+    vi: 'Nghe giống “{word}”. Tôi nghe đúng không?',
+  },
+  'ask.meaning': {
+    en: 'I did not catch a word I know, but this is my best guess.',
+    hi: 'मुझे कोई जाना-पहचाना शब्द नहीं मिला, पर मेरा अंदाज़ा यह है।',
+    ja: '知っている言葉は聞き取れませんでしたが、おそらくこれです。',
+    th: 'ไม่ได้ยินคำที่รู้จัก แต่น่าจะเป็นอันนี้',
+    id: 'Saya tidak menangkap kata yang saya kenal, tapi ini dugaan terbaik saya.',
+    vi: 'Tôi không nghe ra từ nào tôi biết, nhưng đây là phỏng đoán của tôi.',
+  },
+  'ask.disagree': {
+    en: 'The words and the meaning point to different things, so I would rather you chose.',
+    hi: 'शब्द और अर्थ अलग-अलग इशारा कर रहे हैं, इसलिए आप ही चुन लीजिए।',
+    ja: '言葉と意味が食い違っています。お選びいただけますか。',
+    th: 'คำที่ได้ยินกับความหมายไม่ตรงกัน ขอให้คุณเลือกเองดีกว่า',
+    id: 'Kata dan maknanya menunjuk hal berbeda, jadi sebaiknya Anda pilih.',
+    vi: 'Từ ngữ và ý nghĩa chỉ về hai thứ khác nhau, nên bạn chọn giúp tôi nhé.',
+  },
+  'ask.weakHint': {
+    en: 'I only heard “{word}”, which could mean several things.',
+    hi: 'मैंने सिर्फ़ “{word}” सुना, जिसका मतलब कई चीज़ें हो सकती हैं।',
+    ja: '「{word}」だけ聞こえました。いくつかの意味が考えられます。',
+    th: 'ได้ยินแค่ “{word}” ซึ่งอาจหมายถึงหลายอย่าง',
+    id: 'Saya hanya mendengar “{word}”, yang bisa berarti beberapa hal.',
+    vi: 'Tôi chỉ nghe “{word}”, có thể là nhiều thứ.',
+  },
+  'ask.nothing': {
+    en: 'I could not match that to anything. Here are the most common requests.',
+    hi: 'मैं इसे किसी चीज़ से नहीं जोड़ पाया। ये सबसे आम अनुरोध हैं।',
+    ja: '該当するものが見つかりませんでした。よくあるご依頼です。',
+    th: 'จับคู่ไม่ได้เลย นี่คือคำขอที่พบบ่อย',
+    id: 'Saya tidak bisa mencocokkannya. Ini permintaan yang paling umum.',
+    vi: 'Tôi không khớp được với gì cả. Đây là những yêu cầu thường gặp.',
+  },
+  // ── Getting out of a misunderstanding ──────────────────────────────────
+  'ask.sayAgain': {
+    en: 'Say it again',
+    hi: 'फिर से बोलें',
+    ja: 'もう一度話す',
+    th: 'พูดอีกครั้ง',
+    id: 'Ucapkan lagi',
+    vi: 'Nói lại',
+  },
+  'ask.fixWords': {
+    en: 'Fix what I heard',
+    hi: 'मैंने जो सुना उसे ठीक करें',
+    ja: '聞き取りを直す',
+    th: 'แก้คำที่ได้ยิน',
+    id: 'Perbaiki yang saya dengar',
+    vi: 'Sửa lời tôi nghe',
+  },
+  'ask.showAll': {
+    en: 'Show all pictures',
+    hi: 'सारी तस्वीरें दिखाएँ',
+    ja: 'すべての絵を見る',
+    th: 'ดูรูปทั้งหมด',
+    id: 'Tampilkan semua gambar',
+    vi: 'Xem tất cả hình',
+  },
+  'ask.cannotUnderstand': {
+    en: 'HearMe could not understand. A crew member will come and you can show them this screen.',
+    hi: 'HearMe समझ नहीं पाया। क्रू सदस्य आएँगे और आप उन्हें यह स्क्रीन दिखा सकते हैं।',
+    ja: 'HearMe は理解できませんでした。係員が伺いますので、この画面をお見せください。',
+    th: 'HearMe ไม่เข้าใจ ลูกเรือจะมาหา และคุณแสดงหน้าจอนี้ให้ดูได้',
+    id: 'HearMe tidak mengerti. Awak kabin akan datang dan Anda bisa menunjukkan layar ini.',
+    vi: 'HearMe không hiểu được. Tiếp viên sẽ đến và bạn có thể cho họ xem màn hình này.',
   },
   'speech.didYouMean': {
     en: 'Did you mean this?',
@@ -873,10 +974,18 @@ export type StringKey = keyof typeof S;
 
 export const STRINGS: Record<StringKey, Localized> = S;
 
-/** Translate a UI string, filling `{placeholders}`. Falls back to English. */
+/**
+ * Translate a UI string, filling `{placeholders}`.
+ *
+ * Resolution order: the language's own pack, the core catalogue, the core
+ * language the pack falls back to, then English. Reserved keys (airline-
+ * approved safety wording, the honest "speech is simulated" notice) never read
+ * from a pack, so unreviewed translation cannot reach them.
+ */
 export function t(lang: LangCode, key: StringKey, vars?: Record<string, string | number>): string {
   const entry = STRINGS[key];
-  let text = entry[lang] || entry.en;
+  const fromPack = isReservedKey(key) ? undefined : localePack(lang)?.ui[key];
+  let text = fromPack || entry[lang] || entry[fallbackLang(lang)] || entry.en;
   if (vars) {
     for (const [k, v] of Object.entries(vars)) text = text.split(`{${k}}`).join(String(v));
   }
@@ -886,4 +995,11 @@ export function t(lang: LangCode, key: StringKey, vars?: Record<string, string |
 /** Bind `t` to a language for convenient use in components. */
 export function translator(lang: LangCode) {
   return (key: StringKey, vars?: Record<string, string | number>) => t(lang, key, vars);
+}
+
+/** Which UI strings this language actually has of its own (used by the coverage report and its test). */
+export function translatedKeys(lang: LangCode): StringKey[] {
+  const pack = localePack(lang);
+  const keys = Object.keys(STRINGS) as StringKey[];
+  return keys.filter((k) => (pack ? pack.ui[k] !== undefined : STRINGS[k][lang] !== undefined));
 }

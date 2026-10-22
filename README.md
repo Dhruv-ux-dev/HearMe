@@ -92,7 +92,7 @@ How many taps that takes depends on the phone. Apple and Google deliberately mak
 
 Open `http://localhost:8080/#/lab` on the hub laptop. A teammate picks:
 - who speaks: a passenger, or crew replying in Japanese;
-- the language, and whether it is their first language (language packs such as Bengali and Tamil are offered too, in own words only, because they have no sentences to read yet);
+- the language, and whether it is their first language (all ten, including Bengali, Tamil, Punjabi and Marathi, which now have held-out sentences to read like the other six);
 - the place: quiet, cabin noise playing, or a noisy room;
 - the microphone;
 - the task: read a held-out sentence that never tuned the matcher, or ask in their own words from a picture.
@@ -192,48 +192,39 @@ All numbers were measured on a MacBook Air (M2, 8 GB RAM). The scripts and test 
 - Thai is the weak spot, especially in loud noise. Thai vocabulary and two Whisper Thai spellings (ขออยาก → ขอยา, ชาติ → ชาร์จ) were then fixed using the development set only. Thai on the held-out set went from 53% to 56%, and the development set from 50% to 64%. Folding long and short Thai vowels together was also tried: no measurable change.
 - Whisper-base is about 4× faster but less accurate (57–69% top-1).
 
-**Languages HearMe has never seen.** Typed requests in Bengali, Tamil and Tagalog, with no HearMe vocabulary, translations or training data for them:
+**Ten languages, and what each one really covers.** `npm run languages` writes [docs/languages.md](docs/languages.md): one row per language, one column per layer — speech, understanding requests, passenger screens, crew replies, reading aloud, and who checked the wording. A language is never just "supported".
 
-| | top-1 | right picture in top 3 | wrong but sent confidently |
-| --- | --- | --- | --- |
-| Bengali (no pack) | 67% | 92% | 0% |
-| Tamil (no pack) | 58% | 92% | 0% |
-| Tagalog (no pack) | 58% | 92% | 0% |
+| | Speech | Understands | Screens | Replies | Checked by |
+| --- | --- | --- | --- | --- | --- |
+| Hindi, English, Japanese, Thai, Indonesian, Vietnamese | measured | all 40 needs | all | all 11 | non-native |
+| **Bengali, Tamil** | weak | all 40 needs | passenger path; rest in English | all 11 | non-native |
+| **Punjabi, Marathi** | not measured | all 40 needs | passenger path; rest in Hindi | all 11 | non-native |
 
-The trained classifier roughly doubles e5's zero-shot top-1 (33–42% → 58–67%). The sample is small: 12 requests per language.
+Bengali and Tamil used to be keyword-only: a passenger spoke Bengali at English screens. They now carry their own screens and replies, and Punjabi and Marathi are new. A pack language translates the 102-string passenger path (greeting, request grid, speaking, "Did you mean?", confirming, delivery status, the offline card, Care Mode), all 40 need labels and all 11 verified replies; anything else falls back to a core language the picker names before you choose it.
 
-**Adding a language is a data file.** A language pack (`apps/hub/data/languages/<code>.json`) lists keywords for the 40 needs, plus templates or example requests. With a pack:
+**Adding a language is still a data file** — one file in `packages/shared/src/i18n/packs/<code>.ts`, plus one row in `i18n/languages.ts`. No matcher, app or crew-console code changed to add Punjabi and Marathi. A keyword-only draft can still be dropped into `apps/hub/data/languages/<code>.json` to try a language on the hub in an afternoon (`npm run add-language`); it is only ever used to *understand*, never shown to a passenger.
 
-- The hub understands the language **typed and spoken**: Whisper runs in it, and the sound-alike tier covers Indian scripts.
-- The phone offers it at onboarding ("speak or type in Bengali · screens in English").
-- The crew console and the stage show it.
-- It is loaded without restarting the hub.
+**Measured: the matcher on sentences it was never tuned on.** Twelve requests per language, written after the vocabulary was fixed. Scored by the **keyword matcher alone** — no embedding model, no trained classifier — so it reproduces on any laptop with `npm run languages`:
 
-To add a language:
+| | top-1 before | top-1 now | right picture offered before | right picture offered now |
+| --- | ---: | ---: | ---: | ---: |
+| Bengali | 8% | 92% | 25% | 92% |
+| Tamil | 8% | 92% | 25% | 100% |
+| Punjabi | 8% | 83% | 25% | 92% |
+| Marathi | 50% | 100% | 58% | 100% |
+| The six core languages | 74% | 74% | 76% | 76% |
+| **All 120 sentences** | **52%** | **81%** | **59%** | **84%** |
 
-```bash
-npm run models -- translate                                # once: NLLB-200 offline translation model (~900 MB)
-npm run add-language -w @hearme/hub -- ta --draft          # draft data/languages/ta.json offline, retrain, measure, load
-```
+The six core languages are unchanged: the packs added vocabulary without disturbing what was there. Marathi starts higher because it shares its script with Hindi. One wrong-but-confident match across all 120 (English, pre-existing).
 
-`--draft` translates the English catalogue with NLLB-200 on the laptop. The draft is marked `machine` and is only used to *understand* passengers; it is never shown to them, and it needs a native speaker's review. Some of its words are wrong: in the Tamil draft, "blanket" came out as "cloth".
+Three honest caveats, which also appear in the generated report:
+- **The pack languages' numbers are optimistic.** Their vocabulary and their test sentences were written by the same author, so words overlap in a way they would not for a real passenger. The six core languages do not have this problem. A native speaker writing a fresh set is the fix, and it has not been done.
+- **No native-speaker review, anywhere** — including the original six. Care Mode wording and the safety briefing are deliberately left untranslated in every pack: they are what a crew member acts on medically, so they need clinical and airline review, and until then they appear in the fallback language. A test enforces that a pack cannot supply them.
+- Two sentences still fail on keywords alone (Bengali and Punjabi, both "my body isn't doing well", neither containing a catalogue word). They were left failing rather than adding those exact words, which would have tuned the vocabulary on the held-out set and made the table meaningless.
 
-| Typed (12 requests each) | top-1 | top-3 | wrong but sent confidently |
-| --- | --- | --- | --- |
-| Bengali, hand-written pack | 100%* | 100% | 0% |
-| Tamil, machine-drafted pack | 67% (was 58%) | 83% | 0% |
+The Tamil pack began as an NLLB-200 machine draft and was corrected by hand. The draft had called a pillow "powder", a blanket "cloth", a soft drink "alcohol" and tissues "AIDS" — which is exactly why a machine draft is never shown to a passenger.
 
-| Spoken (macOS voices → Whisper-small, 12 each) | top-1 | top-3 | wrong but sent confidently |
-| --- | --- | --- | --- |
-| Bengali, with pack | 42% (was 17%) | 67% | 0% |
-| Tamil, with pack | 50% | 67% | 0% |
-
-\* Optimistic: the pack and the test phrases were written by the same person and share words.
-
-Notes on these numbers:
-- Whisper-small writes Bengali speech in Hindi letters ("अमार" for "আমার"). The hub converts it to Bengali script, which is why spoken Bengali rose from 17% to 42%.
-- Spoken Bengali and Tamil are still weak. Whisper-small hears these languages poorly; a larger speech model would be the next step.
-- The screens, replies and captions for pack languages are still in English.
+Cost of all four languages in the phone bundle: **0.216 MB → 0.237 MB gzipped**.
 
 **Other results:**
 - **Crew voice replies:** 14 of 14 spoken Japanese phrasings matched the right verified reply. Each takes about 1.7 s.
@@ -326,7 +317,7 @@ No new hardware, and about ₹0 a flight to run, because there is no satellite d
 Almost nothing per use, because the AI runs on the airline's tablet, not on our servers. Our costs are people: translation review for each new language, support and updates. That is why a flat price per aircraft works.
 
 **What does adding a language take?**
-No new code. To *understand* it, a language pack: a data file with keywords for the 40 needs, which `npm run add-language` can draft offline and which then needs native-speaker review. Bengali and Tamil work this way today, with screens in English. To show the *screens and replies* in it as well: about 1,300 more words to translate and review. Even with no pack, matching partly works: 58–67% right first time for Bengali, Tamil and Tagalog.
+No new code. One file: `packages/shared/src/i18n/packs/<code>.ts` with the 40 need labels, the 102-string passenger path, the 11 verified replies and the matching vocabulary — about 1,300 words — plus one row in `i18n/languages.ts` declaring what it covers. Punjabi and Marathi were added that way and nothing else changed. For a quick trial, `npm run add-language` can draft keywords offline into `apps/hub/data/languages/<code>.json`, which the hub understands but never shows to a passenger. Either way the real cost is native-speaker review, which no language has had yet.
 
 ---
 
@@ -359,7 +350,8 @@ npm run record-demo    # re-record docs/demo.mp4 (needs Google Chrome, ffmpeg, m
 npm run train -w @hearme/hub      # retrain the need classifier (minutes, on the laptop CPU)
 npm run rescore -w @hearme/hub    # re-score saved Whisper transcripts after matcher changes (seconds)
 npm run zeroshot -w @hearme/hub   # Bengali / Tamil / Tagalog check
-npm run add-language -w @hearme/hub -- bn   # add a language from data/languages/<code>.json, retrain, measure
+npm run languages                           # what each language covers -> docs/languages.md (no models needed)
+npm run add-language -w @hearme/hub -- tl   # try a keyword-only draft from data/languages/<code>.json, retrain, measure
 npm run chart -w @hearme/hub      # redraw docs/results.svg
 npm run a11y -w @hearme/hub       # axe-core accessibility check of every screen
 ```

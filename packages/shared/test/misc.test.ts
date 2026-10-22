@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  contrastRatio, describeStatus, highContrastPalette, isValidSeat, lightPalette, NEEDS, normalizeSeat, LANGUAGES,
+  contrastRatio, CORE_LANGS, describeStatus, highContrastPalette, isValidSeat, lightPalette, NEEDS, normalizeSeat,
   REPLIES, ANNOUNCEMENTS, SAFETY_STEPS, STRINGS, requestTitle, sanitizeName, t, type PassengerRequest,
 } from '../src';
 
@@ -12,8 +12,8 @@ describe('seat validation', () => {
 });
 
 describe('content completeness', () => {
-  const langs = LANGUAGES.map((l) => l.code);
-  it('every need, reply, announcement, safety step and UI string is translated into all 6 languages', () => {
+  const langs = CORE_LANGS;
+  it('every need, reply, announcement, safety step and UI string is translated into all 6 core languages', () => {
     const all = [
       ...NEEDS.map((n) => n.label),
       ...REPLIES.map((r) => r.text),

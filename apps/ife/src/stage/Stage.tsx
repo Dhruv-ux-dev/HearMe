@@ -1,17 +1,18 @@
 import {
-  WebSocketBus,
+  type CabinMessage,
+  type CrewTabletState,
   getAnnouncement,
   getNeed,
   getPurpose,
   getReply,
+  type HubEvent,
   hubSocketUrl,
   languageInfo,
   languageName,
-  type CabinMessage,
-  type CrewTabletState,
-  type HubEvent,
   type ReplyId,
+  replyTextOf,
   type ServerFrame,
+  WebSocketBus,
 } from '@hearme/shared';
 import { ArrowLeft, ArrowRight, Cpu, Film, Languages, Megaphone, Mic, Monitor, QrCode, RotateCcw, Smartphone, Volume2, VolumeX, WifiOff, X, Zap } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -64,7 +65,7 @@ function describe(m: CabinMessage, state: CrewTabletState | null): Item | null {
         at: Date.now(),
         dir: 'to-passenger',
         title: `${m.crewName ?? 'Crew'} replied “${reply.text.ja}”`,
-        detail: `${m.seat} sees and hears (${languageInfo(lang).englishName}): “${reply.text[lang]}”`,
+        detail: `${m.seat} sees and hears (${languageInfo(lang).englishName}): “${replyTextOf(reply, lang)}”`,
         tone: 'ok',
       };
     }

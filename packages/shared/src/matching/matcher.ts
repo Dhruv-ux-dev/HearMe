@@ -20,12 +20,32 @@ export interface MatchCandidate {
   score: number;
 }
 
+/**
+ * *Why* the matcher landed on its top candidate. The confidence number says
+ * how sure; this says on what grounds, which is what the passenger is actually
+ * shown when HearMe has to ask. It is read off the matching that really
+ * happened — not a second guess at a probability.
+ *
+ *  exact_words  the transcript contains a catalogue phrase outright
+ *  sounds_like  no exact phrase; it matched by how it sounds (a mis-transcription)
+ *  meaning      the embedding model recognised the request without any known word
+ *  both_agree   the words and the meaning model picked the same need
+ *  disagree     they picked different needs — the honest reason to ask rather than send
+ *  weak_hint    only a supporting word ("cold", "thirsty"), not the thing itself
+ *  nothing      nothing matched
+ */
+export type MatchEvidence = 'exact_words' | 'sounds_like' | 'meaning' | 'both_agree' | 'disagree' | 'weak_hint' | 'nothing';
+
 export interface MatchResult {
   /** Ranked candidates, best first. May be empty. */
   candidates: MatchCandidate[];
   /** 0..1. At or above CONFIDENCE_THRESHOLD the top candidate can be used directly. */
   confidence: number;
   purposeId?: NeedPurpose['id'];
+  /** On what grounds the top candidate was chosen. */
+  evidence?: MatchEvidence;
+  /** The catalogue word that was recognised, when one was: shown back to the passenger. */
+  matchedWord?: string;
 }
 
 export interface IntentMatcher {
@@ -139,7 +159,7 @@ export function createKeywordMatcher(needs: Need[] = NEEDS): IntentMatcher {
   return {
     match(input: string): MatchResult {
       const text = normalize(dropFalseFriends(input));
-      if (!text.trim()) return { candidates: [], confidence: 0 };
+      if (!text.trim()) return { candidates: [], confidence: 0, evidence: 'nothing' };
 
       const hits: Hit[] = [];
       for (const [purposeId, words] of Object.entries(PURPOSE_PHRASES) as [NeedPurpose['id'], string[]][]) {
@@ -227,11 +247,26 @@ export function createKeywordMatcher(needs: Need[] = NEEDS): IntentMatcher {
 
       const top = candidates[0];
       let confidence = 0;
+      let evidence: MatchEvidence = 'nothing';
+      let matchedWord: string | undefined;
       if (top) {
         const second = candidates[1]?.score ?? 0;
         const strength = Math.min(1, top.score);
         const margin = (top.score - second) / top.score;
         confidence = Math.min(0.99, 0.6 * strength + 0.4 * margin);
+        const named = exact.find((h) => h.needId === top.needId && h.kind === 'phrase');
+        const hinted = exact.find((h) => h.needId === top.needId && h.kind === 'hint');
+        const heard = alikeHits.find((h) => h.needId === top.needId) ?? extensions.find((h) => h.needId === top.needId);
+        if (named) {
+          evidence = 'exact_words';
+          matchedWord = text.slice(named.start, named.end).trim();
+        } else if (heard) {
+          evidence = 'sounds_like';
+          matchedWord = heard.plain;
+        } else if (hinted) {
+          evidence = 'weak_hint';
+          matchedWord = text.slice(hinted.start, hinted.end).trim();
+        }
         // Heard only by sound: show pictures rather than send.
         if (!exact.some((h) => h.needId === top.needId)) confidence = Math.min(confidence, 0.8);
       }
@@ -242,7 +277,7 @@ export function createKeywordMatcher(needs: Need[] = NEEDS): IntentMatcher {
         purposeId = purposeHits.map((h) => h.purposeId!).find((p) => need?.purposes?.includes(p));
       }
 
-      return { candidates, confidence: round(confidence), purposeId };
+      return { candidates, confidence: round(confidence), purposeId, evidence, ...(matchedWord ? { matchedWord } : {}) };
     },
   };
 }
@@ -262,20 +297,44 @@ function round(n: number): number {
  *  ask       – "Did you mean this?" with up to 3 picture options
  */
 export type MatchDecision =
-  | { kind: 'confident'; needId: string; purposeId?: NeedPurpose['id']; confidence: number }
-  | { kind: 'ask'; options: string[]; purposeId?: NeedPurpose['id']; confidence: number };
+  | { kind: 'confident'; needId: string; purposeId?: NeedPurpose['id']; confidence: number; evidence?: MatchEvidence; matchedWord?: string }
+  | { kind: 'ask'; options: string[]; purposeId?: NeedPurpose['id']; confidence: number; evidence?: MatchEvidence; matchedWord?: string };
 
 /** Fallback options when nothing matched: the most common things people ask for. */
 export const FALLBACK_OPTIONS = ['water', 'toilet', 'blanket'];
 
 export function decide(result: MatchResult, threshold = CONFIDENCE_THRESHOLD): MatchDecision {
+  const grounds = { evidence: result.evidence, ...(result.matchedWord ? { matchedWord: result.matchedWord } : {}) };
   const top = result.candidates[0];
   if (top && result.confidence >= threshold) {
-    return { kind: 'confident', needId: top.needId, purposeId: result.purposeId, confidence: result.confidence };
+    return { kind: 'confident', needId: top.needId, purposeId: result.purposeId, confidence: result.confidence, ...grounds };
   }
   const options = result.candidates.slice(0, 3).map((c) => c.needId);
   for (const f of FALLBACK_OPTIONS) if (options.length < 3 && !options.includes(f)) options.push(f);
-  return { kind: 'ask', options, purposeId: result.purposeId, confidence: result.confidence };
+  return { kind: 'ask', options, purposeId: result.purposeId, confidence: result.confidence, ...grounds };
+}
+
+/**
+ * The interface string that explains an uncertain match to the passenger.
+ * Each one describes the matching that actually happened, so the passenger is
+ * told why they are being asked rather than shown a bare percentage.
+ */
+export function evidenceStringKey(evidence: MatchEvidence | undefined): 'ask.exactWords' | 'ask.soundsLike' | 'ask.meaning' | 'ask.disagree' | 'ask.weakHint' | 'ask.nothing' {
+  switch (evidence) {
+    case 'exact_words':
+    case 'both_agree':
+      return 'ask.exactWords';
+    case 'sounds_like':
+      return 'ask.soundsLike';
+    case 'meaning':
+      return 'ask.meaning';
+    case 'disagree':
+      return 'ask.disagree';
+    case 'weak_hint':
+      return 'ask.weakHint';
+    default:
+      return 'ask.nothing';
+  }
 }
 
 export const defaultMatcher = createKeywordMatcher();

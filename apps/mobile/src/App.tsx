@@ -1,4 +1,4 @@
-import { getAnnouncement, languageInfo, translator, type LangCode } from '@hearme/shared';
+import { getAnnouncement, type LangCode, languageInfo, localized, translator } from '@hearme/shared';
 import { useSession } from '@hearme/shared/react';
 import { StatusBar } from 'expo-status-bar';
 import Hand from 'lucide-react-native/icons/hand';
@@ -176,7 +176,7 @@ function CaptionToast({ lang }: { lang: LangCode }) {
         style={{ flex: 1, padding: th.space.md, minHeight: th.minTouch }}
       >
         <Text style={{ color: fg, fontSize: th.fs(12), opacity: 0.9 }}>{tr('captions.title')}</Text>
-        <Text style={{ color: fg, fontSize: th.fs(th.t.body), fontWeight: '700' }}>{tpl.text[lang]}</Text>
+        <Text style={{ color: fg, fontSize: th.fs(th.t.body), fontWeight: '700' }}>{localized(tpl.text, lang)}</Text>
       </Pressable>
       <Pressable onPress={() => session.markAnnouncementsSeen()} accessibilityRole="button" accessibilityLabel={tr('common.close')} style={{ width: th.minTouch, height: th.minTouch, alignItems: 'center', justifyContent: 'center' }}>
         <X color={fg} size={22} />

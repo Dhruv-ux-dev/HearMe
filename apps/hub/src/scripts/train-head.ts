@@ -16,8 +16,12 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   CONFIDENCE_THRESHOLD,
+  LANGUAGES,
+  LOCALE_PACKS,
   NEEDS,
   NeedHead,
+  localePack,
+  needLabel,
   PURPOSE_PHRASES,
   buildNeedIndex,
   combineMatches,
@@ -35,10 +39,16 @@ import { HELDOUT_PHRASES, NEED_PHRASES } from './evalData';
 
 const HUB = fileURLToPath(new URL('../../', import.meta.url));
 const OUT = join(HUB, 'data', 'need-head.json');
-const LANGS: LangCode[] = ['en', 'hi', 'ja', 'th', 'id', 'vi'];
+/** Every language HearMe offers, so the classifier is trained on the pack languages too. */
+const LANGS: LangCode[] = LANGUAGES.map((l) => l.code);
 
 // ── Generated training data ───────────────────────────────────────────────
-const TEMPLATES: Record<LangCode, string[]> = {
+/**
+ * Request templates per language. Core languages are written out; pack
+ * languages supply their own in `i18n/packs/<code>.ts`, so adding a language
+ * does not mean editing this script.
+ */
+const CORE_TEMPLATES: Partial<Record<LangCode, string[]>> = {
   en: ['{k}', 'I need {k}', 'can I have {k} please', 'could you bring me {k}', '{k} please', 'excuse me, {k}'],
   hi: ['{k}', 'मुझे {k} चाहिए', '{k} दे दीजिए', 'क्या {k} मिल सकता है', 'प्लीज़ {k}'],
   ja: ['{k}', '{k}をください', '{k}お願いします', 'すみません、{k}', '{k}をもらえますか'],
@@ -47,6 +57,8 @@ const TEMPLATES: Record<LangCode, string[]> = {
   vi: ['{k}', 'cho tôi {k}', 'tôi cần {k}', 'xin {k}', 'làm ơn cho tôi {k}'],
 };
 const ROMAN_HI = ['{k}', 'mujhe {k} chahiye', '{k} chahiye', '{k} de dijiye'];
+
+const templatesFor = (lang: LangCode): string[] => CORE_TEMPLATES[lang] ?? localePack(lang)?.templates ?? ['{k}'];
 
 const script = (s: string) =>
   /[ऀ-ॿ]/.test(s) ? 'deva' : /[฀-๿]/.test(s) ? 'thai' : /[぀-ヿ一-鿿]/.test(s) ? 'jpan' : 'latn';
@@ -92,9 +104,9 @@ function generate(): Example[] {
   const add = (text: string, need: string) => out.push({ text: text.trim(), need });
   for (const need of NEEDS) {
     for (const lang of LANGS) {
-      const keywords = [...new Set([need.label[lang], ...(need.phrases[lang] ?? [])])];
+      const keywords = [...new Set([needLabel(need, lang), ...(need.phrases[lang] ?? [])])];
       for (const k of keywords) {
-        const templates = lang === 'hi' && script(k) === 'latn' ? ROMAN_HI : TEMPLATES[lang];
+        const templates = lang === 'hi' && script(k) === 'latn' ? ROMAN_HI : templatesFor(lang);
         for (const t of templates) add(t.replace('{k}', k), need.id);
         for (const p of need.purposes ?? []) {
           for (const w of PURPOSE_PHRASES[p] ?? []) if (script(w) === script(k)) add(`${k} ${w}`, need.id);
@@ -102,12 +114,18 @@ function generate(): Example[] {
       }
     }
   }
-  // Language packs (data/languages/*.json): their keywords in their own templates.
+  // Extra packs dropped into data/languages/*.json (npm run add-language drafts): their keywords in their own templates.
   for (const pack of loadLanguagePacks()) {
     for (const [need, words] of Object.entries(pack.needs)) {
       if (!NEEDS.some((n) => n.id === need)) continue;
-      for (const k of words) for (const t of pack.templates) add(t.replace('{k}', k), need);
+      for (const k of words) for (const t of pack.templates ?? ['{k}']) add(t.replace('{k}', k), need);
     }
+    for (const [need, sentences] of Object.entries(pack.examples ?? {})) {
+      if (NEEDS.some((n) => n.id === need)) for (const e of sentences) add(e, need);
+    }
+  }
+  // Built-in packs' example sentences (i18n/packs/<code>.ts).
+  for (const pack of LOCALE_PACKS) {
     for (const [need, sentences] of Object.entries(pack.examples ?? {})) {
       if (NEEDS.some((n) => n.id === need)) for (const e of sentences) add(e, need);
     }

@@ -2,7 +2,7 @@
   "name": "hearme",
   "private": true,
   "version": "0.1.0",
-  "description": "HearMe: passenger ↔ cabin crew communication (phone + seatback + crew console + offline cabin hub)",
+  "description": "HearMe: passenger \u2194 cabin crew communication (phone + seatback + crew console + offline cabin hub)",
   "workspaces": [
     "packages/*",
     "apps/*"
@@ -21,6 +21,7 @@
     "typecheck": "npm run typecheck --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
     "preview": "npm run preview -w @hearme/ife",
-    "record-demo": "npm run record-demo -w @hearme/hub"
+    "record-demo": "npm run record-demo -w @hearme/hub",
+    "languages": "npm run languages -w @hearme/hub"
   }
 }

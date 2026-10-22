@@ -3,11 +3,21 @@ import type { LangCode, ReplyId } from '../types';
 /**
  * Held-out phrases: written after the vocabulary and calibration were tuned
  * on NEED_PHRASES (apps/hub/src/scripts/evalData.ts), and never used for
- * tuning. One phrasing × 12 needs × 6 languages = 72. Report these numbers as
- * the honest estimate. `npm run eval` scores them typed; the voice lab has
+ * tuning. One phrasing × 12 needs × 10 languages = 120. Report these numbers
+ * as the honest estimate. `npm run eval` scores them typed; the voice lab has
  * real people read the same sentences, so the two can be compared directly.
+ *
+ * The same 12 needs in every language, so languages can be compared with each
+ * other rather than only with themselves.
+ *
+ * READ THIS BEFORE QUOTING THE PACK LANGUAGES (bn, ta, pa, mr): their pack
+ * vocabulary and these sentences were written by the same author, so some
+ * words inevitably overlap and the numbers are optimistic in a way the six
+ * core languages' are not. They are a regression check and a comparison
+ * between languages, not an independent accuracy claim. The honest fix is a
+ * native speaker writing a fresh set — that is in the remaining work.
  */
-export const HELDOUT_PHRASES: Record<LangCode, Record<string, string>> = {
+export const HELDOUT_PHRASES: Partial<Record<LangCode, Record<string, string>>> = {
   en: {
     water: 'Some water for me, please',
     hot_water: 'Could you heat some water for me',
@@ -91,6 +101,63 @@ export const HELDOUT_PHRASES: Record<LangCode, Record<string, string>> = {
     sick_bag: 'Tôi thấy buồn nôn',
     wheelchair_arrival: 'Tôi cần xe lăn sau khi hạ cánh',
     charger: 'Tôi có thể sạc điện thoại ở đâu?',
+  },
+  // ── Pack languages ─────────────────────────────────────────────────────
+  bn: {
+    water: 'তেষ্টা পেয়েছে, এক গ্লাস জল দিন',
+    hot_water: 'ওষুধটা খাব, একটু গরম জল হবে?',
+    tea: 'এক কাপ চা হলে ভালো হয়',
+    blanket: 'আর একটা কম্বল দিন না',
+    toilet: 'শৌচাগারটা কোন দিকে?',
+    medicine: 'আমার ওষুধটা খেতে হবে',
+    unwell: 'শরীরটা ভালো যাচ্ছে না',
+    meal: 'খাবার কখন দেবেন?',
+    too_cold: 'এখানে বেশ ঠান্ডা লাগছে',
+    sick_bag: 'বমি পাচ্ছে, একটা থলি দিন',
+    wheelchair_arrival: 'নামার পরে হুইলচেয়ার লাগবে',
+    charger: 'ফোনটা চার্জ দেওয়া যাবে কোথায়?',
+  },
+  ta: {
+    water: 'தாகமாக இருக்கிறது, ஒரு டம்ளர் தண்ணீர் கொடுங்கள்',
+    hot_water: 'மாத்திரை சாப்பிட வெந்நீர் கிடைக்குமா?',
+    tea: 'ஒரு டீ கொடுங்கள்',
+    blanket: 'இன்னொரு போர்வை வேண்டும்',
+    toilet: 'டாய்லெட் எந்தப் பக்கம்?',
+    medicine: 'எனக்கு மாத்திரை வேண்டும்',
+    unwell: 'உடம்பு சரியில்லை',
+    meal: 'சாப்பாடு எப்போது கொடுப்பீர்கள்?',
+    too_cold: 'இங்கே ரொம்ப குளிராக இருக்கிறது',
+    sick_bag: 'வாந்தி வரும் போல இருக்கிறது, பை கொடுங்கள்',
+    wheelchair_arrival: 'இறங்கியபின் வீல்சேர் வேண்டும்',
+    charger: 'போன் சார்ஜ் செய்ய இடம் இருக்கிறதா?',
+  },
+  pa: {
+    water: 'ਪਿਆਸ ਲੱਗੀ ਹੈ, ਇੱਕ ਗਿਲਾਸ ਪਾਣੀ ਦੇ ਦਿਓ',
+    hot_water: 'ਦਵਾਈ ਖਾਣੀ ਹੈ, ਕੋਸਾ ਪਾਣੀ ਮਿਲੇਗਾ?',
+    tea: 'ਇੱਕ ਕੱਪ ਚਾਹ ਬਣਾ ਦਿਓ',
+    blanket: 'ਇੱਕ ਹੋਰ ਕੰਬਲ ਦੇ ਦਿਓ',
+    toilet: 'ਬਾਥਰੂਮ ਕਿਹੜੇ ਪਾਸੇ ਹੈ?',
+    medicine: 'ਮੈਨੂੰ ਗੋਲੀ ਖਾਣੀ ਹੈ',
+    unwell: 'ਸਰੀਰ ਠੀਕ ਨਹੀਂ ਲੱਗ ਰਿਹਾ',
+    meal: 'ਖਾਣਾ ਕਦੋਂ ਮਿਲੇਗਾ?',
+    too_cold: 'ਇੱਥੇ ਬੜੀ ਠੰਢ ਹੈ',
+    sick_bag: 'ਉਲਟੀ ਆਉਣ ਵਾਲੀ ਹੈ, ਥੈਲਾ ਦਿਓ',
+    wheelchair_arrival: 'ਉਤਰਨ ਤੋਂ ਬਾਅਦ ਵੀਲ੍ਹਚੇਅਰ ਚਾਹੀਦੀ ਹੈ',
+    charger: 'ਫ਼ੋਨ ਚਾਰਜ ਕਿੱਥੇ ਕਰ ਸਕਦਾ ਹਾਂ?',
+  },
+  mr: {
+    water: 'तहान लागली आहे, एक ग्लास पाणी द्या',
+    hot_water: 'औषध घ्यायचे आहे, कोमट पाणी मिळेल का?',
+    tea: 'एक कप चहा द्या',
+    blanket: 'अजून एक पांघरूण द्या',
+    toilet: 'बाथरूम कुठल्या बाजूला आहे?',
+    medicine: 'मला गोळी घ्यायची आहे',
+    unwell: 'अंग बरे वाटत नाही',
+    meal: 'जेवण कधी मिळेल?',
+    too_cold: 'इथे खूप गार वाटत आहे',
+    sick_bag: 'उलटी होईल असे वाटते, पिशवी द्या',
+    wheelchair_arrival: 'उतरल्यानंतर व्हीलचेअर पाहिजे',
+    charger: 'फोन चार्ज कुठे करू?',
   },
 };
 

@@ -1,4 +1,4 @@
-import { getAnnouncement, getNeed, getReply, languageInfo, translator, type LangCode, type PassengerSession, type Speaker } from '@hearme/shared';
+import { getAnnouncement, getNeed, getReply, type LangCode, languageInfo, localized, type PassengerSession, translator, replyTextOf, type Speaker } from '@hearme/shared';
 import { useSession } from '@hearme/shared/react';
 import { Heart, Megaphone, Volume2, X } from 'lucide-react';
 import { useEffect, useRef, type ReactNode } from 'react';
@@ -48,7 +48,7 @@ export function ReplyDialog({ session, lang, requestId, speaker }: { session: Pa
   const r = useSession(session, (s) => s.requests.find((x) => x.id === requestId));
   const prefs = useSession(session, (s) => s.prefs);
   const tr = translator(lang);
-  const text = r?.reply ? getReply(r.reply.replyId).text[lang] : '';
+  const text = r?.reply ? replyTextOf(getReply(r.reply.replyId), lang) : '';
   const voice = prefs.replyChannels.includes('voice') && speaker.available();
   useEffect(() => {
     if (voice && text) speaker.speak(text, languageInfo(lang).bcp47);
@@ -144,7 +144,7 @@ export function CaptionToast({ session, lang, onOpen }: { session: PassengerSess
       <Megaphone aria-hidden />
       <button className="ife-toast__text" onClick={onOpen}>
         <span className="ife-toast__label">{tr('captions.title')}</span>
-        {tpl.text[lang]}
+        {localized(tpl.text, lang)}
       </button>
       <button className="ife-toast__close" onClick={() => session.markAnnouncementsSeen()} aria-label={tr('common.close')}>
         <X aria-hidden />

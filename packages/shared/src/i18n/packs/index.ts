@@ -1,0 +1,24 @@
+import type { LangCode } from '../../types';
+import { BN } from './bn';
+import { MR } from './mr';
+import { PA } from './pa';
+import { TA } from './ta';
+import type { LocalePack } from './types';
+
+export type { LocalePack } from './types';
+
+/**
+ * Every language pack, in the order they appear on the language picker.
+ * Adding a language means adding a file here and a row in `i18n/languages.ts`.
+ */
+export const LOCALE_PACKS: LocalePack[] = [BN, TA, PA, MR];
+
+const BY_CODE = new Map(LOCALE_PACKS.map((p) => [p.code as string, p]));
+
+export function localePack(code: string | undefined): LocalePack | undefined {
+  return code === undefined ? undefined : BY_CODE.get(code);
+}
+
+export function hasLocalePack(code: string): code is LangCode {
+  return BY_CODE.has(code);
+}

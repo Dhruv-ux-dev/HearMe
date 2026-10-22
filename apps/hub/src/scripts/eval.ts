@@ -25,6 +25,7 @@ import {
   rankByIndex,
   semanticConfidence,
   type Embedder,
+  languageInfo,
   type LangCode,
   type MatchResult,
 } from '@hearme/shared';
@@ -32,6 +33,7 @@ import { createE5, createWhisper, hasSpeech, AiEngine } from '../ai';
 import { denoise } from '../denoise';
 import { loadNeedHead } from '../head';
 import { inferenceThreads, type AsrSize } from '../models';
+import { aggregateErrorRate, fmtRate } from '@hearme/shared/lab';
 import { CREW_PHRASES, HELDOUT_PHRASES, NEED_PHRASES, VOICES } from './evalData';
 
 const OUT = fileURLToPath(new URL('../../.eval/', import.meta.url));
@@ -44,6 +46,9 @@ const opt = (name: string, fallback: string) => {
 };
 const threads = inferenceThreads();
 const keyword = createKeywordMatcher();
+
+/** A set of test phrases: language → need → one phrasing or several. */
+type PhraseSet = Partial<Record<LangCode, Record<string, string | string[]>>>;
 
 interface Row {
   lang: LangCode;
@@ -82,6 +87,8 @@ function summarize(rows: Row[], label: string, useSemantic: boolean, useHead = f
     rightPictureInTop3: pct(inOptions, rows.length),
     sentWithoutAsking: pct(confident, rows.length),
     wrongButConfident: pct(confidentWrong, rows.length),
+    // The passenger has to fall back to tapping or typing: asked, and the right picture was not offered.
+    fellBackToPictures: pct(rows.length - inOptions, rows.length),
     raw: { top1, inOptions, confident, confidentWrong },
   };
 }
@@ -89,6 +96,26 @@ function summarize(rows: Row[], label: string, useSemantic: boolean, useHead = f
 function byLanguage(rows: Row[]) {
   const langs = [...new Set(rows.map((r) => r.lang))];
   return Object.fromEntries(langs.map((l) => [l, summarize(rows.filter((r) => r.lang === l), l, true, !!head).top1]));
+}
+
+/** One row per language, so a pack language can be compared with a core one directly. */
+function languageTable(rows: Row[]) {
+  const langs = [...new Set(rows.map((r) => r.lang))];
+  return langs.map((l) => {
+    const info = languageInfo(l);
+    const s = summarize(rows.filter((r) => r.lang === l), l, true, !!head);
+    return {
+      language: info.englishName,
+      kind: info.core ? 'core' : 'pack',
+      n: s.n,
+      top1: s.top1,
+      rightPictureInTop3: s.rightPictureInTop3,
+      sentWithoutAsking: s.sentWithoutAsking,
+      wrongButConfident: s.wrongButConfident,
+      screens: info.coverage.ui,
+      checkedBy: info.coverage.review,
+    };
+  });
 }
 
 /** Try calibration settings: keep wrong-but-confident ≤ 2%, then send as many as possible without asking. */
@@ -108,7 +135,7 @@ function sweep(rows: Row[]) {
     .slice(0, 5);
 }
 
-async function collect(embedder: Embedder, index: Awaited<ReturnType<typeof buildNeedIndex>>, set: Record<LangCode, Record<string, string | string[]>>) {
+async function collect(embedder: Embedder, index: Awaited<ReturnType<typeof buildNeedIndex>>, set: PhraseSet) {
   const rows: Row[] = [];
   for (const [lang, needs] of Object.entries(set) as [LangCode, Record<string, string | string[]>][]) {
     for (const [expected, phrases] of Object.entries(needs)) {
@@ -134,12 +161,21 @@ async function textEval(embedder: Embedder) {
   console.log('  calibration candidates (≤2% wrong-but-confident):');
   console.table(candidates);
 
-  console.log('\n▶ Typed requests — held-out set (72 phrases never used for tuning)');
+  const nHeld = Object.values(HELDOUT_PHRASES).reduce((n, needs) => n + Object.keys(needs ?? {}).length, 0);
+  console.log(`\n▶ Typed requests — held-out set (${nHeld} phrases never used for tuning, ${Object.keys(HELDOUT_PHRASES).length} languages)`);
   const held = await collect(embedder, index, HELDOUT_PHRASES);
   const heldResults = [summarize(held, 'keywords only (before)', false), summarize(held, 'keywords + e5', true), ...(head ? [summarize(held, 'keywords + e5 + trained head (now)', true, true)] : [])];
   console.table(heldResults.map(({ raw: _raw, ...r }) => r));
-  console.log('  top-1 by language (keywords + e5):', byLanguage(held));
-  return { rows, results, candidates, heldOut: { rows: held, results: heldResults } };
+  const heldByLanguage = languageTable(held);
+  console.log('\n  By language (keywords + e5 + trained head). "pack" languages were added as data files:');
+  console.table(heldByLanguage);
+  const core = held.filter((r) => languageInfo(r.lang).core);
+  const packs = held.filter((r) => !languageInfo(r.lang).core);
+  if (packs.length) {
+    console.table([summarize(core, 'six core languages', true, !!head), summarize(packs, 'four pack languages', true, !!head)].map(({ raw: _raw, ...r }) => r));
+    console.log('  Pack-language sentences and pack vocabulary share an author, so those rows are optimistic: see the note in packages/shared/src/lab/phrases.ts.');
+  }
+  return { rows, results, candidates, heldOut: { rows: held, results: heldResults, byLanguage: heldByLanguage } };
 }
 
 async function crewEval(embedder: Embedder) {
@@ -201,8 +237,10 @@ function mix(speech: Float32Array, snrDb: number): Float32Array {
 }
 
 function synthesize(text: string, lang: LangCode, file: string): Float32Array {
+  const voice = VOICES[lang];
+  if (!voice) throw new Error(`no synthetic voice for ${lang}`);
   const aiff = `${file}.aiff`;
-  execFileSync('say', ['-v', VOICES[lang], '-o', aiff, text]);
+  execFileSync('say', ['-v', voice, '-o', aiff, text]);
   const raw = execFileSync('ffmpeg', ['-hide_banner', '-loglevel', 'error', '-i', aiff, '-ac', '1', '-ar', '16000', '-f', 'f32le', 'pipe:1'], {
     maxBuffer: 64 * 1024 * 1024,
   });
@@ -216,16 +254,37 @@ async function speechEval(embedder: Embedder) {
     .map((x) => (x === 'clean' ? Infinity : Number(x)));
   // --set heldout speaks the held-out phrasings (never used for tuning) instead of the tuning set's first phrasing.
   const set = opt('set', 'tuning') === 'heldout' ? 'heldout' : 'tuning';
-  const phrases = (set === 'heldout' ? HELDOUT_PHRASES : NEED_PHRASES) as Record<LangCode, Record<string, string | string[]>>;
+  const phrases = (set === 'heldout' ? HELDOUT_PHRASES : NEED_PHRASES) as PhraseSet;
+  const spoken = (Object.keys(phrases) as LangCode[]).filter((l) => VOICES[l]);
+  const skipped = (Object.keys(phrases) as LangCode[]).filter((l) => !VOICES[l]);
   console.log(`\n▶ Synthetic speech (${set} set) → Whisper-${size} → keywords + e5 + head (one phrasing per need, conditions: clean, ${snrs.join(', ')} dB SNR)`);
+  if (skipped.length) {
+    console.log(`  Skipped (macOS has no \`say\` voice): ${skipped.map((l) => languageInfo(l).englishName).join(', ')}. Their spoken accuracy is unmeasured here — use the voice lab with real speakers.`);
+  }
+  // Model start-up cost, measured rather than claimed.
+  const beforeRss = process.memoryUsage().rss;
+  const loadStart = Date.now();
   const asr = await createWhisper(size, threads);
+  const asrLoadMs = Date.now() - loadStart;
   const engine = new AiEngine({ asrSize: size, threads, loadEmbedder: async () => embedder, loadAsr: async () => asr });
+  const warmStart = Date.now();
   await engine.start();
+  const startup = {
+    asrLoadMs,
+    warmupMs: Date.now() - warmStart,
+    asrWarmupMs: engine.status.asr.warmupMs ?? null,
+    embedWarmupMs: engine.status.embed.warmupMs ?? null,
+    rssAfterMb: Math.round(process.memoryUsage().rss / 1e6),
+    rssAddedByAsrMb: Math.round((process.memoryUsage().rss - beforeRss) / 1e6),
+  };
+  console.log('  Start-up and memory on this machine:');
+  console.table([startup]);
   const dir = join(OUT, 'speech');
   mkdirSync(dir, { recursive: true });
   const conditions = [Infinity, ...snrs.filter((x) => Number.isFinite(x))];
-  const rows: { lang: LangCode; expected: string; snr: number; transcript: string; got?: string; confidence: number; asrMs: number }[] = [];
-  for (const [lang, needs] of Object.entries(phrases) as [LangCode, Record<string, string | string[]>][]) {
+  const rows: { lang: LangCode; expected: string; snr: number; said: string; transcript: string; got?: string; confidence: number; asrMs: number; matchMs: number }[] = [];
+  for (const lang of spoken) {
+    const needs = phrases[lang]!;
     for (const [expected, p] of Object.entries(needs)) {
       const text = [p].flat()[0]!;
       const clean = synthesize(text, lang, join(dir, `${set}-${lang}-${expected}`));
@@ -235,30 +294,45 @@ async function speechEval(embedder: Embedder) {
         const t0 = Date.now();
         const transcript = hasSpeech(audio) ? await asr.transcribe(audio, lang) : '';
         const asrMs = Date.now() - t0;
+        const t1 = Date.now();
         const match = await engine.matchNeeds(transcript);
-        rows.push({ lang, expected, snr, transcript, got: match.candidates[0]?.needId, confidence: match.confidence, asrMs });
+        rows.push({ lang, expected, snr, said: text, transcript, got: match.candidates[0]?.needId, confidence: match.confidence, asrMs, matchMs: Date.now() - t1 });
         process.stdout.write('.');
       }
     }
   }
   console.log();
-  const table = conditions.map((snr) => {
-    const r = rows.filter((x) => x.snr === snr);
+  const percentile = (xs: number[], q: number) => (xs.length ? xs[Math.min(xs.length - 1, Math.max(0, Math.ceil(q * xs.length) - 1))]! : null);
+  const summarizeSpeech = (r: typeof rows, label: string) => {
     const correct = r.filter((x) => x.got === x.expected).length;
     const confident = r.filter((x) => x.confidence >= CONFIDENCE_THRESHOLD);
     const wrongConfident = confident.filter((x) => x.got !== x.expected).length;
-    const ms = r.map((x) => x.asrMs).sort((a, b) => a - b);
+    const total = r.map((x) => x.asrMs + x.matchMs).sort((a, b) => a - b);
     return {
-      condition: Number.isFinite(snr) ? `${snr} dB SNR` : 'clean',
+      condition: label,
       n: r.length,
+      // How wrong Whisper's text was, before any matching: separates a speech problem from a matching problem.
+      wordErrorRate: fmtRate(aggregateErrorRate(r.map((x) => ({ reference: x.said, transcript: x.transcript, lang: x.lang })))),
+      heardNothing: pct(r.filter((x) => !x.transcript.trim()).length, r.length),
       top1: pct(correct, r.length),
       sentWithoutAsking: pct(confident.length, r.length),
       wrongButConfident: pct(wrongConfident, r.length),
-      medianSpeechMs: ms[Math.floor(ms.length / 2)],
+      medianMs: percentile(total, 0.5),
+      p95Ms: percentile(total, 0.95),
     };
-  });
+  };
+  const table = conditions.map((snr) => summarizeSpeech(rows.filter((x) => x.snr === snr), Number.isFinite(snr) ? `${snr} dB SNR` : 'clean'));
   console.table(table);
-  return { model: size, set, rows, table };
+
+  console.log('\n  By language (all conditions together):');
+  console.table(spoken.map((l) => summarizeSpeech(rows.filter((x) => x.lang === l), languageInfo(l).englishName)));
+
+  console.log('\n  Quiet vs noisy:');
+  const quiet = rows.filter((x) => !Number.isFinite(x.snr) || x.snr >= 20);
+  const noisy = rows.filter((x) => Number.isFinite(x.snr) && x.snr <= 10);
+  console.table([summarizeSpeech(quiet, 'quiet (clean + ≥20 dB)'), summarizeSpeech(noisy, 'noisy (≤10 dB)')].filter((r) => r.n > 0));
+
+  return { model: size, set, rows, table, startup, byLanguage: spoken.map((l) => summarizeSpeech(rows.filter((x) => x.lang === l), languageInfo(l).englishName)), skipped };
 }
 
 const embedder = await createE5(threads);

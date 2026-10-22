@@ -51,7 +51,11 @@ describe('voice lab report', () => {
     expect(md).toContain('ready to send, in **40%** of 5 passenger requests; counting one extra tap on “Did you mean…?”, **60%**');
     expect(md).toContain('A **wrong** picture appeared first in **1** (20%)');
     // Takes where nothing was heard do not count towards the time.
-    expect(md).toContain('median time on the hub was **2.1 s** (90% within 3.0 s)');
+    expect(md).toContain('median time on the hub was **2.1 s** (90% within 3.0 s, 95% within 3.0 s)');
+    // The two numbers added for the evidence pass: how often voice left the
+    // passenger without a request, and how wrong the text itself was.
+    expect(md).toContain('fall back to tapping or typing');
+    expect(md).toMatch(/Speech-to-text (word|character) error rate was \*\*\d+%\*\*/);
     expect(md).toContain('the right verified reply was suggested in **100%** of 1');
   });
 

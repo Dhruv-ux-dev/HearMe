@@ -1,11 +1,16 @@
 import type { LangCode } from '@hearme/shared';
 
 /**
- * Evaluation phrases: natural requests a passenger might say, written
- * independently of the catalogue's keyword lists (so they test meaning, not
- * exact phrases). Two phrasings × 12 needs × 6 languages = 144.
+ * Tuning set: natural requests a passenger might say, written independently of
+ * the catalogue's keyword lists (so they test meaning, not exact phrases). Two
+ * phrasings × 12 needs × 6 languages = 144.
+ *
+ * Deliberately the six core languages only. The vocabulary and the calibration
+ * were tuned against this set, so anything in it is no longer a blind test;
+ * the pack languages (Bengali, Tamil, Punjabi, Marathi) have held-out
+ * sentences and nothing else, which keeps their numbers honest.
  */
-export const NEED_PHRASES: Record<LangCode, Record<string, [string, string]>> = {
+export const NEED_PHRASES: Partial<Record<LangCode, Record<string, [string, string]>>> = {
   en: {
     water: ['Can I get something to drink, some water?', "I'm thirsty, could you bring me a glass of water"],
     hot_water: ['Could I have some warm water for my pills', 'I need hot water please'],
@@ -92,8 +97,13 @@ export const NEED_PHRASES: Record<LangCode, Record<string, [string, string]>> = 
   },
 };
 
-/** macOS voices used to synthesise test speech (`say -v`). */
-export const VOICES: Record<LangCode, string> = {
+/**
+ * macOS voices used to synthesise test speech (`say -v`). macOS ships no voice
+ * for Bengali, Tamil, Punjabi or Marathi, so `npm run eval -- --speech` skips
+ * those languages and says so rather than quietly leaving them out. Their
+ * speech numbers have to come from the voice lab with real speakers.
+ */
+export const VOICES: Partial<Record<LangCode, string>> = {
   en: 'Samantha',
   hi: 'Lekha',
   ja: 'Kyoko',

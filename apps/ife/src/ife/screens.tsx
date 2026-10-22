@@ -3,22 +3,26 @@ import {
   CATEGORY_LABELS,
   COMMON_NEEDS,
   CREW_LANG,
-  LANGUAGES,
-  SAFETY_STEPS,
   describeStatus,
   getAnnouncement,
   getNeed,
   getPurpose,
   isActive,
-  needsInCategory,
-  replyText,
-  requestTitle,
-  translator,
   type LangCode,
+  languageInfo,
+  LANGUAGES,
+  localized,
   type NeedCategory,
+  needLabel,
   type NeedPurpose,
+  needsInCategory,
   type PassengerRequest,
   type PassengerSession,
+  purposeLabelOf,
+  replyText,
+  requestTitle,
+  SAFETY_STEPS,
+  translator,
 } from '@hearme/shared';
 import { useSession } from '@hearme/shared/react';
 import { Check, ChevronLeft, ChevronRight, CircleAlert, Clock, HeartPulse, Lock, Plus, RotateCcw, Wifi, WifiOff, X } from 'lucide-react';
@@ -98,14 +102,19 @@ export function LanguageScreen({ current, onChoose, onBack }: { current?: LangCo
         ))}
       </h1>
       <div className="ife-lang__grid">
-        {LANGUAGES.map((l) => (
-          <button key={l.code} className={`ife-lang__btn${current === l.code ? ' selected' : ''}`} lang={l.bcp47} aria-pressed={current === l.code} onClick={() => onChoose(l.code)}>
-            <span className="ife-lang__native">{l.nativeName}</span>
-            <span className="ife-lang__english" lang="en">
-              {l.englishName}
-            </span>
-          </button>
-        ))}
+        {LANGUAGES.map((l) => {
+          // A language whose screens are not finished says so on the button itself.
+          const partial = l.coverage.ui !== 'complete';
+          const english = partial ? `${l.englishName} · some screens in ${languageInfo(l.fallback).englishName}` : l.englishName;
+          return (
+            <button key={l.code} className={`ife-lang__btn${current === l.code ? ' selected' : ''}`} lang={l.bcp47} aria-pressed={current === l.code} onClick={() => onChoose(l.code)}>
+              <span className="ife-lang__native">{l.nativeName}</span>
+              <span className="ife-lang__english" lang="en">
+                {english}
+              </span>
+            </button>
+          );
+        })}
       </div>
       {onBack && (
         <button className="ife-btn ife-btn--ghost" onClick={onBack}>
@@ -155,7 +164,7 @@ function NeedTile({ needId, lang, onPress }: { needId: string; lang: LangCode; o
       <span className="ife-tile__icon">
         <NeedIcon name={need.icon} size="100%" />
       </span>
-      <span className="ife-tile__label">{need.label[lang]}</span>
+      <span className="ife-tile__label">{needLabel(need, lang)}</span>
     </button>
   );
 }
@@ -258,7 +267,7 @@ export function RequestScreen({ lang, category, go }: { lang: LangCode; category
             onClick={() => go({ name: 'request', category: c })}
           >
             {c === 'private' && <Lock aria-hidden />}
-            {CATEGORY_LABELS[c][lang]}
+            {localized(CATEGORY_LABELS[c], lang)}
           </button>
         ))}
       </div>
@@ -304,8 +313,8 @@ export function ReviewScreen({
           <NeedIcon name={need.icon} size="100%" />
         </span>
         <div>
-          <div className="ife-review__label">{need.label[lang]}</div>
-          {purpose && <div className="ife-review__purpose">{getPurpose(purpose)?.label[lang]}</div>}
+          <div className="ife-review__label">{needLabel(need, lang)}</div>
+          {purpose && <div className="ife-review__purpose">{purposeLabelOf(purpose, lang)}</div>}
           {lang !== CREW_LANG && (
             <div className="ife-review__crew" lang="ja">
               {tr('reply.from')}: {requestTitle({ needId, purposeId: purpose }, CREW_LANG)}
@@ -324,7 +333,7 @@ export function ReviewScreen({
           {need.purposes.map((p) => (
             <button key={p} className={`ife-toggle${purpose === p ? ' on' : ''}`} aria-pressed={purpose === p} onClick={() => setPurpose(purpose === p ? undefined : p)}>
               {purpose === p && <Check aria-hidden />}
-              {getPurpose(p)?.label[lang]}
+              {purposeLabelOf(p, lang)}
             </button>
           ))}
         </fieldset>
@@ -443,7 +452,7 @@ export function CardScreen({ lang, seat, needId, go }: { lang: LangCode; seat: s
         <div className="ife-showcard__en" lang="en">
           {need.label.en}
         </div>
-        {lang !== 'en' && lang !== CREW_LANG && <div className="ife-showcard__mine">{need.label[lang]}</div>}
+        {lang !== 'en' && lang !== CREW_LANG && <div className="ife-showcard__mine">{needLabel(need, lang)}</div>}
         <button className="ife-btn ife-btn--primary" onClick={() => go({ name: 'card' })}>
           <X aria-hidden /> {tr('common.close')}
         </button>
@@ -458,7 +467,7 @@ export function CardScreen({ lang, seat, needId, go }: { lang: LangCode; seat: s
       <p className="ife-hint">{tr('card.hint')}</p>
       {CATEGORIES.map((c) => (
         <div key={c} className="ife-cardgroup">
-          <h2 className="ife-h2">{CATEGORY_LABELS[c][lang]}</h2>
+          <h2 className="ife-h2">{localized(CATEGORY_LABELS[c], lang)}</h2>
           <div className="ife-grid ife-grid--card">
             {needsInCategory(c).map((n) => (
               <NeedTile key={n.id} needId={n.id} lang={lang} onPress={() => go({ name: 'card', needId: n.id })} />
@@ -487,8 +496,8 @@ export function SafetyScreen({ lang }: { lang: LangCode }) {
         </span>
         <div>
           <div className="ife-safety__count">{tr('safety.step', { n: i + 1, total: SAFETY_STEPS.length })}</div>
-          <h2 className="ife-safety__title">{step.title[lang]}</h2>
-          <p className="ife-safety__body">{step.body[lang]}</p>
+          <h2 className="ife-safety__title">{localized(step.title, lang)}</h2>
+          <p className="ife-safety__body">{localized(step.body, lang)}</p>
         </div>
       </div>
       <div className="ife-safety__nav">
@@ -533,7 +542,7 @@ export function CaptionsScreen({ session, lang }: { session: PassengerSession; l
                 </span>
                 <div>
                   <time className="ife-caption__time">{new Date(a.at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</time>
-                  <p>{tpl.text[lang]}</p>
+                  <p>{localized(tpl.text, lang)}</p>
                 </div>
               </li>
             );

@@ -166,13 +166,25 @@ describe('cabin hub', () => {
   it('lists language packs and understands their language (Bengali: typed, with a Bengali booking)', async () => {
     const l = await (await fetch(`${base}/api/languages`)).json();
     expect(l.builtIn).toHaveLength(6);
+    // Ten languages, each with its coverage spelled out layer by layer.
+    expect(l.languages).toHaveLength(10);
+    const bengali = l.languages.find((x: { code: string }) => x.code === 'bn');
+    expect(bengali).toMatchObject({ core: false, fallback: 'en', coverage: { intent: 'complete', ui: 'partial', replies: 'complete' } });
+    expect(bengali.uiStrings).toBeGreaterThan(80);
+    expect(l.languages.filter((x: { core: boolean }) => x.core)).toHaveLength(6);
     expect(l.packs.map((p: { code: string }) => p.code)).toContain('bn');
     const m = await (await fetch(`${base}/api/match`, { method: 'POST', body: JSON.stringify({ text: 'একটা কম্বল দিন', lang: 'bn' }) })).json();
     expect(m.match.candidates[0].needId).toBe('blanket');
+    // 22B's booking says Bengali, and Bengali now has screens of its own, so the
+    // passenger reads Bengali rather than speaking Bengali at English screens.
     const b = await (await fetch(`${base}/api/booking?seat=22B`)).json();
-    expect(b.profile).toMatchObject({ lang: 'en', speechLang: 'bn' });
+    expect(b.profile).toMatchObject({ lang: 'bn' });
+    expect(b.profile.speechLang).toBeUndefined();
     const r = await (await fetch(`${base}/api/languages/reload`, { method: 'POST' })).json();
-    expect(r.packs).toContain('bn');
+    // Bengali ships with the apps now, so it is in `languages`, not in the
+    // re-read `drafts` (which hold only data/languages/*.json experiments).
+    expect(r.languages).toContain('bn');
+    expect(r.drafts).not.toContain('bn');
   });
 
   it('serves static files without leaving the static folder', async () => {

@@ -22,7 +22,9 @@ afterEach(() => {
 
 async function start(user: ReturnType<typeof userEvent.setup>, language = 'English') {
   await user.click(screen.getByRole('button', { name: /touch to start|छुएँ|タッチ|แตะ|sentuh|chạm/i }));
-  await user.click(screen.getByRole('button', { name: new RegExp(language) }));
+  // Anchored: a pack language's button also mentions the language its untranslated
+  // screens fall back to ("Bengali · some screens in English").
+  await user.click(screen.getByRole('button', { name: new RegExp(`^${language}`) }));
 }
 
 describe('IFE seatback', () => {

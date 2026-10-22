@@ -1,16 +1,17 @@
 import {
+  painWord,
   BODY_AREAS,
   BODY_MAP_VIEWBOX,
   BODY_SHAPES,
-  CONDITIONS,
-  SYMPTOMS,
-  emptyMedicalReport,
-  isUrgentMedical,
-  painWord,
-  translator,
   type BodyArea,
+  CONDITIONS,
+  isUrgentMedical,
   type LangCode,
+  localized,
   type MedicalReport,
+  emptyMedicalReport,
+  translator,
+  SYMPTOMS,
 } from '@hearme/shared';
 import { Check, ChevronLeft, HeartPulse } from 'lucide-react';
 import { useState } from 'react';
@@ -26,7 +27,7 @@ export function CareScreen({ lang, onBack, onSend }: { lang: LangCode; onBack: (
   const tr = translator(lang);
   const [r, setR] = useState<MedicalReport>(emptyMedicalReport);
   const set = (patch: Partial<MedicalReport>) => setR((x) => ({ ...x, ...patch }));
-  const areaLabel = (a: BodyArea) => BODY_AREAS.find((x) => x.id === a)!.label[lang];
+  const areaLabel = (a: BodyArea) => localized(BODY_AREAS.find((x) => x.id === a)!.label, lang);
   const urgent = isUrgentMedical(r);
   return (
     <section className="ife-care">
@@ -72,7 +73,7 @@ export function CareScreen({ lang, onBack, onSend }: { lang: LangCode; onBack: (
           <div className="ife-care__chips">
             {SYMPTOMS.map((s) => (
               <button key={s.id} className={`ife-toggle${r.symptoms.includes(s.id) ? ' on' : ''}`} aria-pressed={r.symptoms.includes(s.id)} onClick={() => set({ symptoms: toggle(r.symptoms, s.id) })}>
-                {r.symptoms.includes(s.id) && <Check aria-hidden />} {s.label[lang]}
+                {r.symptoms.includes(s.id) && <Check aria-hidden />} {localized(s.label, lang)}
               </button>
             ))}
           </div>
@@ -80,7 +81,7 @@ export function CareScreen({ lang, onBack, onSend }: { lang: LangCode; onBack: (
           <div className="ife-care__chips">
             {CONDITIONS.map((c) => (
               <button key={c.id} className={`ife-toggle${r.conditions.includes(c.id) ? ' on' : ''}`} aria-pressed={r.conditions.includes(c.id)} onClick={() => set({ conditions: toggle(r.conditions, c.id) })}>
-                {r.conditions.includes(c.id) && <Check aria-hidden />} {c.label[lang]}
+                {r.conditions.includes(c.id) && <Check aria-hidden />} {localized(c.label, lang)}
               </button>
             ))}
           </div>

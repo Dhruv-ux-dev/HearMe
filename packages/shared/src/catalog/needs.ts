@@ -1,8 +1,30 @@
+import { LOCALE_PACKS } from '../i18n/packs';
 import type { Localized, Need, NeedCategory, NeedPurpose } from '../types';
 
 /** Build a Localized record in a fixed order: en, hi, ja, th, id, vi. */
 export function L(en: string, hi: string, ja: string, th: string, id: string, vi: string): Localized {
   return { en, hi, ja, th, id, vi };
+}
+
+/**
+ * Fold every language pack's vocabulary into the catalogue, so one `NEEDS`
+ * array carries all ten languages. The matcher, the trained classifier's
+ * training data and the e5 description index all read from it, which is why a
+ * pack language is understood on a phone with no hub as well as on the hub.
+ */
+function withPackVocabulary(needs: Need[]): Need[] {
+  if (!LOCALE_PACKS.length) return needs;
+  return needs.map((need) => {
+    const phrases = { ...need.phrases } as Record<string, string[]>;
+    const hints = { ...(need.hints ?? {}) } as Record<string, string[]>;
+    for (const pack of LOCALE_PACKS) {
+      const p = pack.phrases[need.id];
+      if (p?.length) phrases[pack.code] = p;
+      const h = pack.hints?.[need.id];
+      if (h?.length) hints[pack.code] = h;
+    }
+    return { ...need, phrases: phrases as Need['phrases'], ...(Object.keys(hints).length ? { hints: hints as Need['hints'] } : {}) };
+  });
 }
 
 /**
@@ -13,7 +35,7 @@ export function L(en: string, hi: string, ja: string, th: string, id: string, vi
  * need is data only (label in 6 languages + matching phrases).
  * Japanese labels are what the crew tablet shows (the demo route is a Japanese carrier).
  */
-export const NEEDS: Need[] = [
+const CATALOGUE: Need[] = [
   // ── Drinks ─────────────────────────────────────────────────────────────
   {
     id: 'water',
@@ -340,6 +362,12 @@ export const NEEDS: Need[] = [
     phrases: { en: ['bothering me', 'harass', 'harassment', 'touching me'], hi: ['परेशान कर रहा', 'छेड़', 'pareshan'], ja: ['迷惑', '嫌がらせ'], th: ['รบกวน', 'คุกคาม'], id: ['mengganggu', 'pelecehan'], vi: ['lam phien', 'quay roi'] },
   },
 ];
+
+/** The 40 needs, every language pack's vocabulary merged in. */
+export const NEEDS: Need[] = withPackVocabulary(CATALOGUE);
+
+/** The catalogue without pack vocabulary, for tests and for measuring what a pack adds. */
+export { CATALOGUE as CORE_NEEDS };
 
 export const PURPOSES: NeedPurpose[] = [
   { id: 'for_medicine', label: L('to take medicine', 'दवाई के लिए', '服薬のため', 'เพื่อกินยา', 'untuk minum obat', 'để uống thuốc') },

@@ -1,4 +1,5 @@
 import type { MatchResult } from '../matching/matcher';
+import { fallbackLang } from '../i18n/languages';
 import type { LangCode } from '../types';
 import type { UnderstandProgress } from './hubClient';
 
@@ -30,7 +31,7 @@ export interface SpeechRecognizer {
 export type UtteranceMode = 'alternate' | 'noisy' | 'clear';
 
 /** Sample utterances consistent with the PDF story (hot water for medicine, partly drowned by engine noise). */
-export const SAMPLE_UTTERANCES: Record<LangCode, { clear: string; noisy: string }> = {
+export const SAMPLE_UTTERANCES: Partial<Record<LangCode, { clear: string; noisy: string }>> = {
   hi: { clear: 'मुझे दवाई के लिए गरम पानी चाहिए', noisy: '… गरम … चाहिए …' },
   en: { clear: 'Could I have some hot water for my medicine', noisy: '… warm … need …' },
   ja: { clear: '薬を飲むためのお湯をください', noisy: '…温かい…ください…' },
@@ -56,7 +57,7 @@ export class MockSpeechRecognizer implements SpeechRecognizer {
 
   stop(onProgress?: (p: UnderstandProgress) => void): Promise<{ transcript: string }> {
     this.cancel();
-    const sample = SAMPLE_UTTERANCES[this.lang];
+    const sample = SAMPLE_UTTERANCES[this.lang] ?? SAMPLE_UTTERANCES[fallbackLang(this.lang)] ?? SAMPLE_UTTERANCES.en!;
     const useNoisy = this.mode === 'noisy' || (this.mode === 'alternate' && this.turn % 2 === 0);
     this.turn += 1;
     const transcript = useNoisy ? sample.noisy : sample.clear;

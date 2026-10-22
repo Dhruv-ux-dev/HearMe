@@ -3,11 +3,29 @@
  * crew console simulator.
  */
 
-/** Passenger-facing languages in the prototype (the PDF targets 6 for the hackathon prototype). */
-export type LangCode = 'hi' | 'en' | 'ja' | 'th' | 'id' | 'vi';
+/**
+ * The six core languages: every catalogue label, interface string and verified
+ * reply exists in all of them, reviewed as a set (the PDF targets 6 for the
+ * hackathon prototype).
+ */
+export type CoreLang = 'hi' | 'en' | 'ja' | 'th' | 'id' | 'vi';
 
-/** Text available in every supported language. */
-export type Localized = Record<LangCode, string>;
+/**
+ * Every language a passenger can choose. Beyond the six core ones come the
+ * *pack languages*, added as data (`packages/shared/src/i18n/packs/`): they
+ * carry their own request vocabulary, screen text and replies, and fall back
+ * to a core language for anything a pack does not translate yet. How complete
+ * each one is, layer by layer, is declared in `i18n/languages.ts` — ask
+ * `coverageOf(lang)` rather than assuming.
+ */
+export type LangCode = CoreLang | 'bn' | 'ta' | 'pa' | 'mr';
+
+/**
+ * Text available in every core language, and in whichever pack languages have
+ * been translated. Read it with `needLabel` / `replyTextOf` / `t` rather than
+ * indexing, so untranslated keys fall back instead of coming out `undefined`.
+ */
+export type Localized = Record<CoreLang, string> & Partial<Record<LangCode, string>>;
 
 export type NeedCategory = 'drinks' | 'comfort' | 'food' | 'help' | 'private';
 

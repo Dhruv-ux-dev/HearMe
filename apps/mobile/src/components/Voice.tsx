@@ -41,7 +41,7 @@ export function useRouteTranscript() {
         // Only a refusal: ask with pictures, leaving out what was refused.
         const d = decide(hubMatch ?? defaultMatcher.match(transcript));
         const options = (d.kind === 'confident' ? [d.needId] : d.options).filter((id) => !many.refused.includes(id));
-        nav.open({ kind: 'ask', options, purposeId: d.purposeId, source, transcript, confidence: 0 });
+        nav.open({ kind: 'ask', options, purposeId: d.purposeId, source, transcript, confidence: 0, evidence: d.evidence, matchedWord: d.matchedWord });
         return;
       }
     }
@@ -51,7 +51,7 @@ export function useRouteTranscript() {
     if (d.kind === 'confident') {
       nav.open({ kind: 'review', needId: d.needId, purposeId: d.purposeId, source, understanding: { confidence: d.confidence, viaPictures: false } });
     } else {
-      nav.open({ kind: 'ask', options: d.options, purposeId: d.purposeId, source, transcript, confidence: d.confidence });
+      nav.open({ kind: 'ask', options: d.options, purposeId: d.purposeId, source, transcript, confidence: d.confidence, evidence: d.evidence, matchedWord: d.matchedWord });
     }
   };
 }

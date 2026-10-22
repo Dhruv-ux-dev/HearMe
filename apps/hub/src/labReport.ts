@@ -1,5 +1,5 @@
 import { languageName } from '@hearme/shared';
-import { LAB_MICS, LAB_MODES, LAB_OUTCOMES, LAB_PLACES, OUTCOME_LABEL, fmtSeconds, labItemLabel, pct, summarizeBy, summarizeTakes, type LabSummary, type LabTake } from '@hearme/shared/lab';
+import { LAB_MICS, LAB_MODES, LAB_OUTCOMES, LAB_PLACES, OUTCOME_LABEL, fmtRate, fmtSeconds, labItemLabel, pct, summarizeBy, summarizeTakes, type LabSummary, type LabTake } from '@hearme/shared/lab';
 
 /**
  * Markdown for docs/voice-lab.md, from the voice lab's takes (`npm run lab-report`).
@@ -38,7 +38,13 @@ export function renderLabReport(takes: LabTake[], generatedAt = new Date(), name
     out.push(
       `- The right picture appeared, ready to send, in **${pct(p.counts.right, p.takes)}** of ${p.takes} passenger requests; counting one extra tap on “Did you mean…?”, **${pct(p.counts.right + p.counts.offered, p.takes)}**.`,
       `- A **wrong** picture appeared first in **${p.counts.wrong}** (${pct(p.counts.wrong, p.takes)}). The passenger sees the picture before sending, so they can still catch it, but this is the number to keep low.`,
-      `- Whisper heard nothing in ${p.counts.silent} take${p.counts.silent === 1 ? '' : 's'}; of the ${heard} it heard, the median time on the hub was **${fmtSeconds(p.medianMs)}** (90% within ${fmtSeconds(p.p90Ms)}).`,
+      `- Whisper heard nothing in ${p.counts.silent} take${p.counts.silent === 1 ? '' : 's'}; of the ${heard} it heard, the median time on the hub was **${fmtSeconds(p.medianMs)}** (90% within ${fmtSeconds(p.p90Ms)}, 95% within ${fmtSeconds(p.p95Ms)}).`,
+      `- The passenger had to fall back to tapping or typing in **${Math.round(p.fallbackRate * 100)}%** of takes (asked without the right picture, or nothing heard).`,
+      ...(p.wer
+        ? [
+            `- Speech-to-text ${p.wer.unit} error rate was **${fmtRate(p.wer)}** over the ${p.werTakes} takes that read a given sentence (${p.wer.edits} ${p.wer.unit}s wrong out of ${p.wer.reference}). This is how wrong the *text* was, before any matching: a high error rate with a low "wrong one shown" means the matcher is recovering from bad transcripts, which is what it is built to do.`,
+          ]
+        : ['- Speech-to-text error rate: not measurable here, because no take read a given sentence (own-words takes have no reference text to compare against).']),
       '',
     );
   }
@@ -81,6 +87,7 @@ export function renderLabReport(takes: LabTake[], generatedAt = new Date(), name
       ? '- Reading a given sentence is easier than asking in your own words: compare the two rows above.'
       : `- All passenger takes here were “${LAB_MODES[passenger[0]?.mode ?? 'read']}”. ${passenger[0]?.mode === 'own-words' ? '' : 'Reading a given sentence is easier than asking in your own words; the own-words task is the better estimate.'}`.trimEnd(),
     '- Place and microphone were reported by the speaker. “Cabin noise” was synthetic noise played in the room, not a real aircraft.',
+    '- “Speech error rate” counts words (characters for Japanese and Thai) that Whisper got wrong against the sentence the person was asked to read, as total mistakes ÷ total words. It is only computed for read takes; own-words takes have no reference sentence.',
     '- Every take is kept in the log (except ones the speaker discarded as unfair, e.g. a cough or a misread).',
     '',
   );
@@ -90,10 +97,21 @@ export function renderLabReport(takes: LabTake[], generatedAt = new Date(), name
 const cell = (s: string) => s.replace(/\|/g, '\\|').replace(/\s*\n\s*/g, ' ');
 
 function table(rows: LabSummary[], first: string): string {
-  const head = [first, 'Takes', ...LAB_OUTCOMES.map((o) => OUTCOME_LABEL[o]), 'Median on hub', '90% within'];
+  const head = [first, 'Takes', ...LAB_OUTCOMES.map((o) => OUTCOME_LABEL[o]), 'Had to tap or type', 'Speech error rate', 'Median on hub', '90% within', '95% within'];
   const lines = [`| ${head.join(' | ')} |`, `| ${head.map((_, i) => (i === 0 ? '---' : '---:')).join(' | ')} |`];
   for (const r of rows) {
-    lines.push(`| ${[cell(r.label), String(r.takes), ...LAB_OUTCOMES.map((o) => `${pct(r.counts[o], r.takes)} (${r.counts[o]})`), fmtSeconds(r.medianMs), fmtSeconds(r.p90Ms)].join(' | ')} |`);
+    lines.push(
+      `| ${[
+        cell(r.label),
+        String(r.takes),
+        ...LAB_OUTCOMES.map((o) => `${pct(r.counts[o], r.takes)} (${r.counts[o]})`),
+        `${Math.round(r.fallbackRate * 100)}%`,
+        r.wer ? `${fmtRate(r.wer)} (${r.wer.unit === 'character' ? 'char' : 'word'}, ${r.werTakes})` : '—',
+        fmtSeconds(r.medianMs),
+        fmtSeconds(r.p90Ms),
+        fmtSeconds(r.p95Ms),
+      ].join(' | ')} |`,
+    );
   }
   return lines.join('\n');
 }

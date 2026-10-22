@@ -4,8 +4,10 @@ import { REPLIES, REPLY_SUGGEST_MIN, getReply } from '../catalog/replies';
 import { decide } from '../matching/matcher';
 import type { LangCode, ReplyId } from '../types';
 import { CREW_PHRASES, HELDOUT_PHRASES } from './phrases';
+import { aggregateErrorRate, type ErrorRate } from './wer';
 
 export { CREW_PHRASES, HELDOUT_PHRASES } from './phrases';
+export * from './wer';
 
 /**
  * Voice lab: teammates speak into a real microphone, the hub runs the real
@@ -60,17 +62,24 @@ export const STORY_SENTENCES: Partial<Record<LangCode, { text: string; expected:
 /** Crew speak Japanese, as on the crew console. `lang`: one of the 6 languages or a language pack's code. */
 export const labLanguage = (speaker: LabSpeaker, lang: string): string => (speaker === 'crew' ? 'ja' : lang);
 
-const LANGS: LangCode[] = ['en', 'hi', 'ja', 'th', 'id', 'vi'];
-/** Language packs (Bengali, Tamil…) have no held-out sentences to read yet: own words only. */
-export const isBuiltInLang = (lang: string): lang is LangCode => LANGS.includes(lang as LangCode);
+/**
+ * Languages a tester can be given a sentence to read aloud. Every language
+ * HearMe offers now has a held-out set, pack languages included, so the lab
+ * can compare Punjabi against Hindi on the same twelve needs instead of
+ * limiting pack languages to own-words takes.
+ */
+export const hasReadPrompts = (lang: string): lang is LangCode => HELDOUT_PHRASES[lang as LangCode] !== undefined;
+
+/** @deprecated Reads as "is one of the original six"; use `hasReadPrompts` for prompt choice. */
+export const isBuiltInLang = hasReadPrompts;
 
 /** One round of prompts. Reading uses the held-out phrases that never tuned the matcher. */
 export function labPrompts(speaker: LabSpeaker, mode: LabMode, lang: string): LabPrompt[] {
   if (speaker === 'crew') {
     return mode === 'read' ? CREW_PHRASES.map(([text, expected]) => ({ expected, text })) : REPLIES.map((r) => ({ expected: r.id, text: '' }));
   }
-  if (!isBuiltInLang(lang) || mode === 'own-words') return Object.keys(HELDOUT_PHRASES.en).map((expected) => ({ expected, text: '' }));
-  const prompts: LabPrompt[] = Object.entries(HELDOUT_PHRASES[lang]).map(([expected, text]) => ({ expected, text }));
+  if (!hasReadPrompts(lang) || mode === 'own-words') return Object.keys(HELDOUT_PHRASES.en!).map((expected) => ({ expected, text: '' }));
+  const prompts: LabPrompt[] = Object.entries(HELDOUT_PHRASES[lang]!).map(([expected, text]) => ({ expected, text }));
   const story = STORY_SENTENCES[lang];
   if (story) prompts.push({ ...story, story: true });
   return prompts;
@@ -160,13 +169,13 @@ export function labTakeQuery(info: LabTakeInfo): string {
  */
 export function parseLabTakeQuery(q: URLSearchParams, packLangs: readonly string[] = []): LabTakeInfo | string {
   const speaker = pick(q.get('speaker'), ['passenger', 'crew'] as const);
-  const lang = pick(q.get('lang'), [...LANGS, ...packLangs]);
+  const lang = pick(q.get('lang'), [...(Object.keys(HELDOUT_PHRASES) as LangCode[]), ...packLangs]);
   const place = pick(q.get('place'), Object.keys(LAB_PLACES) as LabPlace[]);
   const mic = pick(q.get('mic'), Object.keys(LAB_MICS) as LabMic[]);
   const mode = pick(q.get('mode'), Object.keys(LAB_MODES) as LabMode[]);
   if (!speaker || !lang || !place || !mic || !mode) return 'speaker, lang, place, mic and mode are required';
   if (speaker === 'crew' && lang !== 'ja') return 'crew speak Japanese';
-  if (!isBuiltInLang(lang) && mode !== 'own-words') return 'language packs have no sentences to read yet: use own words';
+  if (!hasReadPrompts(lang) && mode !== 'own-words') return 'no sentences to read in this language yet: use own words';
   const session = q.get('session') ?? '';
   if (!/^[a-z0-9-]{4,40}$/i.test(session)) return 'bad session id';
   const expected = q.get('expected') ?? '';
@@ -181,9 +190,24 @@ export interface LabSummary {
   label: string;
   takes: number;
   counts: Record<LabOutcome, number>;
-  /** Time on the hub, ms: median and 90th percentile. */
+  /** Time on the hub, ms: median, 90th and 95th percentile. */
   medianMs: number | null;
   p90Ms: number | null;
+  p95Ms: number | null;
+  /**
+   * Speech-to-text error rate over the takes that read a given sentence
+   * (own-words takes have no reference text, so they are left out). Null when
+   * no take in the group had a reference.
+   */
+  wer: ErrorRate | null;
+  /** Takes the error rate was computed from. */
+  werTakes: number;
+  /**
+   * Share of takes where the passenger did not get a ready-to-send request:
+   * asked without the right picture, or nothing heard. The number that says
+   * how often someone has to fall back to tapping or typing.
+   */
+  fallbackRate: number;
 }
 
 function percentile(sorted: number[], p: number): number | null {
@@ -195,7 +219,18 @@ export function summarizeTakes(takes: LabTake[], label = 'All takes'): LabSummar
   const counts = Object.fromEntries(LAB_OUTCOMES.map((o) => [o, 0])) as Record<LabOutcome, number>;
   for (const t of takes) counts[t.outcome] += 1;
   const times = takes.filter((t) => t.outcome !== 'silent').map((t) => t.hubMs).sort((a, b) => a - b);
-  return { label, takes: takes.length, counts, medianMs: percentile(times, 0.5), p90Ms: percentile(times, 0.9) };
+  const withReference = takes.filter((t) => t.mode === 'read' && t.prompt.trim());
+  return {
+    label,
+    takes: takes.length,
+    counts,
+    medianMs: percentile(times, 0.5),
+    p90Ms: percentile(times, 0.9),
+    p95Ms: percentile(times, 0.95),
+    wer: aggregateErrorRate(withReference.map((t) => ({ reference: t.prompt, transcript: t.transcript, lang: labLanguage(t.speaker, t.lang) }))),
+    werTakes: withReference.length,
+    fallbackRate: takes.length ? (counts.missed + counts.silent) / takes.length : 0,
+  };
 }
 
 /** One summary row per group (language, place, mic…), biggest first. */

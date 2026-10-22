@@ -1,16 +1,17 @@
 import {
+  painWord,
   BODY_AREAS,
   BODY_MAP_VIEWBOX,
   BODY_SHAPES,
-  CONDITIONS,
-  SYMPTOMS,
-  emptyMedicalReport,
-  isUrgentMedical,
-  painWord,
-  translator,
   type BodyArea,
+  CONDITIONS,
+  isUrgentMedical,
   type LangCode,
+  localized,
   type MedicalReport,
+  emptyMedicalReport,
+  translator,
+  SYMPTOMS,
 } from '@hearme/shared';
 import Check from 'lucide-react-native/icons/check';
 import { useState } from 'react';
@@ -35,7 +36,7 @@ export function CareSheet({ lang }: { lang: LangCode }) {
   const [r, setR] = useState<MedicalReport>(emptyMedicalReport);
   const [error, setError] = useState<string | null>(null);
   const set = (patch: Partial<MedicalReport>) => setR((x) => ({ ...x, ...patch }));
-  const areaLabel = (a: BodyArea) => BODY_AREAS.find((x) => x.id === a)!.label[lang];
+  const areaLabel = (a: BodyArea) => localized(BODY_AREAS.find((x) => x.id === a)!.label, lang);
   const urgent = isUrgentMedical(r);
 
   const send = () => {
@@ -89,7 +90,7 @@ export function CareSheet({ lang }: { lang: LangCode }) {
         </Svg>
         <View style={{ flex: 1, gap: 6 }}>
           {/* Accessible list of the same areas (and "back", which the front view cannot show). */}
-          {BODY_AREAS.map((a) => chip(r.areas.includes(a.id), a.label[lang], () => set({ areas: toggle(r.areas, a.id) }), a.id))}
+          {BODY_AREAS.map((a) => chip(r.areas.includes(a.id), localized(a.label, lang), () => set({ areas: toggle(r.areas, a.id) }), a.id))}
         </View>
       </View>
 
@@ -117,12 +118,12 @@ export function CareSheet({ lang }: { lang: LangCode }) {
 
       <T bold>{tr('care.symptoms')}</T>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: th.space.sm }}>
-        {SYMPTOMS.map((x) => chip(r.symptoms.includes(x.id), x.label[lang], () => set({ symptoms: toggle(r.symptoms, x.id) }), x.id))}
+        {SYMPTOMS.map((x) => chip(r.symptoms.includes(x.id), localized(x.label, lang), () => set({ symptoms: toggle(r.symptoms, x.id) }), x.id))}
       </View>
 
       <T bold>{tr('care.conditions')}</T>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: th.space.sm }}>
-        {CONDITIONS.map((x) => chip(r.conditions.includes(x.id), x.label[lang], () => set({ conditions: toggle(r.conditions, x.id) }), x.id))}
+        {CONDITIONS.map((x) => chip(r.conditions.includes(x.id), localized(x.label, lang), () => set({ conditions: toggle(r.conditions, x.id) }), x.id))}
       </View>
 
       {r.areas.length > 0 && <T muted>{r.areas.map(areaLabel).join(' · ')}</T>}

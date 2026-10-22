@@ -19,7 +19,8 @@
     "zeroshot": "tsx src/scripts/zeroshot.ts",
     "chart": "tsx src/scripts/chart.ts",
     "add-language": "tsx src/scripts/add-language.ts",
-    "multi": "tsx src/scripts/multi.ts"
+    "multi": "tsx src/scripts/multi.ts",
+    "languages": "tsx src/scripts/languages.ts"
   },
   "dependencies": {
     "@hearme/shared": "*",

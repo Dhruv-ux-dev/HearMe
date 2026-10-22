@@ -1,4 +1,4 @@
-import type { NeedCategory, NeedPurpose, RequestSource, Understanding } from '@hearme/shared';
+import type { MatchEvidence, NeedCategory, NeedPurpose, RequestSource, Understanding } from '@hearme/shared';
 import { createContext, useContext } from 'react';
 
 export type Tab = 'home' | 'requests' | 'card' | 'flight' | 'settings';
@@ -13,9 +13,20 @@ export type Overlay =
       transcript: string;
     }
   | { kind: 'picker'; category: NeedCategory }
-  | { kind: 'speech' }
-  | { kind: 'typed' }
-  | { kind: 'ask'; options: string[]; purposeId?: NeedPurpose['id']; source: RequestSource; transcript: string; confidence: number }
+  /** `draft`: start from text the passenger can correct rather than retype (after a misheard request). */
+  | { kind: 'typed'; draft?: string }
+  | {
+      kind: 'ask';
+      options: string[];
+      purposeId?: NeedPurpose['id'];
+      source: RequestSource;
+      transcript: string;
+      confidence: number;
+      /** Why HearMe is asking: shown to the passenger in words. */
+      evidence?: MatchEvidence;
+      /** The catalogue word it recognised, if any. */
+      matchedWord?: string;
+    }
   | { kind: 'showCard'; needId: string }
   | { kind: 'care' };
 

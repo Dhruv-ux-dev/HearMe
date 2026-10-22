@@ -46,13 +46,19 @@ export function Onboarding() {
   const [scanHint, setScanHint] = useState(false);
   const [lang, setLang] = useState<LangCode>('en');
   const [speechLang, setSpeechLang] = useState<string | undefined>();
-  const [packs, setPacks] = useState<{ code: string; name: string }[]>([]);
+  /**
+   * Extra keyword-only drafts the hub has (data/languages/*.json). Every
+   * language HearMe really offers is in LANGUAGES, bundled with the app, so
+   * the picker is complete with no hub and no network — these only add
+   * languages someone is trying out on this particular hub.
+   */
+  const [drafts, setDrafts] = useState<{ code: string; name: string }[]>([]);
   useEffect(() => {
     const hub = getHubUrl();
     if (!hub) return;
     fetch(`${hub}/api/languages`)
-      .then((r) => r.json() as Promise<{ packs: { code: string; name: string; speech: boolean }[] }>)
-      .then((d) => setPacks(d.packs.filter((p) => p.speech)))
+      .then((r) => r.json() as Promise<{ extraPacks?: { code: string; name: string; speech: boolean }[] }>)
+      .then((d) => setDrafts((d.extraPacks ?? []).filter((p) => p.speech)))
       .catch(() => undefined);
   }, []);
   const [seat, setSeat] = useState(qrSeat ?? '');
@@ -156,35 +162,46 @@ export function Onboarding() {
               </View>
               <CyclingHeading />
               <View accessibilityRole="radiogroup" style={{ gap: th.space.sm }}>
-                {LANGUAGES.map((l) => (
-                  <Pressable
-                    key={l.code}
-                    onPress={() => {
-                      setLang(l.code);
-                      setSpeechLang(undefined);
-                      setStep(qrSeat ? 'needs' : 'seat');
-                    }}
-                    accessibilityRole="radio"
-                    accessibilityState={{ checked: lang === l.code }}
-                    accessibilityLabel={`${l.nativeName}, ${l.englishName}`}
-                    accessibilityLanguage={l.bcp47}
-                    style={({ pressed }) => ({
-                      minHeight: 64,
-                      borderRadius: th.radius.md,
-                      borderWidth: 2,
-                      borderColor: pressed ? th.p.primary : th.p.border,
-                      backgroundColor: pressed ? th.p.primarySoft : th.p.surface,
-                      paddingHorizontal: th.space.lg,
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                    })}
-                  >
-                    <T v="title">{l.nativeName}</T>
-                    <T muted>{l.englishName}</T>
-                  </Pressable>
-                ))}
-              {packs.map((p) => (
+                {LANGUAGES.map((l) => {
+                  const partial = l.coverage.ui !== 'complete';
+                  // Say plainly what choosing this language gets you, before choosing it.
+                  const hint = partial ? `Speak and read in ${l.englishName} · some screens in ${languageInfo(l.fallback).englishName}` : l.englishName;
+                  return (
+                    <Pressable
+                      key={l.code}
+                      onPress={() => {
+                        setLang(l.code);
+                        setSpeechLang(undefined);
+                        setStep(qrSeat ? 'needs' : 'seat');
+                      }}
+                      accessibilityRole="radio"
+                      accessibilityState={{ checked: lang === l.code }}
+                      accessibilityLabel={`${l.nativeName}, ${hint}`}
+                      accessibilityLanguage={l.bcp47}
+                      style={({ pressed }) => ({
+                        minHeight: 64,
+                        borderRadius: th.radius.md,
+                        borderWidth: 2,
+                        borderColor: pressed ? th.p.primary : th.p.border,
+                        backgroundColor: pressed ? th.p.primarySoft : th.p.surface,
+                        paddingHorizontal: th.space.lg,
+                        paddingVertical: th.space.sm,
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: th.space.sm,
+                      })}
+                    >
+                      <T v="title" lang={l.bcp47} style={{ flexShrink: 1 }}>
+                        {l.nativeName}
+                      </T>
+                      <T muted style={{ flexShrink: 1, textAlign: 'right' }}>
+                        {hint}
+                      </T>
+                    </Pressable>
+                  );
+                })}
+                {drafts.map((p) => (
                   <Pressable
                     key={p.code}
                     onPress={() => {
@@ -198,7 +215,7 @@ export function Onboarding() {
                     style={{ minHeight: 64, borderRadius: th.radius.md, borderWidth: 2, borderStyle: 'dashed', borderColor: th.p.border, padding: th.space.md, justifyContent: 'center' }}
                   >
                     <T bold>{p.name}</T>
-                    <T muted>Speak or type in {p.name} · screens in English</T>
+                    <T muted>Being tried on this hub · speak or type only, screens in English</T>
                   </Pressable>
                 ))}
               </View>

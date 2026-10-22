@@ -1,5 +1,5 @@
 {
-  "note": "Sample passenger list for the demo flight (Tokyo-bound, rows 21-31). In production the hub receives this from the airline's departure control system before departure: language preference plus PNR special service codes (SSR/OSI).",
+  "note": "Sample passenger list for the demo flight (Tokyo-bound, rows 21-31). In production the hub receives this from the airline's departure control system before departure: language preference (including pack languages such as Bengali and Punjabi) plus PNR special service codes (SSR/OSI).",
   "flight": "DEMO 830 · DEL → NRT",
   "passengers": [
     {
@@ -76,12 +76,22 @@
     },
     {
       "seat": "22B",
-      "lang": "en",
-      "speechLang": "bn",
+      "lang": "bn",
       "name": "Rahim",
       "tags": [],
       "ssr": [
         "OSI LANG BN"
+      ]
+    },
+    {
+      "seat": "27D",
+      "lang": "pa",
+      "name": "ਗੁਰਪ੍ਰੀਤ",
+      "tags": [
+        "senior"
+      ],
+      "ssr": [
+        "OSI LANG PA"
       ]
     }
   ]

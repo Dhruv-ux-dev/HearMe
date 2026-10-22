@@ -8,7 +8,7 @@
  *        --check   only check that everything the demo needs is in place (run it before you present)
  */
 import { spawnSync, spawn } from 'node:child_process';
-import { existsSync, readdirSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { createServer } from 'node:net';
 import { networkInterfaces } from 'node:os';
 import { fileURLToPath } from 'node:url';
@@ -60,6 +60,21 @@ async function preflight() {
   const lan = Object.values(networkInterfaces()).flat().find((a) => a && a.family === 'IPv4' && !a.internal);
   const ffmpeg = spawnSync('ffmpeg', ['-version'], { stdio: 'ignore' }).status === 0;
 
+  /** Each language's own name must appear in the built phone bundle. */
+  function languagesInBundle() {
+    const dir = new URL('../apps/ife/dist/mobile/_expo/static/js/web/', import.meta.url);
+    let js = '';
+    try {
+      for (const f of readdirSync(dir)) if (f.endsWith('.js')) js += readFileSync(new URL(f, dir), 'utf8');
+    } catch {
+      return false;
+    }
+    // The bundler escapes non-ASCII as \uXXXX (and Vietnamese mixes the two),
+    // so decode the escapes once and then just look for each name.
+    const text = js.replace(/\\u([0-9a-fA-F]{4})/g, (_, h) => String.fromCharCode(parseInt(h, 16)));
+    return ['हिन्दी', '日本語', 'ไทย', 'Tiếng Việt', 'বাংলা', 'தமிழ்', 'ਪੰਜਾਬੀ', 'मराठी'].every((name) => text.includes(name));
+  }
+
   console.log('\nHearMe demo check\n');
   const required = [
     ok(Number(process.versions.node.split('.')[0]) >= 20, `Node ${process.versions.node}`, 'install Node 20 or newer'),
@@ -67,6 +82,9 @@ async function preflight() {
     ok(onnx(`.models/onnx-community/whisper-${size}/onnx`), `speech model (whisper-${size})`, size === 'base' ? 'npm run models -- base' : 'npm run models'),
     ok(existsSync(hub('data/need-head.json')), 'trained need classifier (data/need-head.json)', 'npm run train -w @hearme/hub'),
     ok(existsSync(new URL('../apps/ife/dist/index.html', import.meta.url)) && existsSync(new URL('../apps/ife/dist/mobile/index.html', import.meta.url)), 'apps built', 'npm run build'),
+    // The ten languages have to be *inside* the built bundle: nothing is fetched
+    // at run time, so a phone that loaded the app once works with no network at all.
+    ok(languagesInBundle(), 'all 10 languages bundled in the phone app (nothing fetched at run time)', 'npm run build'),
     running ? ok(true, `hub already running (speech: ${running.asr?.state}, meaning: ${running.embed?.state})`) : ok((await portFree(8080)) && (await portFree(8443)), 'ports 8080 and 8443 free', 'stop whatever uses them'),
   ];
   ok(!!lan, lan ? `Wi-Fi address ${lan.address}: phones scan the QR at http://${lan.address}:8080/join (set HEARME_HOST to pick another address)` : 'no Wi-Fi/LAN address (phones cannot join; the stage still works)', 'connect to a network or a phone hotspot');

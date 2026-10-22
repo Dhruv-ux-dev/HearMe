@@ -1,26 +1,28 @@
 import {
+  ago,
+  ANNOUNCEMENTS,
   CATEGORIES,
   CATEGORY_LABELS,
+  type CrewMode,
   DemoCabinLink,
-  LANGUAGES,
-  PROFILE_TAGS,
-  SAFETY_STEPS,
-  ANNOUNCEMENTS,
-  ago,
   describeStatus,
   getAnnouncement,
   getNeed,
   isValidSeat,
+  type LangCode,
+  LANGUAGES,
+  localized,
+  needLabel,
   needsInCategory,
+  type NetworkCondition,
   normalizeSeat,
+  PROFILE_TAGS,
+  translator,
+  type ReplyChannel,
   replyText,
   requestTitle,
+  SAFETY_STEPS,
   sanitizeName,
-  translator,
-  type CrewMode,
-  type LangCode,
-  type NetworkCondition,
-  type ReplyChannel,
   type UtteranceMode,
 } from '@hearme/shared';
 import { useSession } from '@hearme/shared/react';
@@ -114,7 +116,7 @@ export function CardTab({ lang }: { lang: LangCode }) {
       {CATEGORIES.map((c) => (
         <View key={c} style={{ gap: th.space.sm }}>
           <T v="title" role="header">
-            {CATEGORY_LABELS[c][lang]}
+            {localized(CATEGORY_LABELS[c], lang)}
           </T>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: th.space.sm }}>
             {needsInCategory(c).map((n) => (
@@ -122,7 +124,7 @@ export function CardTab({ lang }: { lang: LangCode }) {
                 key={n.id}
                 onPress={() => nav.open({ kind: 'showCard', needId: n.id })}
                 accessibilityRole="button"
-                accessibilityLabel={`${n.label[lang]}. ${tr('requests.showCard')}`}
+                accessibilityLabel={`${needLabel(n, lang)}. ${tr('requests.showCard')}`}
                 style={({ pressed }) => ({
                   flexBasis: '30%',
                   flexGrow: 1,
@@ -139,7 +141,7 @@ export function CardTab({ lang }: { lang: LangCode }) {
               >
                 <NeedIcon name={n.icon} color={th.p.primary} size={th.fs(30)} />
                 <Text maxFontSizeMultiplier={1.4} style={{ color: th.p.text, fontWeight: '700', fontSize: th.fs(14), textAlign: 'center' }}>
-                  {n.label[lang]}
+                  {needLabel(n, lang)}
                 </Text>
               </Pressable>
             ))}
@@ -180,7 +182,7 @@ export function FlightTab({ lang }: { lang: LangCode }) {
                     <T v="caption" muted>
                       {ago(a.at)}
                     </T>
-                    <T v="bodyLarge">{tpl.text[lang]}</T>
+                    <T v="bodyLarge">{localized(tpl.text, lang)}</T>
                   </View>
                 </View>
               </Card>
@@ -206,10 +208,10 @@ export function FlightTab({ lang }: { lang: LangCode }) {
               {tr('safety.step', { n: step + 1, total: SAFETY_STEPS.length })}
             </T>
             <T v="title" center>
-              {s.title[lang]}
+              {localized(s.title, lang)}
             </T>
             <T v="bodyLarge" center>
-              {s.body[lang]}
+              {localized(s.body, lang)}
             </T>
           </View>
           <View style={{ flexDirection: 'row', gap: th.space.sm }}>
@@ -227,12 +229,12 @@ export function FlightTab({ lang }: { lang: LangCode }) {
         <Btn
           variant="secondary"
           big
-          label={getNeed('wheelchair_arrival')!.label[lang]}
+          label={needLabel(getNeed('wheelchair_arrival')!, lang)}
           onPress={() => nav.open({ kind: 'review', needId: 'wheelchair_arrival', source: 'tap' })}
           icon={(c, z) => <Accessibility color={c} size={z} />}
         />
         {profile?.tags.includes('medical') && (
-          <Btn variant="ghost" label={getNeed('unwell')!.label[lang]} onPress={() => nav.open({ kind: 'review', needId: 'unwell', source: 'tap' })} />
+          <Btn variant="ghost" label={needLabel(getNeed('unwell')!, lang)} onPress={() => nav.open({ kind: 'review', needId: 'unwell', source: 'tap' })} />
         )}
       </View>
     </ScrollView>

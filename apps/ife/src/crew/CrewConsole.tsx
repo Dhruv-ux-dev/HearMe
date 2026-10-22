@@ -1,30 +1,31 @@
 import {
+  t,
+  ago,
   ANNOUNCEMENTS,
-  CrewTablet,
-  RemoteCrewTablet,
-  REPLIES,
-  REPLY_SUGGEST_MIN,
   computeCrewMetrics,
   createBroadcastBus,
+  type CrewRequest,
+  CrewTablet,
+  type CrewTabletApi,
   defaultReplyFor,
   formatDuration,
   getNeed,
   getPurpose,
   getReply,
+  type HubEvent,
   isUrgentMedical,
+  type LangCode,
   languageInfo,
   languageName,
   lookupBookingOnHub,
   medicalSummaryLines,
-  t,
-  ago,
-  type CrewRequest,
-  type CrewTabletApi,
-  type HubEvent,
-  type LangCode,
   type PassengerProfile,
   type ProfileTag,
+  RemoteCrewTablet,
+  REPLIES,
+  REPLY_SUGGEST_MIN,
   type ReplyId,
+  replyTextOf,
   type UnderstandProgress,
 } from '@hearme/shared';
 import { useExternal } from '@hearme/shared/react';
@@ -82,7 +83,10 @@ export function CrewConsole() {
   return <Console tablet={conn.tablet} viaHub={conn.kind === 'hub'} />;
 }
 
-const LANG_JA: Record<LangCode, string> = { hi: 'ヒンディー語', en: '英語', ja: '日本語', th: 'タイ語', id: 'インドネシア語', vi: 'ベトナム語' };
+const LANG_JA: Record<LangCode, string> = {
+  hi: 'ヒンディー語', en: '英語', ja: '日本語', th: 'タイ語', id: 'インドネシア語', vi: 'ベトナム語',
+  bn: 'ベンガル語', ta: 'タミル語', pa: 'パンジャブ語', mr: 'マラーティー語',
+};
 const tagJa = (tag: ProfileTag) => t('ja', `tag.${tag}`);
 const tagEn = (tag: ProfileTag) => t('en', `tag.${tag}`);
 const embedded = new URLSearchParams(window.location.search).has('embed');
@@ -491,7 +495,7 @@ function Detail({ r, tablet, viaHub }: { r: CrewRequest; tablet: CrewTabletApi; 
         ))}
       </div>
       <p className="crew2-preview" lang="en">
-        Passenger sees ({languageInfo(r.lang).englishName}): <q lang={languageInfo(r.lang).bcp47}>{getReply(r.reply?.replyId ?? suggested).text[r.lang]}</q>
+        Passenger sees ({languageInfo(r.lang).englishName}): <q lang={languageInfo(r.lang).bcp47}>{replyTextOf(getReply(r.reply?.replyId ?? suggested), r.lang)}</q>
       </p>
     </div>
   );
@@ -561,7 +565,7 @@ function VoiceReply({ r, tablet }: { r: CrewRequest; tablet: CrewTabletApi }) {
             <button className="crew2-reply t-positive suggested" onClick={() => tablet.reply(r.requestId, matched.id)}>
               <span>{matched.text.ja}</span>
               <small lang="en">
-                Send verified reply ({Math.round(result.confidence * 100)}% match) → {matched.text[r.lang]}
+                Send verified reply ({Math.round(result.confidence * 100)}% match) → {replyTextOf(matched, r.lang)}
               </small>
             </button>
           ) : (

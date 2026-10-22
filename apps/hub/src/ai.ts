@@ -3,6 +3,7 @@ import {
   SemanticNeedMatcher,
   createKeywordMatcher,
   type Embedder,
+  findLanguage,
   type LangCode,
   type MatchResult,
   type ModelState,
@@ -29,14 +30,8 @@ export interface Transcriber {
   dispose?(): Promise<void>;
 }
 
-const WHISPER_LANG: Record<LangCode, string> = {
-  hi: 'hindi',
-  en: 'english',
-  ja: 'japanese',
-  th: 'thai',
-  id: 'indonesian',
-  vi: 'vietnamese',
-};
+/** Whisper's name for a language HearMe offers; anything else is passed through unchanged. */
+const whisperLang = (lang: string): string => findLanguage(lang)?.whisper ?? lang;
 
 /** Whisper invents text for silence ("Thank you." …); skip clips with no speech. */
 export function hasSpeech(samples: Float32Array, sampleRate = 16000): boolean {
@@ -97,7 +92,7 @@ export async function createWhisper(size: AsrSize, threads: number): Promise<Tra
     async transcribe(samples, lang, opts) {
       // Long clips are cut to 20 s: requests are short, and this bounds the work per request.
       const clip = samples.length > 16000 * 20 ? samples.subarray(0, 16000 * 20) : samples;
-      const out = (await asr(clip, { language: WHISPER_LANG[lang as LangCode] ?? lang, task: 'transcribe', max_new_tokens: opts?.maxNewTokens ?? 64 })) as { text: string };
+      const out = (await asr(clip, { language: whisperLang(lang), task: 'transcribe', max_new_tokens: opts?.maxNewTokens ?? 64 })) as { text: string };
       return out.text.trim();
     },
     dispose: () => asr.dispose(),
@@ -153,7 +148,11 @@ export function warmupClip(seconds = 2, rate = 16000): Float32Array {
   return out;
 }
 
-/** One short request per language: warms the tokenizer, the e5 index lookup and the trained classifier. */
+/**
+ * One short request per language: warms the tokenizer, the e5 index lookup and
+ * the trained classifier. Every language HearMe offers is warmed, so a
+ * Punjabi passenger's first request is no slower than a Hindi one.
+ */
 const WARMUP_PHRASES: Record<LangCode, string> = {
   hi: 'मुझे पानी चाहिए',
   en: 'I need some water',
@@ -161,6 +160,10 @@ const WARMUP_PHRASES: Record<LangCode, string> = {
   th: 'ขอน้ำหน่อย',
   id: 'Minta air putih',
   vi: 'Cho tôi nước',
+  bn: 'আমার জল লাগবে',
+  ta: 'எனக்கு தண்ணீர் வேண்டும்',
+  pa: 'ਮੈਨੂੰ ਪਾਣੀ ਚਾਹੀਦਾ ਹੈ',
+  mr: 'मला पाणी पाहिजे',
 };
 
 export interface ModelStatus {

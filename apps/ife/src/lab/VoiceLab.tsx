@@ -5,6 +5,7 @@ import {
   LAB_OUTCOMES,
   LAB_PLACES,
   OUTCOME_LABEL,
+  fmtRate,
   fmtSeconds,
   isBuiltInLang,
   labItemLabel,
@@ -723,8 +724,11 @@ function SummaryTable({ takes, groupBy, packs }: { takes: LabTake[]; groupBy: Gr
                 {OUTCOME_LABEL[o]}
               </th>
             ))}
+            <th scope="col">Had to tap or type</th>
+            <th scope="col">Speech error rate</th>
             <th scope="col">Median on hub</th>
             <th scope="col">90% within</th>
+            <th scope="col">95% within</th>
           </tr>
         </thead>
         <tbody>
@@ -737,8 +741,13 @@ function SummaryTable({ takes, groupBy, packs }: { takes: LabTake[]; groupBy: Gr
                   {pct(r.counts[o], r.takes)}
                 </td>
               ))}
+              <td title="Asked without the right picture, or nothing heard">{Math.round(r.fallbackRate * 100)}%</td>
+              <td title={r.wer ? `${r.wer.edits} ${r.wer.unit}s wrong out of ${r.wer.reference}, over ${r.werTakes} read takes` : 'Only measurable for takes that read a given sentence'}>
+                {r.wer ? fmtRate(r.wer) : '—'}
+              </td>
               <td>{fmtSeconds(r.medianMs)}</td>
               <td>{fmtSeconds(r.p90Ms)}</td>
+              <td>{fmtSeconds(r.p95Ms)}</td>
             </tr>
           ))}
         </tbody>
@@ -759,7 +768,13 @@ function SummaryTable({ takes, groupBy, packs }: { takes: LabTake[]; groupBy: Gr
             <b>{OUTCOME_LABEL.wrong}</b>: a wrong picture or reply appeared, ready to send. The passenger (or crew) must notice before sending. This is the number to keep low.
           </li>
           <li>
-            <b>Median on hub</b>: from the recording arriving to the answer (Whisper and matching), on this laptop. Wi-Fi upload comes on top.
+            <b>Had to tap or type</b>: the share of takes that left the passenger without a ready request — unsure and the right picture was not offered, or nothing heard. The one number that says how often voice let someone down.
+          </li>
+          <li>
+            <b>Speech error rate</b>: how wrong Whisper's <i>text</i> was against the sentence the person read — mistaken words ÷ total words (characters for Japanese and Thai). Only read takes count; own-words takes have no sentence to compare with. A high error rate beside a low “{OUTCOME_LABEL.wrong}” means the matcher is recovering from bad transcripts, which is what it is for.
+          </li>
+          <li>
+            <b>Median on hub</b>: from the recording arriving to the answer (Whisper and matching), on this laptop. Wi-Fi upload comes on top. <b>95% within</b> is the slow tail a passenger actually notices.
           </li>
         </ul>
       </details>

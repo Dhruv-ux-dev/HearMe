@@ -1,4 +1,5 @@
 import type { BodyArea, ConditionId, LangCode, Localized, MedicalReport, SymptomId } from '../types';
+import { localized } from '../i18n/resolve';
 import { L } from './needs';
 
 /**
@@ -39,6 +40,13 @@ export const CONDITIONS: { id: ConditionId; label: Localized }[] = [
   { id: 'epilepsy', label: L('Epilepsy', 'मिर्गी', 'てんかん', 'โรคลมชัก', 'Epilepsi', 'Động kinh') },
 ];
 
+/**
+ * Care Mode wording stays in the six core languages on purpose. A language
+ * pack may not supply it: this is the text a crew member acts on medically, so
+ * it needs clinical review in each language before it is shown, and until then
+ * a pack language shows it in the core language it falls back to.
+ */
+
 /** Words for the 0–10 pain scale (shown under the number). */
 export const PAIN_WORDS: { upTo: number; label: Localized }[] = [
   { upTo: 0, label: L('No pain', 'दर्द नहीं', '痛みなし', 'ไม่ปวด', 'Tidak sakit', 'Không đau') },
@@ -49,7 +57,7 @@ export const PAIN_WORDS: { upTo: number; label: Localized }[] = [
 ];
 
 export function painWord(pain: number, lang: LangCode): string {
-  return (PAIN_WORDS.find((p) => pain <= p.upTo) ?? PAIN_WORDS[PAIN_WORDS.length - 1]!).label[lang];
+  return localized((PAIN_WORDS.find((p) => pain <= p.upTo) ?? PAIN_WORDS[PAIN_WORDS.length - 1]!).label, lang);
 }
 
 export function emptyMedicalReport(): MedicalReport {
@@ -64,14 +72,16 @@ export function isUrgentMedical(r: MedicalReport | undefined): boolean {
   return r.symptoms.some((s) => SYMPTOMS.find((x) => x.id === s)?.urgent);
 }
 
-const label = <T extends string>(list: { id: T; label: Localized }[], id: T, lang: LangCode) =>
-  list.find((x) => x.id === id)?.label[lang] ?? id;
+const label = <T extends string>(list: { id: T; label: Localized }[], id: T, lang: LangCode) => {
+  const found = list.find((x) => x.id === id);
+  return found ? localized(found.label, lang) : id;
+};
 
 /** One line per fact, e.g. ["Pain 7/10 (Severe): Chest", "Dizzy · Feel sick", "Known: Diabetes"]. */
 export function medicalSummaryLines(r: MedicalReport, lang: LangCode): string[] {
   const where = r.areas.map((a) => label(BODY_AREAS, a, lang)).join(lang === 'ja' ? '・' : ', ');
-  const painLabel = { en: 'Pain', hi: 'दर्द', ja: '痛み', th: 'ความปวด', id: 'Nyeri', vi: 'Đau' }[lang];
-  const knownLabel = { en: 'Known', hi: 'पहले से', ja: '持病', th: 'โรคประจำตัว', id: 'Riwayat', vi: 'Bệnh nền' }[lang];
+  const painLabel = localized(L('Pain', 'दर्द', '痛み', 'ความปวด', 'Nyeri', 'Đau'), lang);
+  const knownLabel = localized(L('Known', 'पहले से', '持病', 'โรคประจำตัว', 'Riwayat', 'Bệnh nền'), lang);
   const lines = [`${painLabel} ${r.pain}/10 (${painWord(r.pain, lang)})${where ? `: ${where}` : ''}`];
   if (r.symptoms.length) lines.push(r.symptoms.map((s) => label(SYMPTOMS, s, lang)).join(' · '));
   if (r.conditions.length) lines.push(`${knownLabel}: ${r.conditions.map((c) => label(CONDITIONS, c, lang)).join(', ')}`);
