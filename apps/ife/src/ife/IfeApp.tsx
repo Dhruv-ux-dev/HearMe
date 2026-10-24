@@ -1,5 +1,6 @@
 import { JalBrand } from '../common/JalBrand';
 import {
+  isRtl,
   languageInfo,
   translator,
   type DemoCabinLink,
@@ -162,7 +163,7 @@ export function IfeApp({ session, link, seat, idleMs = 180_000, idleGraceSeconds
   const activeNav = screen.name === 'review' || screen.name === 'status' || screen.name === 'care' ? 'request' : screen.name === 'requests' ? 'home' : screen.name;
 
   return (
-    <div className={rootClass} style={rootStyle} lang={languageInfo(lang).bcp47}>
+    <div className={rootClass} style={rootStyle} lang={languageInfo(lang).bcp47} dir={isRtl(lang) ? 'rtl' : 'ltr'}>
       <header className="ife-top">
         <div className="ife-brand" aria-label="HearMe">
           <JalBrand />
@@ -195,7 +196,7 @@ export function IfeApp({ session, link, seat, idleMs = 180_000, idleGraceSeconds
       </nav>
 
       <main className="ife-main" ref={mainRef}>
-        <CaptionToast session={session} lang={lang} onOpen={() => go({ name: 'captions' })} />
+        <CaptionToast session={session} lang={lang} speaker={browserSpeaker} onOpen={() => go({ name: 'captions' })} />
         {notice && (
           <p className="ife-notice" role="status">
             {notice}

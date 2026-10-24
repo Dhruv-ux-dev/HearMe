@@ -5,7 +5,7 @@ import { LANGUAGES, isLangCode, translatedKeys, type HubStatus, type LangCode, t
 import { STORY_SENTENCES, parseLabTakeQuery, scoreTake, takesToCsv, type LabTake } from '@hearme/shared/lab';
 import type { AiEngine } from './ai';
 import { AudioError, decodeAudio, hasFfmpeg } from './audio';
-import { lookupBooking } from './booking';
+import { lookupBooking, manifestSeats } from './booking';
 import { mobileconfig, pemToDer, type HubCertificate } from './cert';
 import { LabLog } from './lab';
 import { joinPage, qrSvg, seatCardsPage, trustPage } from './pages';
@@ -362,6 +362,38 @@ export function createHandler(opts: HandlerOptions) {
       const lang = parseAnyLang(input.lang);
       if (!lang || typeof input.text !== 'string' || input.text.length > 300) return json(res, 400, { error: 'invalid request' });
       return json(res, 200, await understandText(input.text.trim(), lang, parseTarget(input.target), 0));
+    }
+    if (path === '/api/announce/translate' && req.method === 'POST') {
+      // The captain's or crew's own words for everyone on board: one machine translation per language
+      // on the passenger list or in today's requests (Hindi and English always), labelled so on every seat.
+      const body = await readBody(req, MAX_JSON_BYTES);
+      let input: { text?: unknown; from?: unknown };
+      try {
+        input = JSON.parse(body.toString('utf8'));
+      } catch {
+        return json(res, 400, { error: 'invalid JSON' });
+      }
+      const from = input.from === undefined ? 'ja' : parseAnyLang(input.from);
+      if (!from || typeof input.text !== 'string' || !input.text.trim() || input.text.length > 300) return json(res, 400, { error: 'invalid request' });
+      const text = input.text.trim();
+      const langs = new Set<string>(['hi', 'en']);
+      for (const seat of manifestSeats()) {
+        const p = lookupBooking(seat);
+        if (p) langs.add(p.lang);
+      }
+      for (const r of opts.relay.crew.getState().requests) langs.add(r.lang);
+      langs.delete(from);
+      const t0 = Date.now();
+      const texts: Record<string, string> = { [from]: text };
+      const failed: string[] = [];
+      for (const lang of langs) {
+        try {
+          texts[lang] = await opts.ai.translate(text, from, lang);
+        } catch {
+          failed.push(lang);
+        }
+      }
+      return json(res, 200, { texts, failed, ms: Date.now() - t0, machine: true });
     }
     if (path === '/api/translate/warm' && req.method === 'POST') {
       opts.ai.warmTranslator();

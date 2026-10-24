@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { CrewTablet, LocalHub, crewReplyText, PassengerSession, SimulatedCabinLink, type CabinBus, type PassengerProfile } from '../src';
+import { CrewTablet, LocalHub, captionOf, crewReplyText, PassengerSession, SimulatedCabinLink, type CabinBus, type PassengerProfile } from '../src';
 
 const profile: PassengerProfile = { lang: 'hi', seat: '23C', name: 'Sharda', tags: ['senior', 'hard_of_hearing'], shareTagsWithCrew: true };
 
@@ -140,6 +140,23 @@ describe('PassengerSession delivery states', () => {
     expect(r.reply?.replyId).toBeUndefined();
     expect(crewReplyText(r.reply, 'hi')).toBe('मैं तुरंत कंबल लाऊँगी');
     expect(crew!.getState().requests[0]!.reply?.message?.original).toBe('すぐに毛布をお持ちします');
+  });
+
+  it("shows the captain's own words in the passenger's language, marked machine-translated, and falls back when missing", async () => {
+    const { session, crew } = setup();
+    session.submit({ needId: 'water', source: 'tap' });
+    await flush(1);
+    crew!.announceText({ sender: 'captain', original: 'まもなく着陸します', texts: { ja: 'まもなく着陸します', hi: 'हम जल्द ही उतरेंगे', en: 'We will land soon' } });
+    await flush(1);
+    const a = session.getState().announcements[0]!;
+    expect(a.broadcast?.sender).toBe('captain');
+    expect(captionOf(a, 'hi')).toMatchObject({ text: 'हम जल्द ही उतरेंगे', lang: 'hi', machine: true, sender: 'captain' });
+    // Marathi has no translation here: its fallback (Hindi) is shown, still marked.
+    expect(captionOf(a, 'mr')).toMatchObject({ text: 'हम जल्द ही उतरेंगे', lang: 'hi', machine: true });
+    // The Japanese original is not a machine translation.
+    expect(captionOf(a, 'ja')).toMatchObject({ text: 'まもなく着陸します', machine: false });
+    // Templates stay fixed, human-written captions.
+    expect(captionOf({ templateId: 'seatbelt_on' }, 'hi')).toMatchObject({ safety: true, machine: false, lang: 'hi' });
   });
 
   it('ignores messages for another seat', async () => {

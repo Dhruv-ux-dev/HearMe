@@ -1,4 +1,5 @@
-import type { IconName, Localized } from '../types';
+import { fallbackLang } from '../i18n/languages';
+import type { Announcement, IconName, LangCode, Localized } from '../types';
 import { L } from './needs';
 
 /**
@@ -111,4 +112,36 @@ export const ANNOUNCEMENTS: AnnouncementTemplate[] = [
 
 export function getAnnouncement(id: string): AnnouncementTemplate | undefined {
   return ANNOUNCEMENTS.find((a) => a.id === id);
+}
+
+/** What one seat shows (and reads aloud) for an announcement, in its own language where there is one. */
+export interface Caption {
+  text: string;
+  /** The language `text` is written in: the seat's own, or the one it falls back to. */
+  lang: string;
+  icon: IconName;
+  safety: boolean;
+  /** Machine-translated own words: the passenger is told so. */
+  machine: boolean;
+  sender?: 'captain' | 'crew';
+}
+
+export function captionOf(a: Pick<Announcement, 'templateId' | 'broadcast'>, lang: LangCode): Caption | undefined {
+  const b = a.broadcast;
+  if (b) {
+    const shown = [lang, fallbackLang(lang), 'en'].find((l) => b.texts[l]);
+    return {
+      text: shown ? b.texts[shown]! : b.original,
+      lang: shown ?? 'ja',
+      icon: b.sender === 'captain' ? 'plane-takeoff' : 'bell-ring',
+      safety: false,
+      machine: shown !== undefined && shown !== 'ja',
+      sender: b.sender,
+    };
+  }
+  const tpl = getAnnouncement(a.templateId);
+  if (!tpl) return undefined;
+  const own = tpl.text[lang];
+  const fb = fallbackLang(lang);
+  return { text: own ?? tpl.text[fb], lang: own ? lang : fb, icon: tpl.icon, safety: tpl.safety, machine: false };
 }

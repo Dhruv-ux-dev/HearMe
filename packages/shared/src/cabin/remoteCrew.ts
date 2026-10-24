@@ -1,4 +1,4 @@
-import type { CrewMessage, ReplyId } from '../types';
+import type { BroadcastMessage, CrewMessage, ReplyId } from '../types';
 import type { CrewTabletApi, CrewTabletState } from './crewTablet';
 import { hubSocketUrl, type HubEvent } from './hubProtocol';
 import { WebSocketBus, type WebSocketFactory } from './ws';
@@ -59,6 +59,10 @@ export class RemoteCrewTablet implements CrewTabletApi {
 
   sendMessage(requestId: string, message: CrewMessage): void {
     this.bus.sendFrame({ kind: 'crew', cmd: { type: 'message', requestId, message } });
+  }
+
+  announceText(broadcast: BroadcastMessage): void {
+    this.bus.sendFrame({ kind: 'crew', cmd: { type: 'announceText', broadcast } });
   }
 
   announce(templateId: string): void {

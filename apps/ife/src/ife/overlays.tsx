@@ -1,4 +1,4 @@
-import { crewReplyText, getAnnouncement, getNeed, type LangCode, languageInfo, localized, type PassengerSession, translator, type Speaker } from '@hearme/shared';
+import { captionOf, crewReplyText, findLanguage, getNeed, type LangCode, languageInfo, localized, type PassengerSession, translator, type Speaker } from '@hearme/shared';
 import { useSession } from '@hearme/shared/react';
 import { Heart, Megaphone, Volume2, X } from 'lucide-react';
 import { useEffect, useRef, type ReactNode } from 'react';
@@ -133,19 +133,25 @@ export function IdleDialog({ lang, seconds, onStay, onEnd }: { lang: LangCode; s
 }
 
 /** Newest announcement as a caption banner at the top of the content area. */
-export function CaptionToast({ session, lang, onOpen }: { session: PassengerSession; lang: LangCode; onOpen: () => void }) {
+export function CaptionToast({ session, lang, onOpen, speaker }: { session: PassengerSession; lang: LangCode; onOpen: () => void; speaker?: Speaker }) {
   const unseen = useSession(session, (s) => s.unseenAnnouncement);
   const a = useSession(session, (s) => s.announcements.find((x) => x.id === s.unseenAnnouncement));
+  const voice = useSession(session, (s) => s.prefs.replyChannels.includes('voice'));
   const tr = translator(lang);
-  if (!unseen || !a) return null;
-  const tpl = getAnnouncement(a.templateId);
-  if (!tpl) return null;
+  const cap = unseen && a ? captionOf(a, lang) : undefined;
+  // Read every announcement aloud in the passenger's language, when they asked for voice.
+  useEffect(() => {
+    if (cap && voice && speaker?.available()) speaker.speak(cap.text, findLanguage(cap.lang)?.bcp47 ?? cap.lang);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [a?.id, voice]);
+  if (!cap) return null;
   return (
-    <div className={`ife-toast${tpl.safety ? ' safety' : ''}`} role={tpl.safety ? 'alert' : 'status'}>
+    <div className={`ife-toast${cap.safety ? ' safety' : ''}`} role={cap.safety ? 'alert' : 'status'}>
       <Megaphone aria-hidden />
       <button className="ife-toast__text" onClick={onOpen}>
-        <span className="ife-toast__label">{tr('captions.title')}</span>
-        {localized(tpl.text, lang)}
+        <span className="ife-toast__label">{cap.sender ? tr(cap.sender === 'captain' ? 'announce.captain' : 'announce.crew') : tr('captions.title')}</span>
+        {cap.text}
+        {cap.machine && <span className="ife-toast__label"> ⚠ {tr('reply.machine')}</span>}
       </button>
       <button className="ife-toast__close" onClick={() => session.markAnnouncementsSeen()} aria-label={tr('common.close')}>
         <X aria-hidden />

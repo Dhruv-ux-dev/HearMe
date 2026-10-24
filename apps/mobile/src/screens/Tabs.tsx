@@ -6,7 +6,7 @@ import {
   type CrewMode,
   DemoCabinLink,
   describeStatus,
-  getAnnouncement,
+  captionOf,
   getNeed,
   isValidSeat,
   type LangCode,
@@ -172,17 +172,19 @@ export function FlightTab({ lang }: { lang: LangCode }) {
           <T muted>{tr('captions.empty')}</T>
         ) : (
           announcements.slice(0, 5).map((a) => {
-            const tpl = getAnnouncement(a.templateId);
-            if (!tpl) return null;
+            const cap = captionOf(a, lang);
+            if (!cap) return null;
             return (
-              <Card key={a.id} accent={tpl.safety ? th.p.primary : undefined}>
+              <Card key={a.id} accent={cap.safety ? th.p.primary : undefined}>
                 <View style={{ flexDirection: 'row', gap: th.space.md, alignItems: 'flex-start' }}>
-                  <NeedIcon name={tpl.icon} color={th.p.primary} size={th.fs(26)} />
+                  <NeedIcon name={cap.icon} color={th.p.primary} size={th.fs(26)} />
                   <View style={{ flex: 1 }}>
                     <T v="caption" muted>
                       {ago(a.at)}
+                      {cap.sender ? ` · ${tr(cap.sender === 'captain' ? 'announce.captain' : 'announce.crew')}` : ''}
                     </T>
-                    <T v="bodyLarge">{localized(tpl.text, lang)}</T>
+                    <T v="bodyLarge">{cap.text}</T>
+                    {cap.machine && <T v="caption" muted>⚠ {tr('reply.machine')}</T>}
                   </View>
                 </View>
               </Card>

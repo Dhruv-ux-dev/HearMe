@@ -147,6 +147,8 @@ export const PA: LocalePack = {
     'requests.limit': 'ਇਹ ਬੇਨਤੀ ਪਹਿਲਾਂ ਹੀ ਖੁੱਲ੍ਹੀ ਹੈ।',
     'reply.from': 'ਕੈਬਿਨ ਕਰੂ',
     'reply.machine': 'ਮਸ਼ੀਨ ਅਨੁਵਾਦ, ਗਲਤੀ ਹੋ ਸਕਦੀ ਹੈ',
+    'announce.captain': 'ਕਪਤਾਨ ਵੱਲੋਂ',
+    'announce.crew': 'ਕੈਬਿਨ ਕਰੂ ਵੱਲੋਂ',
     'reply.playAgain': 'ਦੁਬਾਰਾ ਸੁਣਾਓ',
     'card.title': 'ਕਰੂ ਨੂੰ ਵਿਖਾਓ',
     'card.hint': 'ਤਸਵੀਰ ਵੱਲ ਇਸ਼ਾਰਾ ਕਰੋ ਅਤੇ ਸਕਰੀਨ ਕਰੂ ਨੂੰ ਵਿਖਾਓ। ਕਨੈਕਸ਼ਨ ਤੋਂ ਬਿਨਾਂ ਵੀ ਚੱਲਦਾ ਹੈ।',

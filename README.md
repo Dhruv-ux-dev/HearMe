@@ -123,6 +123,7 @@ Crew replies are read aloud on the passenger's phone in their language, with the
 
   At 85% confidence or above, the request is ready to send. Below that, the passenger sees *"Did you mean?"* pictures and *None of these, call crew*. When a keyword and the meaning model disagree, both are shown as pictures rather than one being guessed.
 - **Verified replies first.** Crew replies are pre-written phrases checked in all 6 languages. A crew member can also *say* a reply in Japanese. It is matched to the closest verified phrase and confirmed before it is sent.
+- **Announcements in their own words.** The captain or a crew member types or says an announcement in Japanese. The hub translates it offline into every language on the passenger list and in today's requests, with Hindi and English always included. The crew see each translation before sending. Every phone and seatback then shows its own language, marked *machine-translated*, and reads it aloud when the passenger has voice on. Safety announcements stay the fixed, human-written captions, and those are read aloud too.
 - **Own words, labelled.** When no verified reply fits, the crew member can send their own words, spoken or typed in Japanese. The hub translates them offline with NLLB-200 (`npm run models -- translate`, ~900 MB once; the first translation loads the model in ~15 s, later ones take 1–4 s). The crew member sees the translation before sending it. The passenger sees it marked *machine-translated, may have mistakes*, because nobody checked it.
 - **Care Mode.** A body map, a 0–10 pain scale, and symptom and condition lists, one tap from the home screen on both phone and seatback. The crew get a Japanese and English summary, with urgent reports first in red. One tap calls for a doctor; the call is captioned on every seat in that seat's language. The crew can also print a **handover sheet** for the doctor or the ground team.
 - **Crew console.** Live numbers: open requests, median answer time, understood first time, needed pictures, oldest wait, medical, languages.
@@ -196,13 +197,29 @@ All numbers were measured on a MacBook Air (M2, 8 GB RAM). The scripts and test 
 - Thai is the weak spot, especially in loud noise. Thai vocabulary and two Whisper Thai spellings (ขออยาก → ขอยา, ชาติ → ชาร์จ) were then fixed using the development set only. Thai on the held-out set went from 53% to 56%, and the development set from 50% to 64%. Folding long and short Thai vowels together was also tried: no measurable change.
 - Whisper-base is about 4× faster but less accurate (57–69% top-1).
 
-**Ten languages, and what each one really covers.** `npm run languages` writes [docs/languages.md](docs/languages.md): one row per language, one column per layer — speech, understanding requests, passenger screens, crew replies, reading aloud, and who checked the wording. A language is never just "supported".
+**Noise: a 300 Hz filter before Whisper.** Cabin noise is mostly engine rumble and hum below a few hundred hertz, where speech carries little of its meaning. The hub now cuts it with a 4th-order high-pass at 300 Hz, the bottom of the telephone band (`HEARME_HIGHPASS`, 0 turns it off).
+- **Measured:** on 36 held-out phrasings in Hindi, English and Japanese, right first time at 0 dB SNR went from 78% to 83%.
+- **Unchanged:** quiet speech stayed at 83%, and wrong-but-confident stayed at 3%.
+- **Caveat:** this is a small sample with synthetic voices and noise. The full 6-language run and real voices are still to do.
+- **Tried earlier and dropped:** spectral noise reduction made 0 dB worse (68% to 65%).
+
+**27 languages, including all 22 scheduled languages of India, and what each one really covers.** `npm run languages` writes [docs/languages.md](docs/languages.md): one row per language, one column per layer — speech, understanding requests, passenger screens, crew replies, reading aloud, and who checked the wording. A language is never just "supported".
 
 | | Speech | Understands | Screens | Replies | Checked by |
 | --- | --- | --- | --- | --- | --- |
 | Hindi, English, Japanese, Thai, Indonesian, Vietnamese | measured | all 40 needs | all | all 11 | non-native |
 | **Bengali, Tamil** | weak | all 40 needs | passenger path; rest in English | all 11 | non-native |
 | **Punjabi, Marathi** | not measured | all 40 needs | passenger path; rest in Hindi | all 11 | non-native |
+| **Assamese, Gujarati, Kannada, Malayalam, Nepali, Sanskrit, Sindhi, Telugu, Urdu** | Whisper has them; not measured | machine draft | machine draft, with a note | machine draft, with a note | machine only |
+| **Kashmiri, Maithili, Manipuri, Odia, Santali** | heard as Hindi (Kashmiri: Urdu) | machine draft | machine draft, with a note | machine draft, with a note | machine only |
+| **Bodo, Dogri, Konkani** | heard as Hindi (Konkani: Marathi) | via Hindi | in Hindi | in Hindi | nobody yet |
+
+**The 17 newest languages are machine drafts, and say so.** `npm run draft-languages -w @hearme/hub` translated their screens, need labels, replies and matching words offline with NLLB-200, one string at a time:
+- Placeholders such as `{n}` are protected.
+- A matching word that would read as another need is dropped.
+- Safety texts are never drafted: they appear in Hindi or English.
+
+Passengers in these languages see a *machine-translated* note on screens and replies until a native speaker checks them. Urdu, Sindhi and Kashmiri screens run right to left. NLLB-200 has no Bodo, Dogri or Konkani, so those show Hindi until a native speaker writes the pack.
 
 Bengali and Tamil used to be keyword-only: a passenger spoke Bengali at English screens. They now carry their own screens and replies, and Punjabi and Marathi are new. A pack language translates the 102-string passenger path (greeting, request grid, speaking, "Did you mean?", confirming, delivery status, the offline card, Care Mode), all 40 need labels and all 11 verified replies; anything else falls back to a core language the picker names before you choose it.
 

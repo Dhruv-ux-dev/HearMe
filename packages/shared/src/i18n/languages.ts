@@ -1,4 +1,5 @@
 import type { CoreLang, LangCode } from '../types';
+import { hasLocalePack } from './packs';
 
 /**
  * Which languages HearMe offers, and — layer by layer — how far each one
@@ -16,7 +17,9 @@ export type SpeechLevel = 'good' | 'weak' | 'untested' | 'none';
  *  complete – every string exists in this language
  *  partial  – the common path is translated; the rest falls back
  *  fallback – nothing translated; shown in `fallback`
- *  machine  – drafted by offline machine translation: used only to *understand*, never shown to a passenger
+ *  machine  – drafted by offline machine translation (NLLB-200) and not yet checked by a person.
+ *             It is used to understand requests, and shown to passengers only with a
+ *             "machine-translated" note. Safety texts are never drafted.
  */
 export type TextLevel = 'complete' | 'partial' | 'fallback' | 'machine' | 'none';
 
@@ -143,7 +146,71 @@ export const LANGUAGES: LanguageInfo[] = [
     coverage: { speech: 'untested', intent: 'complete', ui: 'partial', replies: 'complete', tts: 'rare', review: 'non-native' },
     note: 'Not yet measured on speech. Untranslated screen text appears in Hindi.',
   },
+
+  // ── The rest of India's 22 scheduled languages ──────────────────────────────
+  // Machine drafts: screens, replies and vocabulary translated offline by NLLB-200 from English
+  // (npm run draft-languages -w @hearme/hub), shown with a "machine-translated" note until a
+  // native speaker checks them. Where Whisper has no model, speech is heard as the closest
+  // language it has, so the passenger can speak that or type; pictures always work.
+  draft('as', 'অসমীয়া', 'Assamese', 'Beng', 'assamese', 'hi'),
+  draft('gu', 'ગુજરાતી', 'Gujarati', 'Gujr', 'gujarati', 'hi'),
+  draft('kn', 'ಕನ್ನಡ', 'Kannada', 'Knda', 'kannada', 'en'),
+  draft('ks', 'کٲشُر', 'Kashmiri', 'Arab', 'urdu', 'en', 'Urdu'),
+  draft('mai', 'मैथिली', 'Maithili', 'Deva', 'hindi', 'hi', 'Hindi'),
+  draft('ml', 'മലയാളം', 'Malayalam', 'Mlym', 'malayalam', 'en'),
+  draft('mni', 'মৈতৈলোন্', 'Manipuri (Meitei)', 'Beng', 'hindi', 'hi', 'Hindi'),
+  draft('ne', 'नेपाली', 'Nepali', 'Deva', 'nepali', 'hi'),
+  draft('or', 'ଓଡ଼ିଆ', 'Odia', 'Orya', 'hindi', 'hi', 'Hindi'),
+  draft('sa', 'संस्कृतम्', 'Sanskrit', 'Deva', 'sanskrit', 'hi'),
+  draft('sat', 'সাঁওতালি', 'Santali', 'Beng', 'hindi', 'hi', 'Hindi', 'Written here in Bengali script, the one the offline translator has; Ol Chiki is not drafted yet.'),
+  draft('sd', 'سنڌي', 'Sindhi', 'Arab', 'sindhi', 'en'),
+  draft('te', 'తెలుగు', 'Telugu', 'Telu', 'telugu', 'en'),
+  draft('ur', 'اردو', 'Urdu', 'Arab', 'urdu', 'en'),
+  // Not in NLLB-200: nothing to draft from, so Hindi screens until a native speaker writes the pack.
+  notYet('brx', 'बड़ो', 'Bodo', 'hindi', 'Hindi'),
+  notYet('doi', 'डोगरी', 'Dogri', 'hindi', 'Hindi'),
+  notYet('kok', 'कोंकणी', 'Konkani', 'marathi', 'Marathi'),
 ];
+
+function draft(code: LangCode, nativeName: string, englishName: string, script: string, whisper: string, fallback: CoreLang, heardAs?: string, extra?: string): LanguageInfo {
+  // Until its draft is generated, a language shows its fallback and says so.
+  if (!hasLocalePack(code)) {
+    return { ...notYet(code, nativeName, englishName, whisper, heardAs ?? englishName), script, fallback, note: `Being drafted: until then screens and replies appear in ${fallback === 'hi' ? 'Hindi' : 'English'}.` };
+  }
+  return {
+    code,
+    nativeName,
+    englishName,
+    bcp47: `${code}-IN`,
+    script,
+    whisper,
+    core: false,
+    fallback,
+    coverage: { speech: heardAs ? 'none' : 'untested', intent: 'machine', ui: 'machine', replies: 'machine', tts: 'rare', review: 'machine' },
+    note: [
+      'Machine draft (NLLB-200), not yet checked by a native speaker: screens and replies show a “machine-translated” note.',
+      heardAs ? `Whisper has no ${englishName}, so speech is heard as ${heardAs}: speak ${heardAs} or type.` : 'Speech not yet measured.',
+      extra,
+    ]
+      .filter(Boolean)
+      .join(' '),
+  };
+}
+
+function notYet(code: LangCode, nativeName: string, englishName: string, whisper: string, heardAs: string): LanguageInfo {
+  return {
+    code,
+    nativeName,
+    englishName,
+    bcp47: `${code}-IN`,
+    script: 'Deva',
+    whisper,
+    core: false,
+    fallback: 'hi',
+    coverage: { speech: 'none', intent: 'fallback', ui: 'fallback', replies: 'fallback', tts: 'none', review: 'none' },
+    note: `The offline translator has no ${englishName} yet: screens and replies appear in Hindi, and speech is heard as ${heardAs}. A native speaker can add the pack as one data file.`,
+  };
+}
 
 /** The six languages every catalogue is complete in. */
 export const CORE_LANGS: CoreLang[] = ['hi', 'en', 'ja', 'th', 'id', 'vi'];
@@ -170,6 +237,11 @@ export function languageName(code: string): string {
 /** Name in the language itself where we know it, else the English name. */
 export function languageNativeName(code: string): string {
   return BY_CODE.get(code)?.nativeName ?? languageName(code);
+}
+
+/** Urdu, Sindhi and Kashmiri are written right to left in Perso-Arabic script. */
+export function isRtl(code: string): boolean {
+  return findLanguage(code)?.script === 'Arab';
 }
 
 export function languageInfo(code: LangCode): LanguageInfo {
@@ -223,7 +295,7 @@ export function describeCoverage(code: LangCode): { layer: string; status: strin
         : level === 'fallback'
           ? `not translated — shown in ${fb}`
           : level === 'machine'
-            ? 'machine draft, used only to understand speech'
+            ? `machine draft (NLLB-200), shown with a “machine-translated” note; safety texts in ${fb}`
             : 'none';
   return [
     {

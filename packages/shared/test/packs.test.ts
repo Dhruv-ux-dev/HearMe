@@ -37,30 +37,35 @@ import { HELDOUT_PHRASES } from '../src/lab/phrases';
  */
 
 const packLangs = LOCALE_PACKS.map((p) => p.code);
+/** Hand-written packs keep the strict contract; machine drafts (NLLB-200) have their own, below. */
+const writtenPacks = packLangs.filter((l) => coverageOf(l).ui !== 'machine');
+const draftPacks = packLangs.filter((l) => coverageOf(l).ui === 'machine');
+/** Languages with a held-out test set: only these can be measured. */
+const measured = packLangs.filter((l) => HELDOUT_PHRASES[l]);
 
 describe('every language pack is complete where it says it is', () => {
-  it.each(packLangs)('%s translates the whole passenger path', (lang) => {
+  it.each(writtenPacks)('%s translates the whole passenger path', (lang) => {
     const pack = localePack(lang)!;
     const missing = PASSENGER_PATH_KEYS.filter((k) => !pack.ui[k]?.trim());
     expect(missing, `${lang} is missing ${missing.length} passenger-path strings`).toEqual([]);
   });
 
-  it.each(packLangs)('%s labels all 40 needs', (lang) => {
+  it.each(writtenPacks)('%s labels all 40 needs', (lang) => {
     const missing = NEEDS.filter((n) => !localePack(lang)!.needs[n.id]?.trim()).map((n) => n.id);
     expect(missing).toEqual([]);
   });
 
-  it.each(packLangs)('%s has every verified crew reply', (lang) => {
+  it.each(writtenPacks)('%s has every verified crew reply', (lang) => {
     const missing = REPLIES.filter((r) => !localePack(lang)!.replies[r.id]?.trim()).map((r) => r.id);
     expect(missing).toEqual([]);
   });
 
-  it.each(packLangs)('%s labels every purpose', (lang) => {
+  it.each(writtenPacks)('%s labels every purpose', (lang) => {
     const missing = PURPOSES.filter((p) => !localePack(lang)!.purposes?.[p.id]?.trim()).map((p) => p.id);
     expect(missing).toEqual([]);
   });
 
-  it.each(packLangs)('%s has matching vocabulary for all 40 needs', (lang) => {
+  it.each(writtenPacks)('%s has matching vocabulary for all 40 needs', (lang) => {
     const missing = NEEDS.filter((n) => !localePack(lang)!.phrases[n.id]?.length).map((n) => n.id);
     expect(missing).toEqual([]);
   });
@@ -135,7 +140,7 @@ describe('resolution never comes out blank', () => {
   });
 
   it('counts translated strings honestly', () => {
-    for (const lang of packLangs) {
+    for (const lang of writtenPacks) {
       const translated = translatedKeys(lang);
       expect(translated.length).toBeGreaterThanOrEqual(PASSENGER_PATH_KEYS.length);
       expect(translated.length).toBeLessThan(Object.keys(STRINGS).length);
@@ -189,7 +194,7 @@ describe('pack vocabulary actually matches requests', () => {
    */
   const KEYWORD_FLOOR = 10;
 
-  it.each(packLangs)('%s: keywords alone offer the right picture for at least 10 of 12', (lang) => {
+  it.each(measured)('%s: keywords alone offer the right picture for at least 10 of 12', (lang) => {
     const set = HELDOUT_PHRASES[lang]!;
     const failures: string[] = [];
     let offeredCount = 0;
@@ -207,7 +212,7 @@ describe('pack vocabulary actually matches requests', () => {
     // gets 1/12 top-1 in Bengali, Tamil and Punjabi (6/12 in Marathi, whose
     // script it shares with Hindi). With the packs it is 10–12 of 12.
     const withoutPacks = createKeywordMatcher(CORE_NEEDS);
-    for (const lang of packLangs) {
+    for (const lang of measured) {
       const set = HELDOUT_PHRASES[lang]!;
       const count = (m: typeof matcher) =>
         Object.entries(set).filter(([expected, sentence]) => {
@@ -227,5 +232,44 @@ describe('pack vocabulary actually matches requests', () => {
       }
     }
     expect(wrong, `${lang}\n${wrong.join('\n')}`).toEqual([]);
+  });
+});
+
+describe('machine-drafted languages say so and stay safe', () => {
+  const placeholders = (text: string) => [...text.matchAll(/\{\w+\}/g)].map((m) => m[0]).sort();
+
+  it.each(draftPacks)('%s is labelled a machine draft everywhere', (lang) => {
+    const c = coverageOf(lang);
+    expect([c.intent, c.ui, c.replies, c.review]).toEqual(['machine', 'machine', 'machine', 'machine']);
+    expect(localePack(lang)!.provenance).toMatch(/machine draft/i);
+    expect(languageInfo(lang).note).toMatch(/machine/i);
+  });
+
+  it.each(draftPacks)('%s covers most of the passenger path, and the rest falls back', (lang) => {
+    const pack = localePack(lang)!;
+    const path = PASSENGER_PATH_KEYS.filter((k) => !isReservedKey(k));
+    const have = path.filter((k) => pack.ui[k]?.trim());
+    expect(have.length / path.length, `${lang}: ${have.length}/${path.length}`).toBeGreaterThanOrEqual(0.85);
+    for (const k of path) expect(t(lang, k), `${lang} ${k}`).toBeTruthy();
+  });
+
+  it.each(draftPacks)('%s keeps every placeholder a string needs', (lang) => {
+    for (const [k, v] of Object.entries(localePack(lang)!.ui)) {
+      expect(placeholders(v!), `${lang} ${k}`).toEqual(placeholders(STRINGS[k as StringKey].en));
+    }
+  });
+
+  it.each(draftPacks)('%s labels every need, purpose and reply (in English where the draft failed)', (lang) => {
+    for (const n of NEEDS) expect(needLabel(n, lang)).toBeTruthy();
+    for (const p of PURPOSES) expect(purposeLabel(p, lang)).toBeTruthy();
+    for (const r of REPLIES) expect(replyTextOf(r, lang)).toBeTruthy();
+    const words = Object.values(localePack(lang)!.phrases).filter((w) => w.length).length;
+    expect(words, `${lang}: matching words for ${words}/40 needs`).toBeGreaterThanOrEqual(30);
+  });
+
+  it('offers all 22 scheduled languages of India', () => {
+    const india = ['as', 'bn', 'brx', 'doi', 'gu', 'hi', 'kn', 'ks', 'kok', 'mai', 'ml', 'mni', 'mr', 'ne', 'or', 'pa', 'sa', 'sat', 'sd', 'ta', 'te', 'ur'];
+    expect(india).toHaveLength(22);
+    for (const code of india) expect(LANGUAGES.some((l) => l.code === code), code).toBe(true);
   });
 });

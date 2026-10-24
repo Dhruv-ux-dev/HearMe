@@ -123,6 +123,7 @@ export class CabinRelay {
         const cmd = frame.cmd;
         if (cmd.type === 'reply') this.crew.reply(cmd.requestId, cmd.replyId);
         else if (cmd.type === 'message') this.crew.sendMessage(cmd.requestId, cmd.message);
+        else if (cmd.type === 'announceText') this.crew.announceText(cmd.broadcast);
         else if (cmd.type === 'announce') this.crew.announce(cmd.templateId);
         else if (cmd.type === 'autoReply') this.crew.setAutoReply(cmd.on);
         else if (cmd.type === 'reset') this.crew.reset();

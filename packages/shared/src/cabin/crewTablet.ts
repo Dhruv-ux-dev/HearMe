@@ -1,5 +1,5 @@
 import { getNeed } from '../catalog/needs';
-import type { CrewMessage, LangCode, MedicalReport, NeedPurpose, ProfileTag, ReplyId, RequestSource, Understanding } from '../types';
+import type { BroadcastMessage, CrewMessage, LangCode, MedicalReport, NeedPurpose, ProfileTag, ReplyId, RequestSource, Understanding } from '../types';
 import type { CabinBus } from './bus';
 import type { CabinMessage, DeviceKind } from './protocol';
 
@@ -35,6 +35,7 @@ export interface CrewAnnouncementLog {
   id: string;
   templateId: string;
   at: number;
+  broadcast?: BroadcastMessage;
 }
 
 export interface CrewTabletState {
@@ -62,6 +63,8 @@ export interface CrewTabletApi {
   /** The crew member's own words, machine-translated: shown to the passenger as such. */
   sendMessage(requestId: string, message: CrewMessage): void;
   announce(templateId: string): void;
+  /** The captain's or crew's own words, already machine-translated for each language on board. */
+  announceText(broadcast: BroadcastMessage): void;
   setAutoReply(autoReply: boolean): void;
   /** Clear all requests and captions (demo reset). */
   reset(): void;
@@ -142,6 +145,12 @@ export class CrewTablet implements CrewTabletApi {
 
   announce(templateId: string): void {
     const entry = { id: this.idFactory(), templateId, at: this.now() };
+    this.update({ ...this.state, announcements: [entry, ...this.state.announcements].slice(0, 20) });
+    this.bus.post({ type: 'announcement', ...entry });
+  }
+
+  announceText(broadcast: BroadcastMessage): void {
+    const entry = { id: this.idFactory(), templateId: 'custom', at: this.now(), broadcast };
     this.update({ ...this.state, announcements: [entry, ...this.state.announcements].slice(0, 20) });
     this.bus.post({ type: 'announcement', ...entry });
   }

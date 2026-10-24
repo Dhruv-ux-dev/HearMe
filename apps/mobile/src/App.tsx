@@ -1,4 +1,4 @@
-import { getAnnouncement, type LangCode, languageInfo, localized, translator } from '@hearme/shared';
+import { captionOf, findLanguage, isRtl, type LangCode, languageInfo, translator } from '@hearme/shared';
 import { useCrewMode, useSession } from '@hearme/shared/react';
 import { StatusBar } from 'expo-status-bar';
 import Hand from 'lucide-react-native/icons/hand';
@@ -13,7 +13,7 @@ import { ActivityIndicator, BackHandler, Platform, Pressable, Text, View } from 
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { ConnectionPill, T } from './components/ui';
 import { NavContext, useNav, type Nav, type Overlay, type Tab } from './nav';
-import { clearStoredSession, connectHub, inStage, link as cabinLink, loadSession, registerOfflineCache, session, startAutosave, unlockVoiceOnFirstTap } from './runtime';
+import { clearStoredSession, connectHub, inStage, link as cabinLink, loadSession, registerOfflineCache, replyVoice, session, startAutosave, unlockVoiceOnFirstTap } from './runtime';
 import { seatFromUrl } from './screens/Onboarding';
 import { Home } from './screens/Home';
 import { Onboarding } from './screens/Onboarding';
@@ -108,7 +108,7 @@ function Root({ startupNotice }: { startupNotice: string | null }) {
     <NavContext.Provider value={nav}>
       <StatusBar style="light" />
       <SafeAreaView edges={['top']} style={{ backgroundColor: th.p.navy }} />
-      <View style={{ flex: 1, backgroundColor: th.p.bg }} accessibilityLanguage={languageInfo(lang).bcp47}>
+      <View style={{ flex: 1, backgroundColor: th.p.bg, direction: isRtl(lang) ? 'rtl' : 'ltr' }} accessibilityLanguage={languageInfo(lang).bcp47}>
         <Header lang={lang} seat={profile.seat} />
         {startupNotice && <T v="caption" muted style={{ padding: 8 }}>{startupNotice}</T>}
         <CaptionToast lang={lang} />
@@ -158,15 +158,22 @@ function CaptionToast({ lang }: { lang: LangCode }) {
   const th = useTheme();
   const nav = useNav();
   const a = useSession(session, (s) => s.announcements.find((x) => x.id === s.unseenAnnouncement));
-  if (!a) return null;
-  const tpl = getAnnouncement(a.templateId);
-  if (!tpl) return null;
+  const voice = useSession(session, (s) => s.prefs.replyChannels.includes('voice'));
+  const cap = a ? captionOf(a, lang) : undefined;
+  // Read every announcement aloud in the passenger's language, when they asked for voice.
+  useEffect(() => {
+    if (!cap || !voice) return;
+    replyVoice.speak(cap.text, findLanguage(cap.lang)?.bcp47 ?? cap.lang);
+    return () => replyVoice.stop();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [a?.id, voice]);
+  if (!a || !cap) return null;
   const tr = translator(lang);
-  const bg = tpl.safety ? th.p.primary : th.p.navy;
-  const fg = tpl.safety ? th.p.onPrimary : th.p.onNavy;
+  const bg = cap.safety ? th.p.primary : th.p.navy;
+  const fg = cap.safety ? th.p.onPrimary : th.p.onNavy;
   return (
     <View
-      accessibilityLiveRegion={tpl.safety ? 'assertive' : 'polite'}
+      accessibilityLiveRegion={cap.safety ? 'assertive' : 'polite'}
       style={{ margin: th.space.md, marginBottom: 0, backgroundColor: bg, borderRadius: th.radius.md, flexDirection: 'row', alignItems: 'center', paddingLeft: th.space.md, borderWidth: th.hc ? 2 : 0, borderColor: th.p.border }}
     >
       <Megaphone color={fg} size={22} />
@@ -178,8 +185,9 @@ function CaptionToast({ lang }: { lang: LangCode }) {
         accessibilityRole="button"
         style={{ flex: 1, padding: th.space.md, minHeight: th.minTouch }}
       >
-        <Text style={{ color: fg, fontSize: th.fs(12), opacity: 0.9 }}>{tr('captions.title')}</Text>
-        <Text style={{ color: fg, fontSize: th.fs(th.t.body), fontWeight: '700' }}>{localized(tpl.text, lang)}</Text>
+        <Text style={{ color: fg, fontSize: th.fs(12), opacity: 0.9 }}>{cap.sender ? tr(cap.sender === 'captain' ? 'announce.captain' : 'announce.crew') : tr('captions.title')}</Text>
+        <Text style={{ color: fg, fontSize: th.fs(th.t.body), fontWeight: '700' }}>{cap.text}</Text>
+        {cap.machine && <Text style={{ color: fg, fontSize: th.fs(12), opacity: 0.9 }}>⚠ {tr('reply.machine')}</Text>}
       </Pressable>
       <Pressable onPress={() => session.markAnnouncementsSeen()} accessibilityRole="button" accessibilityLabel={tr('common.close')} style={{ width: th.minTouch, height: th.minTouch, alignItems: 'center', justifyContent: 'center' }}>
         <X color={fg} size={22} />

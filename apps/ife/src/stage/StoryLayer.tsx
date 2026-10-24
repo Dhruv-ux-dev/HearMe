@@ -1,4 +1,4 @@
-import { LANGUAGES, WebSocketBus, fetchHubStatus, hubSocketUrl, languageInfo, translator, type CrewCommand, type LangCode } from '@hearme/shared';
+import { LANGUAGES, WebSocketBus, fetchHubStatus, hubSocketUrl, languageInfo, localePack, translator, type CrewCommand, type LangCode } from '@hearme/shared';
 import { Film, Gavel, Play, RotateCcw, Square, X } from 'lucide-react';
 import { useMemo, useRef, useState } from 'react';
 import { hubBaseUrl } from '../common/hub';
@@ -294,8 +294,19 @@ export function StoryEnd({ story, onVideo }: { story: Story; onVideo: () => void
   );
 }
 
+/** Phrases to try in a language: hand-written ones, else the language pack's own examples (machine drafts included). */
+function tryPhrases(lang: LangCode): [string, string][] {
+  const own = TRY[lang];
+  if (own) return own;
+  const ex = localePack(lang)?.examples ?? {};
+  return [
+    [ex.blanket?.[0], 'Can I have a blanket, please?'],
+    [ex.water?.[0], 'Can I have water, please?'],
+  ].filter((p): p is [string, string] => !!p[0]);
+}
+
 /** Phrases a judge can try in each language (with what they mean). */
-const TRY: Record<LangCode, [string, string][]> = {
+const TRY: Partial<Record<LangCode, [string, string][]>> = {
   hi: [
     ['मुझे एक कंबल चाहिए', 'I need a blanket'],
     ['टॉयलेट कहाँ है?', 'Where is the toilet?'],
@@ -356,7 +367,7 @@ export function JudgePanel({ story, phoneUrl, trust }: { story: Story; phoneUrl:
       </div>
       <div className="judge-try">
         <small>Try saying ({languageInfo(lang).englishName}):</small>
-        {TRY[lang].map(([text, gloss]) => (
+        {tryPhrases(lang).map(([text, gloss]) => (
           <div key={text} className="judge-phrase">
             <q lang={languageInfo(lang).bcp47}>{text}</q>
             {gloss && <span>{gloss}</span>}

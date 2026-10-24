@@ -1,5 +1,5 @@
 import { LANGUAGES } from '../i18n/languages';
-import type { BodyArea, ConditionId, CrewMessage, LangCode, MedicalReport, NeedPurpose, ProfileTag, ReplyId, SymptomId, Understanding } from '../types';
+import type { BodyArea, BroadcastMessage, ConditionId, CrewMessage, LangCode, MedicalReport, NeedPurpose, ProfileTag, ReplyId, SymptomId, Understanding } from '../types';
 import type { CrewTabletState } from './crewTablet';
 import type { CabinMessage, PassengerToCrew } from './protocol';
 
@@ -17,6 +17,7 @@ export type HubRole = 'passenger' | 'crew' | 'observer';
 export type CrewCommand =
   | { type: 'reply'; requestId: string; replyId: ReplyId }
   | { type: 'message'; requestId: string; message: CrewMessage }
+  | { type: 'announceText'; broadcast: BroadcastMessage }
   | { type: 'announce'; templateId: string }
   | { type: 'autoReply'; on: boolean }
   | { type: 'reset' };
@@ -187,6 +188,16 @@ export function parseClientFrame(raw: unknown): ClientFrame | null {
       const { original, text, lang } = c.message;
       const ok = (s: unknown, max: number): s is string => typeof s === 'string' && s.trim().length > 0 && s.length <= max;
       if (ok(original, 300) && ok(text, 600) && ok(lang, 8)) return { kind: 'crew', cmd: { type: 'message', requestId: c.requestId, message: { original, text, lang } } };
+    }
+    if (c.type === 'announceText' && isObj(c.broadcast)) {
+      const { sender, original, texts } = c.broadcast;
+      const entries = isObj(texts) ? Object.entries(texts) : [];
+      const valid =
+        (sender === 'captain' || sender === 'crew') &&
+        typeof original === 'string' && original.trim().length > 0 && original.length <= 300 &&
+        entries.length > 0 && entries.length <= 40 &&
+        entries.every(([k, v]) => /^[a-z]{2,3}$/.test(k) && typeof v === 'string' && v.length > 0 && v.length <= 600);
+      if (valid) return { kind: 'crew', cmd: { type: 'announceText', broadcast: { sender, original, texts: Object.fromEntries(entries) as Record<string, string> } } };
     }
     if (c.type === 'announce' && isStr(c.templateId)) return { kind: 'crew', cmd: { type: 'announce', templateId: c.templateId } };
     if (c.type === 'autoReply' && typeof c.on === 'boolean') return { kind: 'crew', cmd: { type: 'autoReply', on: c.on } };

@@ -18,7 +18,12 @@ export type CoreLang = 'hi' | 'en' | 'ja' | 'th' | 'id' | 'vi';
  * each one is, layer by layer, is declared in `i18n/languages.ts` — ask
  * `coverageOf(lang)` rather than assuming.
  */
-export type LangCode = CoreLang | 'bn' | 'ta' | 'pa' | 'mr';
+/** The six core languages, then language packs: every scheduled language of India. */
+export type LangCode =
+  | CoreLang
+  | 'bn' | 'ta' | 'pa' | 'mr'
+  | 'as' | 'gu' | 'kn' | 'ks' | 'mai' | 'ml' | 'mni' | 'ne' | 'or' | 'sa' | 'sat' | 'sd' | 'te' | 'ur'
+  | 'brx' | 'doi' | 'kok';
 
 /**
  * Text available in every core language, and in whichever pack languages have
@@ -222,6 +227,21 @@ export interface Announcement {
   id: string;
   templateId: string;
   at: number;
+  /** An announcement in the captain's or crew's own words, instead of a template. */
+  broadcast?: BroadcastMessage;
+}
+
+/**
+ * What the captain or a crew member said or typed in their own words (in
+ * Japanese), machine-translated offline into each language on board. Shown
+ * to passengers marked as machine-translated. Safety announcements stay
+ * fixed, human-written templates.
+ */
+export interface BroadcastMessage {
+  sender: 'captain' | 'crew';
+  original: string;
+  /** Translations by language code, including the original's own language. */
+  texts: Record<string, string>;
 }
 
 /**

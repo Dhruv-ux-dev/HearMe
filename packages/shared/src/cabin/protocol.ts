@@ -1,4 +1,4 @@
-import type { CrewMessage, LangCode, MedicalReport, NeedPurpose, ProfileTag, ReplyId, RequestSource, Understanding } from '../types';
+import type { BroadcastMessage, CrewMessage, LangCode, MedicalReport, NeedPurpose, ProfileTag, ReplyId, RequestSource, Understanding } from '../types';
 
 /**
  * Messages exchanged between passenger devices (phone web app / seatback IFE)
@@ -37,7 +37,7 @@ export type PassengerToCrew =
 export type CrewToPassenger =
   | { type: 'request.received'; requestId: string; seat: string }
   | { type: 'request.reply'; requestId: string; seat: string; replyId?: ReplyId; message?: CrewMessage; crewName?: string; at: number }
-  | { type: 'announcement'; id: string; templateId: string; at: number }
+  | { type: 'announcement'; id: string; templateId: string; at: number; broadcast?: BroadcastMessage }
   | { type: 'crew.heartbeat'; at: number };
 
 export type CabinMessage = PassengerToCrew | CrewToPassenger;

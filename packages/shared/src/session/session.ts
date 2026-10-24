@@ -353,7 +353,7 @@ export class PassengerSession {
       if (this.state.announcements.some((a) => a.id === m.id)) return;
       if (!this.state.profile) return; // nobody is using this device yet
       this.set({
-        announcements: [{ id: m.id, templateId: m.templateId, at: m.at }, ...this.state.announcements].slice(0, 30),
+        announcements: [{ id: m.id, templateId: m.templateId, at: m.at, ...(m.broadcast ? { broadcast: m.broadcast } : {}) }, ...this.state.announcements].slice(0, 30),
         unseenAnnouncement: m.id,
       });
       return;

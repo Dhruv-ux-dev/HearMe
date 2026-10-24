@@ -5,7 +5,7 @@ import {
   COMMON_NEEDS,
   CREW_LANG,
   describeStatus,
-  getAnnouncement,
+  captionOf,
   getNeed,
   getPurpose,
   isActive,
@@ -535,16 +535,20 @@ export function CaptionsScreen({ session, lang }: { session: PassengerSession; l
       ) : (
         <ul className="ife-captions">
           {announcements.map((a) => {
-            const tpl = getAnnouncement(a.templateId);
-            if (!tpl) return null;
+            const cap = captionOf(a, lang);
+            if (!cap) return null;
             return (
-              <li key={a.id} className={`ife-caption${tpl.safety ? ' safety' : ''}`}>
+              <li key={a.id} className={`ife-caption${cap.safety ? ' safety' : ''}`}>
                 <span className="ife-caption__icon">
-                  <NeedIcon name={tpl.icon} size="100%" />
+                  <NeedIcon name={cap.icon} size="100%" />
                 </span>
                 <div>
-                  <time className="ife-caption__time">{new Date(a.at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</time>
-                  <p>{localized(tpl.text, lang)}</p>
+                  <time className="ife-caption__time">
+                    {new Date(a.at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    {cap.sender ? ` · ${tr(cap.sender === 'captain' ? 'announce.captain' : 'announce.crew')}` : ''}
+                  </time>
+                  <p>{cap.text}</p>
+                  {cap.machine && <p className="ife-caption__time">⚠ {tr('reply.machine')}</p>}
                 </div>
               </li>
             );

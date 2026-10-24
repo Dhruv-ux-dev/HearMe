@@ -151,6 +151,28 @@ describe('cabin hub', () => {
     }
   });
 
+  it('translates an announcement for every language on board and delivers it to every seat', async () => {
+    const t = await (await fetch(`${base}/api/announce/translate`, { method: 'POST', body: JSON.stringify({ text: 'まもなく着陸します' }) })).json();
+    expect(t.texts.ja).toBe('まもなく着陸します');
+    expect(t.texts.hi).toBe('[ja→hi] まもなく着陸します');
+    expect(t.texts.en).toBe('[ja→en] まもなく着陸します');
+    expect((await fetch(`${base}/api/announce/translate`, { method: 'POST', body: JSON.stringify({ text: '' }) })).status).toBe(400);
+    const crew = new RemoteCrewTablet(base, { factory });
+    const link = new DemoCabinLink('hub', { hubUrl: base, wsFactory: factory });
+    const session = new PassengerSession({ link, device: 'phone' });
+    try {
+      session.setProfile({ lang: 'hi', seat: '23C', tags: [], shareTagsWithCrew: false });
+      await waitFor(() => session.getState().link === 'online' && crew.isConnected());
+      crew.announceText({ sender: 'crew', original: 'まもなく着陸します', texts: t.texts });
+      await waitFor(() => session.getState().announcements.length === 1);
+      expect(session.getState().announcements[0]!.broadcast?.texts.hi).toBe('[ja→hi] まもなく着陸します');
+    } finally {
+      session.dispose();
+      link.dispose();
+      crew.dispose();
+    }
+  });
+
   it('drops malformed frames and requests for a seat the device did not register', async () => {
     const crew = new RemoteCrewTablet(base, { factory });
     const ws = new WebSocket(base.replace('http', 'ws') + '/ws');
@@ -209,8 +231,8 @@ describe('cabin hub', () => {
   it('lists language packs and understands their language (Bengali: typed, with a Bengali booking)', async () => {
     const l = await (await fetch(`${base}/api/languages`)).json();
     expect(l.builtIn).toHaveLength(6);
-    // Ten languages, each with its coverage spelled out layer by layer.
-    expect(l.languages).toHaveLength(10);
+    // 27 languages (6 core + all 22 scheduled languages of India, Hindi counted once), each with its coverage spelled out layer by layer.
+    expect(l.languages).toHaveLength(27);
     const bengali = l.languages.find((x: { code: string }) => x.code === 'bn');
     expect(bengali).toMatchObject({ core: false, fallback: 'en', coverage: { intent: 'complete', ui: 'partial', replies: 'complete' } });
     expect(bengali.uiStrings).toBeGreaterThan(80);

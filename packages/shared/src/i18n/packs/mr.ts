@@ -146,6 +146,8 @@ export const MR: LocalePack = {
     'requests.limit': 'ही विनंती आधीच सुरू आहे.',
     'reply.from': 'केबिन कर्मचारी',
     'reply.machine': 'यंत्राने केलेले भाषांतर, चूक असू शकते',
+    'announce.captain': 'कॅप्टनकडून',
+    'announce.crew': 'केबिन कर्मचाऱ्यांकडून',
     'reply.playAgain': 'पुन्हा ऐकवा',
     'card.title': 'कर्मचाऱ्यांना दाखवा',
     'card.hint': 'चित्राकडे बोट दाखवा आणि स्क्रीन कर्मचाऱ्यांना दाखवा. जोडणीशिवायही चालते.',

@@ -22,10 +22,25 @@ export const NLLB_CODES: Record<string, string> = {
   ta: 'tam_Taml',
   pa: 'pan_Guru',
   mr: 'mar_Deva',
+  as: 'asm_Beng',
+  gu: 'guj_Gujr',
+  kn: 'kan_Knda',
+  ks: 'kas_Arab',
+  mai: 'mai_Deva',
+  ml: 'mal_Mlym',
+  mni: 'mni_Beng',
+  ne: 'npi_Deva',
+  or: 'ory_Orya',
+  sa: 'san_Deva',
+  sat: 'sat_Beng',
+  sd: 'snd_Arab',
+  te: 'tel_Telu',
+  ur: 'urd_Arab',
 };
 
 export interface Translator {
-  translate(text: string, from: string, to: string): Promise<string>;
+  /** `maxNewTokens` caps the output (default 96): short inputs get short caps, so nothing runs on. */
+  translate(text: string, from: string, to: string, maxNewTokens?: number): Promise<string>;
 }
 
 /**
@@ -90,7 +105,7 @@ export async function createNllb(threads: number): Promise<Translator> {
     session_options: { intraOpNumThreads: threads, interOpNumThreads: 1 },
   } as never)) as unknown as (texts: string[], opts: Record<string, unknown>) => Promise<{ translation_text: string }[]>;
   return {
-    async translate(text, from, to) {
+    async translate(text, from, to, maxNewTokens = 96) {
       const src = NLLB_CODES[from];
       const tgt = NLLB_CODES[to];
       if (!src || !tgt) throw new Error(`no translation for ${from} → ${to}`);
@@ -98,7 +113,7 @@ export async function createNllb(threads: number): Promise<Translator> {
       const sentences = text.split(/(?<=[。！？!?])\s*/u).filter((s) => s.trim());
       const out: string[] = [];
       for (const s of sentences) {
-        const [r] = await run([s], { src_lang: src, tgt_lang: tgt, max_new_tokens: 96 });
+        const [r] = await run([s], { src_lang: src, tgt_lang: tgt, max_new_tokens: maxNewTokens });
         out.push(keepTarget(r?.translation_text ?? '', tgt.split('_')[1]!));
       }
       return out.filter(Boolean).join(' ');

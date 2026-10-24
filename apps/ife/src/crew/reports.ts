@@ -21,7 +21,12 @@ import {
 const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!);
 const time = (ms: number) => new Date(ms).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 const list = (items: string[]) => `<ul>${items.map((i) => `<li>${esc(i)}</li>`).join('')}</ul>`;
-const LANG_JA: Record<string, string> = { hi: 'ヒンディー語', en: '英語', ja: '日本語', th: 'タイ語', id: 'インドネシア語', vi: 'ベトナム語' };
+const LANG_JA: Record<string, string> = {
+  hi: 'ヒンディー語', en: '英語', ja: '日本語', th: 'タイ語', id: 'インドネシア語', vi: 'ベトナム語',
+  bn: 'ベンガル語', ta: 'タミル語', pa: 'パンジャブ語', mr: 'マラーティー語',
+  as: 'アッサム語', gu: 'グジャラート語', kn: 'カンナダ語', ks: 'カシミール語', mai: 'マイティリー語', ml: 'マラヤーラム語', mni: 'マニプリ語', ne: 'ネパール語', or: 'オディア語',
+  sa: 'サンスクリット語', sat: 'サンタル語', sd: 'シンド語', te: 'テルグ語', ur: 'ウルドゥー語', brx: 'ボド語', doi: 'ドーグリー語', kok: 'コンカニ語',
+};
 
 const CSS = `
   body { font: 15px/1.5 "Noto Sans", "Hiragino Sans", system-ui, sans-serif; color: #12213f; margin: 32px auto; max-width: 760px; padding: 0 20px; }
@@ -109,6 +114,6 @@ export function openFlightReport(state: CrewTabletState): void {
        ${row('Medical reports', medical.length ? esc(medical.map((r) => `${r.seat}${isUrgentMedical(r.medical) ? ' URGENT' : ''} ${time(r.receivedAt)}`).join(', ')) : 'none')}
      </table>
      <h2>Captions sent</h2>
-     <table>${[...ann.entries()].map(([id, n]) => row(esc(ANNOUNCEMENTS.find((a) => a.id === id)?.text.en ?? id), String(n))).join('') || row('—', '0')}</table>`,
+     <table>${[...ann.entries()].map(([id, n]) => row(esc(id === 'custom' ? 'In the crew’s or captain’s own words (machine-translated)' : (ANNOUNCEMENTS.find((a) => a.id === id)?.text.en ?? id)), String(n))).join('') || row('—', '0')}</table>`,
   );
 }

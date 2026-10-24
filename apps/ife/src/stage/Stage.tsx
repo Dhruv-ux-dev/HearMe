@@ -1,5 +1,6 @@
 import { JalBrand } from '../common/JalBrand';
 import {
+  LANGUAGES,
   type CabinMessage,
   type CrewTabletState,
   getAnnouncement,
@@ -81,6 +82,11 @@ function describe(m: CabinMessage, state: CrewTabletState | null): Item | null {
       };
     }
     case 'announcement': {
+      if (m.broadcast) {
+        const who = m.broadcast.sender === 'captain' ? 'The captain' : 'The crew';
+        const langs = Object.keys(m.broadcast.texts).filter((l) => l !== 'ja');
+        return { id, at: Date.now(), dir: 'to-passenger', title: `${who} announced in their own words: “${m.broadcast.original}”`, detail: `Machine-translated on this laptop into ${langs.length} languages; every seat shows and reads its own`, tone: 'info' };
+      }
       const a = getAnnouncement(m.templateId);
       return { id, at: Date.now(), dir: 'to-passenger', title: `Caption to every seat: ${a?.text.en ?? m.templateId}`, detail: 'Each device shows it in its own language', tone: 'info' };
     }
@@ -290,8 +296,8 @@ export function Stage() {
           <span className="stage-chip ok">
             <WifiOff aria-hidden /> no internet needed
           </span>
-          <span className="stage-chip ok" title={packs.map((p) => `${p.name}: understood through a language pack (${p.draft} draft), screens in English`).join('\n') || 'Add one: npm run add-language -w @hearme/hub -- <code> --draft'}>
-            <Languages aria-hidden /> 6 languages{packs.length ? ` + ${packs.map((p) => p.name).join(', ')}` : ''}
+          <span className="stage-chip ok" title={LANGUAGES.map((l) => `${l.englishName}: ${l.note ?? (l.core ? 'core language' : 'language pack')}`).join('\n')}>
+            <Languages aria-hidden /> {LANGUAGES.length} languages, all 22 of India
           </span>
         </div>
         <div className="stage-actions">

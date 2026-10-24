@@ -20,7 +20,8 @@
     "chart": "tsx src/scripts/chart.ts",
     "add-language": "tsx src/scripts/add-language.ts",
     "multi": "tsx src/scripts/multi.ts",
-    "languages": "tsx src/scripts/languages.ts"
+    "languages": "tsx src/scripts/languages.ts",
+    "draft-languages": "tsx src/scripts/draft-languages.ts"
   },
   "dependencies": {
     "@hearme/shared": "*",

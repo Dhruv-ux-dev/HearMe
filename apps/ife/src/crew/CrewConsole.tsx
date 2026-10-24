@@ -91,6 +91,8 @@ export function CrewConsole() {
 const LANG_JA: Record<LangCode, string> = {
   hi: 'ヒンディー語', en: '英語', ja: '日本語', th: 'タイ語', id: 'インドネシア語', vi: 'ベトナム語',
   bn: 'ベンガル語', ta: 'タミル語', pa: 'パンジャブ語', mr: 'マラーティー語',
+  as: 'アッサム語', gu: 'グジャラート語', kn: 'カンナダ語', ks: 'カシミール語', mai: 'マイティリー語', ml: 'マラヤーラム語', mni: 'マニプリ語', ne: 'ネパール語', or: 'オディア語',
+  sa: 'サンスクリット語', sat: 'サンタル語', sd: 'シンド語', te: 'テルグ語', ur: 'ウルドゥー語', brx: 'ボド語', doi: 'ドーグリー語', kok: 'コンカニ語',
 };
 const tagJa = (tag: ProfileTag) => t('ja', `tag.${tag}`);
 const tagEn = (tag: ProfileTag) => t('en', `tag.${tag}`);
@@ -321,8 +323,120 @@ function Console({ tablet, viaHub }: { tablet: CrewTabletApi; viaHub: boolean })
               Last sent {ago(state.announcements[0].at)} ago.
             </p>
           )}
+          {viaHub && <OwnAnnouncement tablet={tablet} />}
         </section>
       </div>
+    </div>
+  );
+}
+
+/**
+ * The captain or a crew member makes an announcement in their own words
+ * (typed or spoken in Japanese). The hub machine-translates it into every
+ * language on board; the crew see each translation before sending, and every
+ * seat shows and reads its own, marked as machine-translated. Safety
+ * announcements stay the fixed captions above.
+ */
+function OwnAnnouncement({ tablet }: { tablet: CrewTabletApi }) {
+  const rec = useRef(new MicRecorder());
+  const [sender, setSender] = useState<'crew' | 'captain'>('crew');
+  const [text, setText] = useState('');
+  const [phase, setPhase] = useState<'idle' | 'listening' | 'hearing' | 'translating'>('idle');
+  const [result, setResult] = useState<{ source: string; texts: Record<string, string> } | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [sent, setSent] = useState(false);
+  useEffect(() => () => rec.current.cancel(), []);
+  useEffect(() => {
+    void fetch(`${hubBaseUrl()}/api/translate/warm`, { method: 'POST' }).catch(() => undefined);
+  }, []);
+
+  const listen = async () => {
+    setError(null);
+    try {
+      await rec.current.start(() => undefined, () => void hear());
+      setPhase('listening');
+    } catch {
+      setError('Microphone not available. Type the announcement instead.');
+    }
+  };
+  const hear = async () => {
+    setPhase('hearing');
+    try {
+      const res = await recordAndUnderstand(rec.current, hubBaseUrl(), 'ja', 'replies');
+      if (res.transcript.trim()) setText(res.transcript.trim());
+    } catch {
+      setError('Could not hear that. Type the announcement instead.');
+    }
+    setPhase('idle');
+  };
+  const translate = async () => {
+    const source = text.trim();
+    if (!source) return;
+    setPhase('translating');
+    setError(null);
+    setSent(false);
+    try {
+      const res = await fetch(`${hubBaseUrl()}/api/announce/translate`, { method: 'POST', body: JSON.stringify({ text: source, from: 'ja' }) });
+      const body = (await res.json()) as { texts?: Record<string, string>; error?: string };
+      if (!res.ok || !body.texts) throw new Error(body.error ?? 'translation failed');
+      setResult({ source, texts: body.texts });
+    } catch (e) {
+      setError(`Could not translate: ${e instanceof Error ? e.message : String(e)}`);
+    }
+    setPhase('idle');
+  };
+  const fresh = result && result.source === text.trim();
+  return (
+    <div className="crew2-own" aria-label="Announcement in your own words">
+      <div className="crew2-own__label" lang="en">
+        自分の言葉でアナウンス · Announce in your own words
+        <span className="crew2-own__who" role="radiogroup" aria-label="Who is speaking">
+          {(['crew', 'captain'] as const).map((s) => (
+            <label key={s}>
+              <input type="radio" name="announce-sender" checked={sender === s} onChange={() => setSender(s)} /> {s === 'crew' ? '客室乗務員 Crew' : '機長 Captain'}
+            </label>
+          ))}
+        </span>
+        <textarea value={text} maxLength={300} rows={2} onChange={(e) => setText(e.target.value)} placeholder="例: まもなく着陸します。お手洗いは今のうちにお済ませください。" />
+      </div>
+      <div className="crew2-own__row">
+        <button className="crew2-own__btn" onClick={phase === 'listening' ? () => void hear() : () => void listen()} disabled={phase === 'hearing' || phase === 'translating'}>
+          {phase === 'listening' ? <Square aria-hidden /> : <Mic aria-hidden />} {phase === 'listening' ? '話し終わったらタップ · Tap when done' : phase === 'hearing' ? '認識中… · Hearing…' : '話す · Speak'}
+        </button>
+        <button className="crew2-own__btn" onClick={() => void translate()} disabled={!text.trim() || phase !== 'idle'}>
+          {phase === 'translating' ? '翻訳中… · Translating…' : '全言語に翻訳 · Translate for everyone on board'}
+        </button>
+      </div>
+      {error && (
+        <p className="crew2-note" lang="en">
+          {error}
+        </p>
+      )}
+      {fresh && (
+        <div className="crew2-own__preview">
+          <small lang="en">Every seat will see its own language, marked machine-translated (not checked):</small>
+          <ul className="crew2-own__langs">
+            {Object.entries(result.texts)
+              .filter(([l]) => l !== 'ja')
+              .map(([l, t]) => (
+                <li key={l}>
+                  <b lang="en">{languageName(l)}</b> <span lang={l}>{t}</span>
+                </li>
+              ))}
+          </ul>
+          <button
+            className="crew2-reply t-positive"
+            disabled={sent}
+            onClick={() => {
+              tablet.announceText({ sender, original: result.source, texts: result.texts });
+              setSent(true);
+            }}
+          >
+            <span>{sent ? '送信しました' : '全席に送る'}</span>
+            <small lang="en">{sent ? 'Sent to every seat' : 'Send to every seat'}</small>
+          </button>
+        </div>
+      )}
     </div>
   );
 }

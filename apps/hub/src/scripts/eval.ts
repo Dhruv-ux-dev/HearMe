@@ -29,7 +29,7 @@ import {
   type LangCode,
   type MatchResult,
 } from '@hearme/shared';
-import { createE5, createWhisper, hasSpeech, AiEngine } from '../ai';
+import { createE5, createWhisper, hasSpeech, highPass, HIGH_PASS_HZ, AiEngine } from '../ai';
 import { denoise } from '../denoise';
 import { loadNeedHead } from '../head';
 import { inferenceThreads, type AsrSize } from '../models';
@@ -255,7 +255,9 @@ async function speechEval(embedder: Embedder) {
   // --set heldout speaks the held-out phrasings (never used for tuning) instead of the tuning set's first phrasing.
   const set = opt('set', 'tuning') === 'heldout' ? 'heldout' : 'tuning';
   const phrases = (set === 'heldout' ? HELDOUT_PHRASES : NEED_PHRASES) as PhraseSet;
-  const spoken = (Object.keys(phrases) as LangCode[]).filter((l) => VOICES[l]);
+  // --langs hi,en,ja limits the run (a quick check); default: every language with a macOS voice.
+  const only = opt('langs', '').split(',').filter(Boolean);
+  const spoken = (Object.keys(phrases) as LangCode[]).filter((l) => VOICES[l] && (!only.length || only.includes(l)));
   const skipped = (Object.keys(phrases) as LangCode[]).filter((l) => !VOICES[l]);
   console.log(`\n▶ Synthetic speech (${set} set) → Whisper-${size} → keywords + e5 + head (one phrasing per need, conditions: clean, ${snrs.join(', ')} dB SNR)`);
   if (skipped.length) {
@@ -290,7 +292,8 @@ async function speechEval(embedder: Embedder) {
       const clean = synthesize(text, lang, join(dir, `${set}-${lang}-${expected}`));
       for (const snr of conditions) {
         const noisy = Number.isFinite(snr) ? mix(clean, snr) : clean;
-        const audio = flag('denoise') ? denoise(noisy) : noisy;
+        const hp = Number(opt('hp', String(HIGH_PASS_HZ)));
+        const audio = highPass(flag('denoise') ? denoise(noisy) : noisy, hp);
         const t0 = Date.now();
         const transcript = hasSpeech(audio) ? await asr.transcribe(audio, lang) : '';
         const asrMs = Date.now() - t0;
@@ -347,7 +350,7 @@ const previous = (() => {
   }
 })();
 const heldOutSpeech = speech?.set === 'heldout';
-if (heldOutSpeech) writeFileSync(join(OUT, `results-${speech.model}-heldout${flag('denoise') ? '-denoise' : ''}.json`), JSON.stringify({ at: new Date().toISOString(), speech }, null, 2));
+if (heldOutSpeech) writeFileSync(join(OUT, `results-${speech.model}-heldout${flag('denoise') ? '-denoise' : ''}${Number(opt('hp', String(HIGH_PASS_HZ))) > 0 ? `-hp${opt('hp', String(HIGH_PASS_HZ))}` : ''}.json`), JSON.stringify({ at: new Date().toISOString(), speech }, null, 2));
 writeFileSync(
   join(OUT, 'results.json'),
   JSON.stringify({ ...previous, at: new Date().toISOString(), calibration: SEMANTIC_CALIBRATION, text, crew, ...(speech && !heldOutSpeech ? { speech } : {}) }, null, 2),

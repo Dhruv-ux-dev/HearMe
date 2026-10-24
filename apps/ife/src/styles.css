@@ -2376,6 +2376,30 @@ svg {
   color: var(--c-text);
   resize: vertical;
 }
+.crew2-own__who {
+  display: flex;
+  gap: 14px;
+  font-weight: 400;
+}
+.crew2-own__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.crew2-own__btn svg {
+  width: 14px;
+  height: 14px;
+  vertical-align: -2px;
+}
+.crew2-own__langs {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 14px;
+}
 .crew2-own__btn {
   align-self: flex-start;
   border: 1px solid var(--c-border);
