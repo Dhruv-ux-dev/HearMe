@@ -2219,6 +2219,26 @@ svg {
   font-weight: 700;
   color: var(--c-warning);
 }
+.crew2-said {
+  background: var(--c-primary-soft);
+  border-radius: 12px;
+  padding: 10px 12px;
+  margin: 8px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.crew2-said__label {
+  color: var(--c-primary-strong);
+  font-size: 12px;
+  font-weight: 700;
+}
+.crew2-said q {
+  font-size: 16px;
+}
+.crew2-said p {
+  margin: 0;
+}
 .crew2-med {
   background: var(--c-primary-soft);
   border: 1px solid color-mix(in srgb, var(--c-danger) 40%, var(--c-surface));

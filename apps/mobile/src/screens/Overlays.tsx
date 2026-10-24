@@ -406,7 +406,10 @@ function AskSheet({ lang, o }: { lang: LangCode; o: Extract<Overlay, { kind: 'as
         <Btn
           variant="ghost"
           label={tr('speech.noneCallCrew')}
-          onPress={() => nav.open({ kind: 'review', needId: 'call_crew', source: o.source, understanding: { confidence: o.confidence, viaPictures: true } })}
+          // What they said goes too: the crew read it machine-translated instead of arriving knowing nothing.
+          onPress={() =>
+            nav.open({ kind: 'review', needId: 'call_crew', source: o.source, understanding: { confidence: o.confidence, viaPictures: true, ...(o.transcript ? { said: o.transcript } : {}) } })
+          }
           icon={(c, sz) => <BellRing color={c} size={sz} />}
           hint={tr('ask.cannotUnderstand')}
         />

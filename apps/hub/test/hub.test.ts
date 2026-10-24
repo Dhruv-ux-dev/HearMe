@@ -79,6 +79,24 @@ describe('cabin hub', () => {
     expect(s.embed.state).toBe('ready');
   });
 
+  it('carries what the passenger said with a call for crew, so the crew can read it translated', async () => {
+    const crew = new RemoteCrewTablet(base, { factory });
+    const link = new DemoCabinLink('hub', { hubUrl: base, wsFactory: factory });
+    const session = new PassengerSession({ link, device: 'phone' });
+    try {
+      session.setProfile({ lang: 'te', seat: '31K', tags: [], shareTagsWithCrew: false });
+      await waitFor(() => session.getState().link === 'online');
+      const said = 'నా పాపకి జ్వరం వచ్చినట్టుంది';
+      session.submit({ needId: 'call_crew', source: 'speech', understanding: { confidence: 0.4, viaPictures: true, said } });
+      await waitFor(() => crew.getState().requests.length === 1);
+      expect(crew.getState().requests[0]).toMatchObject({ needId: 'call_crew', lang: 'te', understanding: { said } });
+    } finally {
+      session.dispose();
+      link.dispose();
+      crew.dispose();
+    }
+  });
+
   it('delivers a phone request to the shared crew tablet and the reply back to that seat only', async () => {
     const crew = new RemoteCrewTablet(base, { factory });
     const link = new DemoCabinLink('hub', { hubUrl: base, wsFactory: factory });

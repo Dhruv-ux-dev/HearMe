@@ -10,6 +10,7 @@ import {
   CrewTablet,
   type CrewTabletApi,
   defaultReplyFor,
+  findLanguage,
   formatDuration,
   getNeed,
   getPurpose,
@@ -631,6 +632,8 @@ function Detail({ r, tablet, viaHub }: { r: CrewRequest; tablet: CrewTabletApi; 
         </div>
       </div>
 
+      {r.understanding?.said && <PassengerWords key={r.requestId} r={r} said={r.understanding.said} />}
+
       {r.medical && (
         <div className={`crew2-med${isUrgentMedical(r.medical) ? ' urgent' : ''}`}>
           <div className="crew2-med__title">
@@ -789,6 +792,55 @@ function VoiceReply({ r, tablet }: { r: CrewRequest; tablet: CrewTabletApi }) {
       ) : (
         <OwnWords key={result?.transcript ?? ''} r={r} tablet={tablet} initial={ownWords} />
       )}
+    </div>
+  );
+}
+
+/**
+ * What a passenger said when HearMe could not match it and they called the
+ * crew instead: their words, and the same translated offline on the hub into
+ * Japanese and English, so the crew member walks up knowing what it is about.
+ * Without the translator the original still shows.
+ */
+function PassengerWords({ r, said }: { r: CrewRequest; said: string }) {
+  const from = r.spokenLang ?? r.lang;
+  const [out, setOut] = useState<{ ja?: string; en?: string; error?: string } | null>(null);
+  useEffect(() => {
+    let live = true;
+    const to = async (lang: 'ja' | 'en') => {
+      const res = await fetch(`${hubBaseUrl()}/api/translate`, { method: 'POST', body: JSON.stringify({ text: said, from, to: lang }) });
+      const body = (await res.json()) as { text?: string; error?: string };
+      if (!res.ok || !body.text) throw new Error(body.error ?? 'translation failed');
+      return body.text;
+    };
+    // One after the other: the hub translates one sentence at a time.
+    void (async () => {
+      try {
+        const ja = await to('ja');
+        if (live) setOut({ ja });
+        const en = await to('en');
+        if (live) setOut({ ja, en });
+      } catch (e) {
+        if (live) setOut((o) => ({ ...o, error: e instanceof Error ? e.message : String(e) }));
+      }
+    })();
+    return () => {
+      live = false;
+    };
+  }, [said, from]);
+  return (
+    <div className="crew2-said">
+      <div className="crew2-said__label">
+        お客様の言葉 · <span lang="en">Passenger said ({languageName(from)})</span>
+      </div>
+      <q lang={findLanguage(from)?.bcp47 ?? from}>{said}</q>
+      <div className="crew2-said__label">
+        機械翻訳 · <span lang="en">Machine translation, not checked</span>
+      </div>
+      {out?.ja && <p lang="ja">{out.ja}</p>}
+      {out?.en && <p lang="en">{out.en}</p>}
+      {!out && <p lang="en">Translating…</p>}
+      {out?.error && !out.ja && <p lang="en">Could not translate ({out.error}). Show the passenger the pictures, or reply with your own words below.</p>}
     </div>
   );
 }

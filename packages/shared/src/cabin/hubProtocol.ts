@@ -113,7 +113,8 @@ function subset<T extends string>(v: unknown, allowed: Set<T>, max = 8): T[] | n
 function parseUnderstanding(v: unknown): Understanding | undefined | null {
   if (v === undefined) return undefined;
   if (!isObj(v) || typeof v.confidence !== 'number' || typeof v.viaPictures !== 'boolean') return null;
-  return { confidence: Math.max(0, Math.min(1, v.confidence)), viaPictures: v.viaPictures };
+  const said = typeof v.said === 'string' ? v.said.trim().slice(0, 300) : '';
+  return { confidence: Math.max(0, Math.min(1, v.confidence)), viaPictures: v.viaPictures, ...(said ? { said } : {}) };
 }
 
 function parseMedical(v: unknown): MedicalReport | undefined | null {
