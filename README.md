@@ -129,8 +129,8 @@ Crew replies are read aloud on the passenger's phone in their language, with the
 
   At 85% confidence or above, the request is ready to send. Below that, the passenger sees *"Did you mean?"* pictures and *None of these, call crew*. When a keyword and the meaning model disagree, both are shown as pictures rather than one being guessed.
 - **Verified replies first.** Crew replies are pre-written phrases checked in all 6 languages. A crew member can also *say* a reply in Japanese. It is matched to the closest verified phrase and confirmed before it is sent.
-- **Announcements in their own words.** The captain or a crew member types or says an announcement in Japanese. The hub translates it offline into every language on the passenger list and in today's requests, with Hindi and English always included. The crew see each translation before sending. Every phone and seatback then shows its own language, marked *machine-translated*, and reads it aloud when the passenger has voice on. Safety announcements stay the fixed, human-written captions, and those are read aloud too.
-- **Own words, labelled.** When no verified reply fits, the crew member can send their own words, spoken or typed in Japanese. The hub translates them offline with NLLB-200 (`npm run models -- translate`, ~900 MB once; the first translation loads the model in ~15 s, later ones take 1–4 s). The crew member sees the translation before sending it. The passenger sees it marked *machine-translated, may have mistakes*, because nobody checked it.
+- **Announcements in their own words.** The captain or a crew member types or says an announcement in Japanese. The hub translates it offline into every language on the passenger list and in today's requests, with Hindi and English always included. The crew see each translation before sending. Every phone and seatback then shows its own language and reads it aloud when the passenger has voice on. Safety announcements stay the fixed, human-written captions, and those are read aloud too.
+- **Own words, labelled.** When no verified reply fits, the crew member can send their own words, spoken or typed in Japanese. The hub translates them offline with NLLB-200 (`npm run models -- translate`, ~900 MB once; the first translation loads the model in ~15 s, later ones take 1–4 s). The crew member sees the translation before sending it. The crew see the translation before sending it, because nobody checked it.
 - **Care Mode.** A body map, a 0–10 pain scale, and symptom and condition lists, one tap from the home screen on both phone and seatback. The crew get a Japanese and English summary, with urgent reports first in red. One tap calls for a doctor; the call is captioned on every seat in that seat's language. The crew can also print a **handover sheet** for the doctor or the ground team.
 - **Crew console.** Live numbers: open requests, median answer time, understood first time, needed pictures, oldest wait, medical, languages.
   - Click a seat to see its language and the needs shared at check-in.
@@ -216,8 +216,8 @@ All numbers were measured on a MacBook Air (M2, 8 GB RAM). The scripts and test 
 | Hindi, English, Japanese, Thai, Indonesian, Vietnamese | measured | all 40 needs | all | all 11 | non-native |
 | **Bengali, Tamil** | weak | all 40 needs | passenger path; rest in English | all 11 | non-native |
 | **Punjabi, Marathi** | not measured | all 40 needs | passenger path; rest in Hindi | all 11 | non-native |
-| **Gujarati, Kannada, Malayalam, Telugu** | Whisper has them; not measured | machine draft | machine draft, with a note | machine draft, with a note | machine only |
-| **Odia** | heard as Hindi | machine draft | machine draft, with a note | machine draft, with a note | machine only |
+| **Gujarati, Kannada, Malayalam, Telugu** | Whisper has them; not measured | machine draft | machine draft | machine draft | machine only |
+| **Odia** | heard as Hindi | machine draft | machine draft | machine draft | machine only |
 
 **The newest five languages are machine drafts, and say so.** `npm run draft-languages -w @hearme/hub` drafted them offline with NLLB-200, one string at a time: screen text from English, need names from Hindi.
 - Hindi words are unambiguous where single English words are not: "blanket" came out as "cup" in Telugu when drafted from English.
@@ -225,7 +225,7 @@ All numbers were measured on a MacBook Air (M2, 8 GB RAM). The scripts and test 
 - A few need names that stayed clearly wrong were corrected by hand.
 - Safety texts are never drafted: they appear in Hindi or English.
 
-Every screen string is drafted except the Care Mode medical lists and the safety briefing, which stay human-written in Hindi or English. Passengers in these languages see a *machine-translated* note on screens and replies until a native speaker checks them. With Hindi, Bengali, Tamil, Punjabi, Marathi and English, Gujarati, Kannada, Malayalam, Odia and Telugu complete the 11 languages Sarvam AI covers.
+Every screen string is drafted except the Care Mode medical lists and the safety briefing, which stay human-written in Hindi or English. They are machine translations and need a native speaker's check before a pilot. With Hindi, Bengali, Tamil, Punjabi, Marathi and English, Gujarati, Kannada, Malayalam, Odia and Telugu complete the 11 languages Sarvam AI covers.
 
 Bengali and Tamil used to be keyword-only: a passenger spoke Bengali at English screens. They now carry their own screens and replies, and Punjabi and Marathi are new. A pack language translates the 102-string passenger path (greeting, request grid, speaking, "Did you mean?", confirming, delivery status, the offline card, Care Mode), all 40 need labels and all 11 verified replies; anything else falls back to a core language the picker names before you choose it.
 

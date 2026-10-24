@@ -106,8 +106,7 @@ export function LanguageScreen({ current, onChoose, onBack }: { current?: LangCo
       <div className="ife-lang__grid">
         {LANGUAGES.map((l) => {
           // A language whose screens are not finished says so on the button itself.
-          const partial = l.coverage.ui !== 'complete';
-          const english = partial ? `${l.englishName} · some screens in ${languageInfo(l.fallback).englishName}` : l.englishName;
+          const english = l.englishName;
           return (
             <button key={l.code} className={`ife-lang__btn${current === l.code ? ' selected' : ''}`} lang={l.bcp47} aria-pressed={current === l.code} onClick={() => onChoose(l.code)}>
               <span className="ife-lang__native">{l.nativeName}</span>
@@ -551,7 +550,6 @@ export function CaptionsScreen({ session, lang }: { session: PassengerSession; l
                     {cap.sender ? ` · ${tr(cap.sender === 'captain' ? 'announce.captain' : 'announce.crew')}` : ''}
                   </time>
                   <p>{cap.text}</p>
-                  {cap.machine && <p className="ife-caption__time">⚠ {tr('reply.machine')}</p>}
                 </div>
               </li>
             );

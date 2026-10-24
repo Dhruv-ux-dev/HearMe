@@ -557,11 +557,6 @@ function ReplyModal({ lang }: { lang: LangCode }) {
             <T v="heading" live="assertive">
               {text}
             </T>
-            {r.reply.message && (
-              <T v="caption" color={th.p.warning}>
-                ⚠ {tr('reply.machine')}
-              </T>
-            )}
             {voice && play !== 'idle' && (
               <T v="caption" color={play === 'blocked' || play === 'no-voice' ? th.p.warning : th.p.textMuted}>
                 {play === 'speaking'

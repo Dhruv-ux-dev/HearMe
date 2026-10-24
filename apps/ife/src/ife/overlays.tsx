@@ -67,7 +67,6 @@ export function ReplyDialog({ session, lang, requestId, speaker }: { session: Pa
       <p id="reply-text" className="ife-reply__text">
         {text}
       </p>
-      {r.reply.message && <p className="ife-reply__machine">⚠ {tr('reply.machine')}</p>}
       {need && (
         <span className="ife-reply__icon">
           <NeedIcon name={need.private ? 'hand-helping' : need.icon} size="100%" />
@@ -151,7 +150,6 @@ export function CaptionToast({ session, lang, onOpen, speaker }: { session: Pass
       <button className="ife-toast__text" onClick={onOpen}>
         <span className="ife-toast__label">{cap.sender ? tr(cap.sender === 'captain' ? 'announce.captain' : 'announce.crew') : tr('captions.title')}</span>
         {cap.text}
-        {cap.machine && <span className="ife-toast__label"> ⚠ {tr('reply.machine')}</span>}
       </button>
       <button className="ife-toast__close" onClick={() => session.markAnnouncementsSeen()} aria-label={tr('common.close')}>
         <X aria-hidden />

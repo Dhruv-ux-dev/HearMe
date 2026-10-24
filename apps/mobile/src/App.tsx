@@ -187,7 +187,6 @@ function CaptionToast({ lang }: { lang: LangCode }) {
       >
         <Text style={{ color: fg, fontSize: th.fs(12), opacity: 0.9 }}>{cap.sender ? tr(cap.sender === 'captain' ? 'announce.captain' : 'announce.crew') : tr('captions.title')}</Text>
         <Text style={{ color: fg, fontSize: th.fs(th.t.body), fontWeight: '700' }}>{cap.text}</Text>
-        {cap.machine && <Text style={{ color: fg, fontSize: th.fs(12), opacity: 0.9 }}>⚠ {tr('reply.machine')}</Text>}
       </Pressable>
       <Pressable onPress={() => session.markAnnouncementsSeen()} accessibilityRole="button" accessibilityLabel={tr('common.close')} style={{ width: th.minTouch, height: th.minTouch, alignItems: 'center', justifyContent: 'center' }}>
         <X color={fg} size={22} />

@@ -160,9 +160,7 @@ export function Onboarding() {
               <CyclingHeading />
               <View accessibilityRole="radiogroup" style={{ gap: th.space.sm }}>
                 {LANGUAGES.map((l) => {
-                  const partial = l.coverage.ui !== 'complete';
-                  // Say plainly what choosing this language gets you, before choosing it.
-                  const hint = partial ? `Speak and read in ${l.englishName} · some screens in ${languageInfo(l.fallback).englishName}` : l.englishName;
+                  const hint = l.englishName;
                   return (
                     <Pressable
                       key={l.code}

@@ -184,7 +184,6 @@ export function FlightTab({ lang }: { lang: LangCode }) {
                       {cap.sender ? ` · ${tr(cap.sender === 'captain' ? 'announce.captain' : 'announce.crew')}` : ''}
                     </T>
                     <T v="bodyLarge">{cap.text}</T>
-                    {cap.machine && <T v="caption" muted>⚠ {tr('reply.machine')}</T>}
                   </View>
                 </View>
               </Card>
