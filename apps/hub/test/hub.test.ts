@@ -231,8 +231,8 @@ describe('cabin hub', () => {
   it('lists language packs and understands their language (Bengali: typed, with a Bengali booking)', async () => {
     const l = await (await fetch(`${base}/api/languages`)).json();
     expect(l.builtIn).toHaveLength(6);
-    // 27 languages (6 core + all 22 scheduled languages of India, Hindi counted once), each with its coverage spelled out layer by layer.
-    expect(l.languages).toHaveLength(27);
+    // 19 languages (6 core + 13 more of India), each with its coverage spelled out layer by layer.
+    expect(l.languages).toHaveLength(19);
     const bengali = l.languages.find((x: { code: string }) => x.code === 'bn');
     expect(bengali).toMatchObject({ core: false, fallback: 'en', coverage: { intent: 'complete', ui: 'partial', replies: 'complete' } });
     expect(bengali.uiStrings).toBeGreaterThan(80);

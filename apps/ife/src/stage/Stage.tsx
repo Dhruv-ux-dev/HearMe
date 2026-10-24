@@ -297,7 +297,7 @@ export function Stage() {
             <WifiOff aria-hidden /> no internet needed
           </span>
           <span className="stage-chip ok" title={LANGUAGES.map((l) => `${l.englishName}: ${l.note ?? (l.core ? 'core language' : 'language pack')}`).join('\n')}>
-            <Languages aria-hidden /> {LANGUAGES.length} languages, all 22 of India
+            <Languages aria-hidden /> {LANGUAGES.length} languages, {LANGUAGES.filter((l) => l.bcp47.endsWith('-IN') && l.code !== 'en').length} of India
           </span>
         </div>
         <div className="stage-actions">

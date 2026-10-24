@@ -267,9 +267,11 @@ describe('machine-drafted languages say so and stay safe', () => {
     expect(words, `${lang}: matching words for ${words}/40 needs`).toBeGreaterThanOrEqual(30);
   });
 
-  it('offers all 22 scheduled languages of India', () => {
-    const india = ['as', 'bn', 'brx', 'doi', 'gu', 'hi', 'kn', 'ks', 'kok', 'mai', 'ml', 'mni', 'mr', 'ne', 'or', 'pa', 'sa', 'sat', 'sd', 'ta', 'te', 'ur'];
-    expect(india).toHaveLength(22);
-    for (const code of india) expect(LANGUAGES.some((l) => l.code === code), code).toBe(true);
+  it("offers every language Sarvam AI covers, each with screens of its own", () => {
+    const sarvam = ['hi', 'bn', 'ta', 'te', 'kn', 'ml', 'mr', 'gu', 'pa', 'or', 'en'];
+    for (const code of sarvam) {
+      expect(LANGUAGES.some((l) => l.code === code), code).toBe(true);
+      expect(['complete', 'partial', 'machine'], code).toContain(coverageOf(code as LangCode).ui);
+    }
   });
 });

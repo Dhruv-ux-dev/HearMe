@@ -6,7 +6,7 @@ import type { LocalePack } from './types';
  */
 export const ML: LocalePack = {
   "code": "ml",
-  "provenance": "Machine draft: translated offline from English by NLLB-200 (distilled 600M) for the prototype. Nobody has checked it yet. Screens and replies in this language carry a \"machine-translated\" note until a native speaker reviews them. Safety texts are never drafted: they appear in the fallback language.",
+  "provenance": "Machine draft: translated offline by NLLB-200 (distilled 600M) for the prototype, screens from English and need names from Hindi. A few need names (sick_bag) were corrected by hand where the draft was clearly wrong. Nobody has checked the rest. Screens and replies in this language carry a \"machine-translated\" note until a native speaker reviews them. Safety texts are never drafted: they appear in the fallback language.",
   "needs": {
     "water": "വെള്ളം",
     "hot_water": "ചൂടുവെള്ളം",
@@ -14,46 +14,46 @@ export const ML: LocalePack = {
     "coffee": "കാപ്പി",
     "juice": "ജ്യൂസ്",
     "milk": "പാൽ",
-    "soft_drink": "മധുരപലഹാരം",
-    "ice": "ഐസ്",
-    "blanket": "കവചം",
-    "pillow": "തലയണ",
-    "too_cold": "എനിക്ക് തണുപ്പാണ്",
-    "too_hot": "എനിക്ക് ചൂട് തോന്നുന്നു",
+    "soft_drink": "തണുത്ത പാനീയം",
+    "ice": "മഞ്ഞും",
+    "blanket": "പുതപ്പ്",
+    "pillow": "തലയിണ",
+    "too_cold": "തണുപ്പാണ്",
+    "too_hot": "ചൂട് തോന്നുന്നു",
     "headphones": "ഹെഡ്ഫോണുകൾ",
-    "eye_mask": "കണ്ണുമാസ്ക്",
-    "tissues": "തുണിത്തരങ്ങൾ / നനഞ്ഞ ടവൽ",
-    "seat_help": "എന്റെ സീറ്റിലെ സഹായം",
+    "eye_mask": "കണ്ണിന് മാസ്ക്",
+    "tissues": "ടിഷ്യു / നനഞ്ഞ ടവൽ",
+    "seat_help": "സീറ്റിലെ സഹായം",
     "screen_help": "സ്ക്രീനില് സഹായം",
-    "charger": "ഫോൺ ചാർജ് ചെയ്യൽ",
-    "meal": "ഭക്ഷ്യവസ്തുക്കൾ",
-    "snack": "ലഘുഭക്ഷണം",
+    "charger": "ഫോൺ ചാർജ് ചെയ്യുന്നത്",
+    "meal": "ഭക്ഷണം",
+    "snack": "വെളിച്ചം പ്രഭാതഭക്ഷണം",
     "veg_meal": "സസ്യാഹാരം",
-    "baby_food": "ശിശു ഭക്ഷണം",
-    "allergy": "ഭക്ഷ്യ അലർജി ചോദ്യം",
+    "baby_food": "കുട്ടികളുടെ ഭക്ഷണം",
+    "allergy": "ഭക്ഷണ അലർജി",
     "toilet": "ടോയ്ലറ്റ്",
-    "medicine": "വൈദ്യശാസ്ത്രം",
-    "unwell": "എനിക്ക് സുഖമില്ല",
-    "bag_help": "എന്റെ ബാഗ് എടുക്കാൻ സഹായിക്കൂ",
+    "medicine": "മരുന്നുകൾ",
+    "unwell": "ആരോഗ്യം മോശമാണ്",
+    "bag_help": "സാധനങ്ങളുടെ സഹായത്തോടെ",
     "call_crew": "ദയവായി എന്റെ സീറ്റിലേക്ക് വരൂ",
-    "wheelchair_arrival": "വീല് ചെയര് എത്തും",
-    "arrival_form": "വരവ് ഫോമുകളിലെ സഹായം",
-    "connection": "എന്റെ ബന്ധിപ്പിക്കുന്ന വിമാനം",
-    "time_left": "എത്ര നാൾ നമ്മൾ ഇറങ്ങും?",
-    "lost_item": "എനിക്ക് എന്തോ നഷ്ടപ്പെട്ടു.",
-    "diaper": "കുഞ്ഞുങ്ങളുടെ വസ്ത്രങ്ങൾ / പൈപ്പറുകൾ",
-    "sanitary": "സാനിറ്ററി ഉത്പന്നങ്ങൾ",
-    "sick_bag": "രോഗിയായ ബാഗ്",
-    "toilet_assist": "ടോയ്ലറ്റിൽ പോകാന് സഹായിക്കുക",
-    "private_talk": "വ്യക്തിപരമായി സംഘവുമായി സംസാരിക്കുക",
-    "anxious": "എനിക്ക് ഉത്കണ്ഠ തോന്നുന്നു",
-    "bothered": "ആരെങ്കിലും എന്നെ അലട്ടുന്നു."
+    "wheelchair_arrival": "വീൽചെയർ",
+    "arrival_form": "വരവ് ഫോമിലെ സഹായം",
+    "connection": "എന്റെ കണക്റ്റിങ് ഫ്ലൈറ്റ്",
+    "time_left": "എത്ര നാൾ ഇറങ്ങും",
+    "lost_item": "എനിക്ക് എന്തെങ്കിലും നഷ്ടപ്പെട്ടു",
+    "diaper": "കുട്ടിയുടെ ഡയപ്പർ",
+    "sanitary": "സാനിറ്ററി പാഡ്",
+    "sick_bag": "ഛർദ്ദി ബാഗ്",
+    "toilet_assist": "ടോയ്ലറ്റ് പോകാൻ സഹായിക്കുക",
+    "private_talk": "ക്രൂ സ്വകാര്യമായി സംസാരിക്കുക",
+    "anxious": "എനിക്ക് പേടിയാണ്",
+    "bothered": "ആരെങ്കിലും എന്നെ അസ്വസ്ഥനാക്കുന്നു"
   },
   "purposes": {
-    "for_medicine": "മരുന്നുകൾ കഴിക്കാൻ",
-    "vegetarian": "സസ്യഭക്ഷണം",
-    "for_child": "ഒരു കുട്ടിക്കുവേണ്ടി",
-    "urgent": "അടിയന്തിരമായി"
+    "for_medicine": "മരുന്നുകൾ",
+    "vegetarian": "സസ്യാഹാരം",
+    "for_child": "ഒരു കുട്ടിക്ക് വേണ്ടി",
+    "urgent": "വേഗം"
   },
   "replies": {
     "bringing_now": "ഞങ്ങൾ അത് ഇപ്പോൾ തന്നെ നിനക്ക് എത്തിക്കുന്നു.",
@@ -186,9 +186,7 @@ export const ML: LocalePack = {
     "hot_water": [
       "ചൂടുവെള്ളം"
     ],
-    "tea": [
-      "ചായ"
-    ],
+    "tea": [],
     "coffee": [
       "കാപ്പി"
     ],
@@ -196,30 +194,28 @@ export const ML: LocalePack = {
       "ജ്യൂസ്",
       "ഓറഞ്ച് ജ്യൂസ്"
     ],
-    "milk": [
-      "പാൽ"
-    ],
+    "milk": [],
     "soft_drink": [
-      "മധുരപലഹാരം",
+      "തണുത്ത പാനീയം",
       "കോക്ക്"
     ],
     "ice": [
-      "ഐസ്",
+      "മഞ്ഞും",
       "ഐസ് കബിസ്"
     ],
     "blanket": [
-      "കവചം"
+      "പുതപ്പ്"
     ],
     "pillow": [
-      "തലയണ",
+      "തലയിണ",
       "കഷണം"
     ],
     "too_cold": [
-      "എനിക്ക് തണുപ്പാണ്",
+      "തണുപ്പാണ്",
       "വളരെ തണുത്ത"
     ],
     "too_hot": [
-      "എനിക്ക് ചൂട് തോന്നുന്നു",
+      "ചൂട് തോന്നുന്നു",
       "വളരെ ചൂട്"
     ],
     "headphones": [
@@ -227,31 +223,29 @@ export const ML: LocalePack = {
       "ഹെഡ്ഫോൺ"
     ],
     "eye_mask": [
-      "കണ്ണുമാസ്ക്",
+      "കണ്ണിന് മാസ്ക്",
       "ഉറക്ക മാസ്ക്"
     ],
     "tissues": [
-      "തുണിത്തരങ്ങൾ / നനഞ്ഞ ടവൽ",
+      "ടിഷ്യു / നനഞ്ഞ ടവൽ",
       "ടിഷ്യു"
     ],
     "seat_help": [
-      "എന്റെ സീറ്റിലെ സഹായം",
-      "ചാടി"
+      "സീറ്റിലെ സഹായം"
     ],
     "screen_help": [
       "സ്ക്രീനില് സഹായം",
       "സ്ക്രീൻ"
     ],
     "charger": [
-      "ഫോൺ ചാർജ് ചെയ്യൽ",
+      "ഫോൺ ചാർജ് ചെയ്യുന്നത്",
       "ചാർജ്"
     ],
     "meal": [
-      "ഭക്ഷ്യവസ്തുക്കൾ",
       "ഭക്ഷണം"
     ],
     "snack": [
-      "ലഘുഭക്ഷണം",
+      "വെളിച്ചം പ്രഭാതഭക്ഷണം",
       "കുക്കികൾ"
     ],
     "veg_meal": [
@@ -259,11 +253,11 @@ export const ML: LocalePack = {
       "പച്ചക്കറി ഭക്ഷണം"
     ],
     "baby_food": [
-      "ശിശു ഭക്ഷണം",
+      "കുട്ടികളുടെ ഭക്ഷണം",
       "എന്റെ കുഞ്ഞിന് ഭക്ഷണം"
     ],
     "allergy": [
-      "ഭക്ഷ്യ അലർജി ചോദ്യം",
+      "ഭക്ഷണ അലർജി",
       "അലർജി"
     ],
     "toilet": [
@@ -271,66 +265,66 @@ export const ML: LocalePack = {
       "കുളിമുറി"
     ],
     "medicine": [
-      "വൈദ്യശാസ്ത്രം",
+      "മരുന്നുകൾ",
       "ഗുളികകൾ"
     ],
     "unwell": [
-      "എനിക്ക് സുഖമില്ല",
-      "രോഗം"
+      "ആരോഗ്യം മോശമാണ്"
     ],
     "bag_help": [
-      "എന്റെ ബാഗ് എടുക്കാൻ സഹായിക്കൂ",
-      "ബാഗ്"
+      "സാധനങ്ങളുടെ സഹായത്തോടെ"
     ],
     "call_crew": [
       "ദയവായി എന്റെ സീറ്റിലേക്ക് വരൂ",
       "ഇവിടെ വരൂ"
     ],
     "wheelchair_arrival": [
-      "വീല് ചെയര് എത്തും",
+      "വീൽചെയർ",
       "ചക്രം"
     ],
     "arrival_form": [
-      "വരവ് ഫോമുകളിലെ സഹായം",
-      "ഫോം"
+      "വരവ് ഫോമിലെ സഹായം"
     ],
     "connection": [
-      "എന്റെ ബന്ധിപ്പിക്കുന്ന വിമാനം",
+      "എന്റെ കണക്റ്റിങ് ഫ്ലൈറ്റ്",
       "ബന്ധിപ്പിക്കുന്ന വിമാനം"
     ],
     "time_left": [
+      "എത്ര നാൾ ഇറങ്ങും",
       "എത്ര നാൾ നമ്മൾ ഇറങ്ങും",
       "എത്ര നാൾ"
     ],
     "lost_item": [
+      "എനിക്ക് എന്തെങ്കിലും നഷ്ടപ്പെട്ടു",
       "എനിക്ക് എന്തോ നഷ്ടപ്പെട്ടു",
       "നഷ്ടപ്പെട്ടത്"
     ],
     "diaper": [
-      "കുഞ്ഞുങ്ങളുടെ വസ്ത്രങ്ങൾ / പൈപ്പറുകൾ",
+      "കുട്ടിയുടെ ഡയപ്പർ",
       "പായൽ"
     ],
     "sanitary": [
-      "സാനിറ്ററി ഉത്പന്നങ്ങൾ",
+      "സാനിറ്ററി പാഡ്",
       "സാനിറ്ററി"
     ],
     "sick_bag": [
-      "രോഗിയായ ബാഗ്",
+      "ഛർദ്ദി ബാഗ്",
       "വീക്കം"
     ],
     "toilet_assist": [
-      "ടോയ്ലറ്റിൽ പോകാന് സഹായിക്കുക",
+      "ടോയ്ലറ്റ് പോകാൻ സഹായിക്കുക",
       "ടോയ്ലറ്റിലെ സഹായം"
     ],
     "private_talk": [
-      "വ്യക്തിപരമായി സംഘവുമായി സംസാരിക്കുക",
+      "ക്രൂ സ്വകാര്യമായി സംസാരിക്കുക",
       "സ്വകാര്യമായി"
     ],
     "anxious": [
-      "എനിക്ക് ഉത്കണ്ഠ തോന്നുന്നു",
+      "എനിക്ക് പേടിയാണ്",
       "ഉത്കണ്ഠ"
     ],
     "bothered": [
+      "ആരെങ്കിലും എന്നെ അസ്വസ്ഥനാക്കുന്നു",
       "ആരെങ്കിലും എന്നെ അലട്ടുന്നു",
       "എന്നെ അസ്വസ്ഥനാക്കുന്നു"
     ]

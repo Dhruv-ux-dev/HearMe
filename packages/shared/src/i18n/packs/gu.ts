@@ -6,7 +6,7 @@ import type { LocalePack } from './types';
  */
 export const GU: LocalePack = {
   "code": "gu",
-  "provenance": "Machine draft: translated offline from English by NLLB-200 (distilled 600M) for the prototype. Nobody has checked it yet. Screens and replies in this language carry a \"machine-translated\" note until a native speaker reviews them. Safety texts are never drafted: they appear in the fallback language.",
+  "provenance": "Machine draft: translated offline by NLLB-200 (distilled 600M) for the prototype, screens from English and need names from Hindi. A few need names (blanket, sick_bag) were corrected by hand where the draft was clearly wrong. Nobody has checked the rest. Screens and replies in this language carry a \"machine-translated\" note until a native speaker reviews them. Safety texts are never drafted: they appear in the fallback language.",
   "needs": {
     "water": "પાણી",
     "hot_water": "ગરમ પાણી",
@@ -14,46 +14,46 @@ export const GU: LocalePack = {
     "coffee": "કોફી",
     "juice": "રસ",
     "milk": "દૂધ",
-    "soft_drink": "સોફ્ટ ડ્રિંક",
+    "soft_drink": "ઠંડા પીણું",
     "ice": "બરફ",
-    "blanket": "કવર",
-    "pillow": "પ્યાલો",
-    "too_cold": "મને ઠંડી લાગે છે",
-    "too_hot": "હું ગરમ લાગે છે",
+    "blanket": "ધાબળો",
+    "pillow": "પિચ",
+    "too_cold": "ઠંડી લાગે છે",
+    "too_hot": "ગરમ લાગે છે",
     "headphones": "હેડફોનો",
-    "eye_mask": "આંખ માસ્ક",
-    "tissues": "પેશીઓ / ભીનું ટુવાલ",
-    "seat_help": "મારી સીટ સાથે મદદ કરો",
-    "screen_help": "સ્ક્રીન સાથે મદદ",
+    "eye_mask": "આંખનો માસ્ક",
+    "tissues": "પેશી / ભીનું ટુવાલ",
+    "seat_help": "બેઠક મદદ",
+    "screen_help": "સ્ક્રીન મદદ",
     "charger": "ફોન ચાર્જિંગ",
-    "meal": "ખાદ્ય",
-    "snack": "નાસ્તા",
-    "veg_meal": "શાકાહારી ભોજન",
-    "baby_food": "બાળક ખોરાક",
-    "allergy": "ખોરાક એલર્જી પ્રશ્ન",
+    "meal": "ખાવું",
+    "snack": "નાસ્તો",
+    "veg_meal": "શાકાહારી ખોરાક",
+    "baby_food": "બાળકનું ભોજન",
+    "allergy": "ખાવાથી એલર્જી",
     "toilet": "શૌચાલય",
     "medicine": "દવા",
-    "unwell": "મને સારું નથી લાગતું",
-    "bag_help": "મારી બેગ સાથે મદદ કરો",
+    "unwell": "ખરાબ સ્વભાવ",
+    "bag_help": "સામાન મદદ",
     "call_crew": "કૃપા કરીને મારી સીટ પર આવો",
-    "wheelchair_arrival": "આગમન પર વ્હીલચેર",
-    "arrival_form": "આગમન ફોર્મ્સાથે મદદ",
+    "wheelchair_arrival": "પહોંચ્યા પછી વ્હીલચેર",
+    "arrival_form": "આગમન ફોર્મમાં મદદ",
     "connection": "મારી કનેક્ટિંગ ફ્લાઇટ",
-    "time_left": "અમે ઉતરાણ સુધી કેટલો સમય લે છે?",
-    "lost_item": "મેં કંઈક ગુમાવ્યું",
-    "diaper": "બાળક બદલવાનું / ડાયપર",
-    "sanitary": "સેનિટેરી ઉત્પાદનો",
-    "sick_bag": "બીમાર બેગ",
-    "toilet_assist": "ટોયલેટ જવા માટે મદદ",
-    "private_talk": "ખાનગીમાં ક્રૂ સાથે વાત કરો",
-    "anxious": "મને ચિંતા લાગે છે",
+    "time_left": "કેટલો સમય ઉતરાણ",
+    "lost_item": "હું કંઈક ગુમાવી છે",
+    "diaper": "બાળકના ડાયપર",
+    "sanitary": "સેનિટરી પેડ",
+    "sick_bag": "ઉલ્ટીની થેલી",
+    "toilet_assist": "શૌચાલયમાં જવા માટે મદદ",
+    "private_talk": "ક્રૂ સાથે ખાનગી વાત",
+    "anxious": "હું ભયભીત છું",
     "bothered": "કોઈ મને હેરાન કરી રહ્યું છે"
   },
   "purposes": {
-    "for_medicine": "દવા લેવા માટે",
+    "for_medicine": "દવા માટે",
     "vegetarian": "શાકાહારી",
     "for_child": "બાળક માટે",
-    "urgent": "તાત્કાલિક"
+    "urgent": "ઝડપથી"
   },
   "replies": {
     "bringing_now": "અમે તેને તમને હવે લાવી રહ્યા છીએ.",
@@ -180,47 +180,34 @@ export const GU: LocalePack = {
   ],
   "phrases": {
     "water": [
-      "પાણી",
       "પીવાનું પાણી"
     ],
     "hot_water": [
       "ગરમ પાણી"
     ],
-    "tea": [
-      "ચા",
-      "ચાઇ"
-    ],
-    "coffee": [
-      "કોફી"
-    ],
+    "tea": [],
+    "coffee": [],
     "juice": [
-      "રસ",
       "નારંગીનો રસ"
     ],
-    "milk": [
-      "દૂધ"
-    ],
+    "milk": [],
     "soft_drink": [
-      "સોફ્ટ ડ્રિંક",
-      "કોક"
+      "ઠંડા પીણું"
     ],
     "ice": [
       "બરફ",
       "બરફના ક્યુબ્સ"
     ],
     "blanket": [
-      "કવર"
+      "ધાબળો"
     ],
-    "pillow": [
-      "પ્યાલો",
-      "કૂચ"
-    ],
+    "pillow": [],
     "too_cold": [
-      "મને ઠંડી લાગે છે",
+      "ઠંડી લાગે છે",
       "ખૂબ ઠંડી"
     ],
     "too_hot": [
-      "હું ગરમ લાગે છે",
+      "ગરમ લાગે છે",
       "ખૂબ ગરમ"
     ],
     "headphones": [
@@ -228,19 +215,18 @@ export const GU: LocalePack = {
       "હેડફોન"
     ],
     "eye_mask": [
-      "આંખ માસ્ક",
+      "આંખનો માસ્ક",
       "ઊંઘ માસ્ક"
     ],
     "tissues": [
-      "પેશીઓ / ભીનું ટુવાલ",
-      "પેશી"
+      "પેશી / ભીનું ટુવાલ"
     ],
     "seat_help": [
-      "મારી સીટ સાથે મદદ કરો",
+      "બેઠક મદદ",
       "બેકઅપ"
     ],
     "screen_help": [
-      "સ્ક્રીન સાથે મદદ",
+      "સ્ક્રીન મદદ",
       "સ્ક્રીન"
     ],
     "charger": [
@@ -248,22 +234,21 @@ export const GU: LocalePack = {
       "ચાર્જ"
     ],
     "meal": [
-      "ખાદ્ય",
       "ભોજન"
     ],
     "snack": [
-      "નાસ્તા",
+      "નાસ્તો",
       "કૂકીટ"
     ],
     "veg_meal": [
-      "શાકાહારી ભોજન"
+      "શાકાહારી ખોરાક"
     ],
     "baby_food": [
-      "બાળક ખોરાક",
+      "બાળકનું ભોજન",
       "મારા બાળક માટે ખોરાક"
     ],
     "allergy": [
-      "ખોરાક એલર્જી પ્રશ્ન",
+      "ખાવાથી એલર્જી",
       "એલર્જી"
     ],
     "toilet": [
@@ -271,27 +256,25 @@ export const GU: LocalePack = {
       "બાથરૂમ"
     ],
     "medicine": [
-      "દવા",
       "ટેબ્લેટ"
     ],
     "unwell": [
-      "મને સારું નથી લાગતું",
+      "ખરાબ સ્વભાવ",
       "અસ્વસ્થતા"
     ],
     "bag_help": [
-      "મારી બેગ સાથે મદદ કરો",
-      "બેગ"
+      "સામાન મદદ"
     ],
     "call_crew": [
       "કૃપા કરીને મારી સીટ પર આવો",
       "અહીં આવો"
     ],
     "wheelchair_arrival": [
-      "આગમન પર વ્હીલચેર",
+      "પહોંચ્યા પછી વ્હીલચેર",
       "વ્હીલચેર"
     ],
     "arrival_form": [
-      "આગમન ફોર્મ્સાથે મદદ",
+      "આગમન ફોર્મમાં મદદ",
       "ફોર્મ"
     ],
     "connection": [
@@ -299,36 +282,36 @@ export const GU: LocalePack = {
       "જોડાણ ફ્લાઇટ"
     ],
     "time_left": [
+      "કેટલો સમય ઉતરાણ",
       "અમે ઉતરાણ સુધી કેટલો સમય લે છે",
       "કેટલો સમય"
     ],
     "lost_item": [
-      "મેં કંઈક ગુમાવ્યું",
+      "હું કંઈક ગુમાવી છે",
       "ખોવાઈ ગયેલી"
     ],
     "diaper": [
-      "બાળક બદલવાનું / ડાયપર",
+      "બાળકના ડાયપર",
       "ડાયપર"
     ],
     "sanitary": [
-      "સેનિટેરી ઉત્પાદનો",
+      "સેનિટરી પેડ",
       "સેનેટરી"
     ],
     "sick_bag": [
-      "બીમાર બેગ",
+      "ઉલ્ટીની થેલી",
       "ઉલટી"
     ],
     "toilet_assist": [
-      "ટોયલેટ જવા માટે મદદ",
+      "શૌચાલયમાં જવા માટે મદદ",
       "શૌચાલય મદદ"
     ],
     "private_talk": [
-      "ખાનગીમાં ક્રૂ સાથે વાત કરો",
+      "ક્રૂ સાથે ખાનગી વાત",
       "ખાનગી રીતે"
     ],
     "anxious": [
-      "મને ચિંતા લાગે છે",
-      "ચિંતા"
+      "હું ભયભીત છું"
     ],
     "bothered": [
       "કોઈ મને હેરાન કરી રહ્યું છે",

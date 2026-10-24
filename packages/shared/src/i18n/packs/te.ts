@@ -6,7 +6,7 @@ import type { LocalePack } from './types';
  */
 export const TE: LocalePack = {
   "code": "te",
-  "provenance": "Machine draft: translated offline from English by NLLB-200 (distilled 600M) for the prototype. Nobody has checked it yet. Screens and replies in this language carry a \"machine-translated\" note until a native speaker reviews them. Safety texts are never drafted: they appear in the fallback language.",
+  "provenance": "Machine draft: translated offline by NLLB-200 (distilled 600M) for the prototype, screens from English and need names from Hindi. A few need names (blanket, sick_bag) were corrected by hand where the draft was clearly wrong. Nobody has checked the rest. Screens and replies in this language carry a \"machine-translated\" note until a native speaker reviews them. Safety texts are never drafted: they appear in the fallback language.",
   "needs": {
     "water": "నీరు",
     "hot_water": "వేడి నీరు",
@@ -14,46 +14,46 @@ export const TE: LocalePack = {
     "coffee": "కాఫీ",
     "juice": "జ్యూస్",
     "milk": "పాలు",
-    "soft_drink": "మంచినీళ్లు",
+    "soft_drink": "చల్లని పానీయం",
     "ice": "మంచు",
-    "blanket": "కప్పు",
-    "pillow": "పుట్టె",
-    "too_cold": "నేను చల్లగా ఉన్నాను",
-    "too_hot": "నేను వేడి అనుభూతి",
-    "headphones": "హెడ్ఫోన్స్",
-    "eye_mask": "కంటి మాస్క్",
-    "tissues": "నేలలు / తడి తువ్వాళ్లు",
-    "seat_help": "నా సీటు తో సహాయం",
-    "screen_help": "స్క్రీన్ తో సహాయం",
+    "blanket": "దుప్పటి",
+    "pillow": "దిండు",
+    "too_cold": "చల్లగా ఉంది",
+    "too_hot": "వేడి కనిపిస్తోంది",
+    "headphones": "హెడ్ఫోన్",
+    "eye_mask": "కంటి ముసుగు",
+    "tissues": "కణజాలం / తడి టవల్",
+    "seat_help": "సీటు సహాయం",
+    "screen_help": "స్క్రీన్ సహాయం",
     "charger": "ఫోన్ ఛార్జింగ్",
-    "meal": "ఆహారము",
-    "snack": "స్నాక్",
+    "meal": "ఆహారం",
+    "snack": "తేలికపాటి అల్పాహారం",
     "veg_meal": "శాఖాహారం",
-    "baby_food": "శిశు భోజనం",
-    "allergy": "ఆహార అలెర్జీ ప్రశ్న",
+    "baby_food": "పిల్లల ఆహారం",
+    "allergy": "ఆహార అలెర్జీ",
     "toilet": "టాయిలెట్",
-    "medicine": "ఔషధం",
-    "unwell": "నేను అనారోగ్యంతో ఉన్నాను",
-    "bag_help": "నా బ్యాగ్ తో సహాయం",
-    "call_crew": "దయచేసి నా సీటుకు రండి",
-    "wheelchair_arrival": "వల్చర్ చైర్ రాకపై",
-    "arrival_form": "రాక ఫారమ్లతో సహాయం",
-    "connection": "నా కనెక్టివిటీ విమాన",
-    "time_left": "మేము ల్యాండింగ్ వరకు ఎంత సమయం?",
-    "lost_item": "నేను ఏదో కోల్పోయింది",
-    "diaper": "బేబీ మారకం / పప్పెట్లు",
-    "sanitary": "పారిశుద్ధ్య ఉత్పత్తులు",
-    "sick_bag": "రోగి సంచి",
-    "toilet_assist": "టాయిలెట్ వెళ్ళడానికి సహాయం",
-    "private_talk": "సిబ్బందితో ప్రైవేటుగా మాట్లాడండి",
-    "anxious": "నేను ఆందోళన అనుభూతి",
-    "bothered": "ఎవరైనాకు ఇబ్బంది ఉంది"
+    "medicine": "ఔషధము",
+    "unwell": "ఆరోగ్యం చెడ్డది",
+    "bag_help": "సామానుతో సహాయం",
+    "call_crew": "నా సీటుకి రండి",
+    "wheelchair_arrival": "వాల్చేరు",
+    "arrival_form": "రాక ఫారమ్ లో సహాయం",
+    "connection": "నా కనెక్టింగ్ విమాన",
+    "time_left": "ఎంతకాలం ల్యాండ్ అవుతారు",
+    "lost_item": "నాకేదో కోల్పోయింది",
+    "diaper": "శిశువు డైపర్",
+    "sanitary": "సానిటరీ ప్యాడ్",
+    "sick_bag": "వాంతి సంచి",
+    "toilet_assist": "టాయిలెట్కు వెళ్ళడానికి సహాయం",
+    "private_talk": "సిబ్బందితో ప్రైవేట్ గా మాట్లాడండి",
+    "anxious": "నేను భయపడుతున్నాను",
+    "bothered": "ఎవరైనా నన్ను ఇబ్బంది పెట్టారు"
   },
   "purposes": {
-    "for_medicine": "ఔషధాలను తీసుకోవడం",
-    "vegetarian": "సాగర పశువుల",
-    "for_child": "ఒక బిడ్డకు",
-    "urgent": "అత్యవసరం"
+    "for_medicine": "ఔషధానికి",
+    "vegetarian": "శాఖాహారం",
+    "for_child": "పిల్లవాడి కోసం",
+    "urgent": "త్వరగా"
   },
   "replies": {
     "bringing_now": "మేము ఇప్పుడు మీకు తీసుకురావడానికి.",
@@ -180,68 +180,55 @@ export const TE: LocalePack = {
   ],
   "phrases": {
     "water": [
-      "నీరు",
       "తాగునీరు"
     ],
     "hot_water": [
       "వేడి నీరు",
       "వెచ్చని నీరు"
     ],
-    "tea": [
-      "టీ",
-      "చై"
-    ],
-    "coffee": [
-      "కాఫీ"
-    ],
+    "tea": [],
+    "coffee": [],
     "juice": [
       "జ్యూస్",
       "ఆరెంజ్ జ్యూస్"
     ],
-    "milk": [
-      "పాలు"
-    ],
+    "milk": [],
     "soft_drink": [
-      "మంచినీళ్లు",
-      "కోక్"
+      "చల్లని పానీయం"
     ],
     "ice": [
-      "మంచు",
       "మంచు క్యూబ్లు"
     ],
     "blanket": [
-      "కప్పు"
+      "దుప్పటి"
     ],
     "pillow": [
-      "పుట్టె",
       "కుడివైపు"
     ],
     "too_cold": [
-      "నేను చల్లగా ఉన్నాను",
+      "చల్లగా ఉంది",
       "చాలా చల్లగా"
     ],
     "too_hot": [
-      "నేను వేడి అనుభూతి",
+      "వేడి కనిపిస్తోంది",
       "చాలా వేడిగా"
     ],
     "headphones": [
-      "హెడ్ఫోన్స్",
       "హెడ్ఫోన్"
     ],
     "eye_mask": [
-      "కంటి మాస్క్",
+      "కంటి ముసుగు",
       "నిద్ర మాస్క్"
     ],
     "tissues": [
-      "నేలలు / తడి తువ్వాళ్లు",
+      "కణజాలం / తడి టవల్",
       "కణజాలం"
     ],
     "seat_help": [
-      "నా సీటు తో సహాయం",
-      "వంగి"
+      "సీటు సహాయం"
     ],
     "screen_help": [
-      "స్క్రీన్ తో సహాయం",
+      "స్క్రీన్ సహాయం",
       "స్క్రీన్"
     ],
     "charger": [
@@ -249,11 +236,10 @@ export const TE: LocalePack = {
       "రుసుము"
     ],
     "meal": [
-      "ఆహారము",
-      "వంట"
+      "ఆహారం"
     ],
     "snack": [
-      "స్నాక్",
+      "తేలికపాటి అల్పాహారం",
       "బిస్కట్"
     ],
     "veg_meal": [
@@ -261,11 +247,11 @@ export const TE: LocalePack = {
       "కూరగాయల వంట"
     ],
     "baby_food": [
-      "శిశు భోజనం",
+      "పిల్లల ఆహారం",
       "నా బిడ్డకు ఆహారం"
     ],
     "allergy": [
-      "ఆహార అలెర్జీ ప్రశ్న",
+      "ఆహార అలెర్జీ",
       "అలెర్జీ"
     ],
     "toilet": [
@@ -273,67 +259,67 @@ export const TE: LocalePack = {
       "బాత్రూమ్"
     ],
     "medicine": [
-      "ఔషధం",
+      "ఔషధము",
       "టాబ్లెట్లు"
     ],
     "unwell": [
-      "నేను అనారోగ్యంతో ఉన్నాను",
+      "ఆరోగ్యం చెడ్డది",
       "అనారోగ్యము"
     ],
     "bag_help": [
-      "నా బ్యాగ్ తో సహాయం",
+      "సామానుతో సహాయం",
       "బ్యాగ్"
     ],
     "call_crew": [
-      "దయచేసి నా సీటుకు రండి",
+      "నా సీటుకి రండి",
       "ఇక్కడ వస్తాయి"
     ],
     "wheelchair_arrival": [
-      "వల్చర్ చైర్ రాకపై",
+      "వాల్చేరు",
       "వీల్ చైర్"
     ],
     "arrival_form": [
-      "రాక ఫారమ్లతో సహాయం",
-      "రూపం"
+      "రాక ఫారమ్ లో సహాయం"
     ],
     "connection": [
-      "నా కనెక్టివిటీ విమాన",
+      "నా కనెక్టింగ్ విమాన",
       "అనుసంధాన విమానము"
     ],
     "time_left": [
+      "ఎంతకాలం ల్యాండ్ అవుతారు",
       "మేము ల్యాండింగ్ వరకు ఎంత సమయం",
       "ఎంతకాలం"
     ],
     "lost_item": [
-      "నేను ఏదో కోల్పోయింది",
+      "నాకేదో కోల్పోయింది",
       "కోల్పోయిన"
     ],
     "diaper": [
-      "బేబీ మారకం / పప్పెట్లు",
+      "శిశువు డైపర్",
       "పచ్చిక"
     ],
     "sanitary": [
-      "పారిశుద్ధ్య ఉత్పత్తులు",
+      "సానిటరీ ప్యాడ్",
       "పారిశుద్ధ్య"
     ],
     "sick_bag": [
-      "రోగి సంచి",
+      "వాంతి సంచి",
       "వాంతులు"
     ],
     "toilet_assist": [
-      "టాయిలెట్ వెళ్ళడానికి సహాయం",
+      "టాయిలెట్కు వెళ్ళడానికి సహాయం",
       "టాయిలెట్కు సహాయం"
     ],
     "private_talk": [
-      "సిబ్బందితో ప్రైవేటుగా మాట్లాడండి",
+      "సిబ్బందితో ప్రైవేట్ గా మాట్లాడండి",
       "ప్రైవేటుగా"
     ],
     "anxious": [
-      "నేను ఆందోళన అనుభూతి",
+      "నేను భయపడుతున్నాను",
       "ఆందోళన"
     ],
     "bothered": [
-      "ఎవరైనాకు ఇబ్బంది ఉంది",
+      "ఎవరైనా నన్ను ఇబ్బంది పెట్టారు",
       "నన్ను ఇబ్బంది పెట్టడం"
     ]
   },

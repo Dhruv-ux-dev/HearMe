@@ -6,54 +6,54 @@ import type { LocalePack } from './types';
  */
 export const UR: LocalePack = {
   "code": "ur",
-  "provenance": "Machine draft: translated offline from English by NLLB-200 (distilled 600M) for the prototype. Nobody has checked it yet. Screens and replies in this language carry a \"machine-translated\" note until a native speaker reviews them. Safety texts are never drafted: they appear in the fallback language.",
+  "provenance": "Machine draft: translated offline by NLLB-200 (distilled 600M) for the prototype, screens from English and need names from Hindi. A few need names (sick_bag) were corrected by hand where the draft was clearly wrong. Nobody has checked the rest. Screens and replies in this language carry a \"machine-translated\" note until a native speaker reviews them. Safety texts are never drafted: they appear in the fallback language.",
   "needs": {
     "water": "پانی",
     "hot_water": "گرم پانی",
     "tea": "چائے",
     "coffee": "کافی",
-    "juice": "رس",
+    "juice": "جوس",
     "milk": "دودھ",
-    "soft_drink": "مشروب",
+    "soft_drink": "سرد مشروب",
     "ice": "برف",
-    "blanket": "کپڑا",
-    "pillow": "کشن",
-    "too_cold": "مجھے ٹھنڈا محسوس ہوتا ہے",
-    "too_hot": "میں گرمحسوس کرتا ہوں",
+    "blanket": "کمبل",
+    "pillow": "تکیا",
+    "too_cold": "ٹھنڈا لگ رہا ہے",
+    "too_hot": "گرم ہو رہا ہے",
     "headphones": "ہیڈ فون",
     "eye_mask": "آنکھوں کا ماسک",
-    "tissues": "ٹیکسٹائل / گیلے تولیہ",
-    "seat_help": "میری سیٹ کے ساتھ مدد",
-    "screen_help": "اسکرین کے ساتھ مدد",
-    "charger": "فون چارج",
-    "meal": "خوراک",
-    "snack": "نمکین",
+    "tissues": "ٹشو / گیلے تولیہ",
+    "seat_help": "سیٹ میں مدد",
+    "screen_help": "اسکرین میں مدد",
+    "charger": "فون چارج کرنا",
+    "meal": "کھانا",
+    "snack": "ہلکا ناشتا",
     "veg_meal": "سبزی خور کھانا",
     "baby_food": "بچے کا کھانا",
-    "allergy": "کھانے کی الرجی کا سوال",
+    "allergy": "کھانے سے الرجی",
     "toilet": "ٹوائلٹ",
-    "medicine": "طب",
-    "unwell": "میں بیمار محسوس کرتا ہوں",
-    "bag_help": "میرے بیگ کے ساتھ مدد",
-    "call_crew": "براہ مہربانی میری نشست پر آ",
-    "wheelchair_arrival": "پہیے کی کرسی آمد پر",
-    "arrival_form": "آمد کے فارم کے ساتھ مدد",
+    "medicine": "دوائی",
+    "unwell": "صحت خراب",
+    "bag_help": "سامان میں مدد",
+    "call_crew": "براہ مہربانی میری نشست پر آئیں",
+    "wheelchair_arrival": "پہیے کی کرسی",
+    "arrival_form": "آنے والے فارم میں مدد",
     "connection": "میری رابطہ پرواز",
-    "time_left": "ہم زمین تکتنا وقت لگتا ہے؟",
-    "lost_item": "میں نے کچھ کھو دیا",
-    "diaper": "بچے کی تبدیلی / ڈائپر",
-    "sanitary": "حفظان صحت کی مصنوعات",
-    "sick_bag": "بیمار بیگ",
+    "time_left": "کتنے وقت میں اترنے کے لئے؟",
+    "lost_item": "میں کچھ کھو گیا ہوں",
+    "diaper": "بچے کا ڈایپر",
+    "sanitary": "سینیٹری پیڈ",
+    "sick_bag": "الٹی کا تھیلا",
     "toilet_assist": "ٹوائلٹ جانے میں مدد",
-    "private_talk": "ذاتی طور پر عملے سے بات کریں",
-    "anxious": "میں پریشان محسوس",
-    "bothered": "کوئی مجھے پریشان کرہا ہے"
+    "private_talk": "عملے سے ذاتی بات",
+    "anxious": "میں گھبراتا ہوں",
+    "bothered": "کوئی مجھے پریشان کر رہا ہے"
   },
   "purposes": {
-    "for_medicine": "دوا لینے کے لیے",
+    "for_medicine": "دوائی کے لئے",
     "vegetarian": "سبزی خور",
-    "for_child": "ایک بچے کے لیے",
-    "urgent": "فوری"
+    "for_child": "بچے کے لئے",
+    "urgent": "جلدی"
   },
   "replies": {
     "bringing_now": "ہم اسے آپ کو ابھی لے کر جا رہے ہیں.",
@@ -194,14 +194,14 @@ export const UR: LocalePack = {
       "کافی"
     ],
     "juice": [
-      "رس",
+      "جوس",
       "نارنج کا رس"
     ],
     "milk": [
       "دودھ"
     ],
     "soft_drink": [
-      "مشروب",
+      "سرد مشروب",
       "کوک"
     ],
     "ice": [
@@ -209,17 +209,17 @@ export const UR: LocalePack = {
       "آئس کیوبز"
     ],
     "blanket": [
-      "کپڑا"
+      "کمبل"
     ],
     "pillow": [
-      "کشن"
+      "تکیا"
     ],
     "too_cold": [
-      "مجھے ٹھنڈا محسوس ہوتا ہے",
+      "ٹھنڈا لگ رہا ہے",
       "بہت سرد"
     ],
     "too_hot": [
-      "میں گرمحسوس کرتا ہوں",
+      "گرم ہو رہا ہے",
       "بہت گرم"
     ],
     "headphones": [
@@ -230,27 +230,26 @@ export const UR: LocalePack = {
       "نیند کا ماسک"
     ],
     "tissues": [
-      "ٹیکسٹائل / گیلے تولیہ",
+      "ٹشو / گیلے تولیہ",
       "ٹشو"
     ],
     "seat_help": [
-      "میری سیٹ کے ساتھ مدد",
+      "سیٹ میں مدد",
       "جھکنا"
     ],
     "screen_help": [
-      "اسکرین کے ساتھ مدد",
+      "اسکرین میں مدد",
       "سکرین"
     ],
     "charger": [
-      "فون چارج",
+      "فون چارج کرنا",
       "چارج"
     ],
     "meal": [
-      "خوراک",
       "کھانا"
     ],
     "snack": [
-      "نمکین",
+      "ہلکا ناشتا",
       "کوکیٹس"
     ],
     "veg_meal": [
@@ -262,7 +261,7 @@ export const UR: LocalePack = {
       "میرے بچے کے لیے کھانا"
     ],
     "allergy": [
-      "کھانے کی الرجی کا سوال",
+      "کھانے سے الرجی",
       "الرجی"
     ],
     "toilet": [
@@ -270,27 +269,26 @@ export const UR: LocalePack = {
       "باتھ روم"
     ],
     "medicine": [
-      "طب",
+      "دوائی",
       "گولیاں"
     ],
     "unwell": [
-      "میں بیمار محسوس کرتا ہوں",
+      "صحت خراب",
       "بیمار"
     ],
     "bag_help": [
-      "میرے بیگ کے ساتھ مدد",
+      "سامان میں مدد",
       "بیگ"
     ],
     "call_crew": [
-      "براہ مہربانی میری نشست پر آ",
+      "براہ مہربانی میری نشست پر آئیں",
       "یہاں آؤ"
     ],
     "wheelchair_arrival": [
-      "پہیے کی کرسی آمد پر",
       "پہیے کی کرسی"
     ],
     "arrival_form": [
-      "آمد کے فارم کے ساتھ مدد",
+      "آنے والے فارم میں مدد",
       "فارم"
     ],
     "connection": [
@@ -298,23 +296,23 @@ export const UR: LocalePack = {
       "رابطہ پرواز"
     ],
     "time_left": [
-      "ہم زمین تکتنا وقت لگتا ہے؟",
+      "کتنے وقت میں اترنے کے لئے؟",
       "کب تک"
     ],
     "lost_item": [
-      "میں نے کچھ کھو دیا",
+      "میں کچھ کھو گیا ہوں",
       "کھوئے ہوئے"
     ],
     "diaper": [
-      "بچے کی تبدیلی / ڈائپر",
+      "بچے کا ڈایپر",
       "ڈایپ"
     ],
     "sanitary": [
-      "حفظان صحت کی مصنوعات",
+      "سینیٹری پیڈ",
       "حفظان صحت"
     ],
     "sick_bag": [
-      "بیمار بیگ",
+      "الٹی کا تھیلا",
       "کٹائی"
     ],
     "toilet_assist": [
@@ -322,15 +320,15 @@ export const UR: LocalePack = {
       "ٹوائلٹ میں مدد"
     ],
     "private_talk": [
-      "ذاتی طور پر عملے سے بات کریں",
+      "عملے سے ذاتی بات",
       "نجی طور پر"
     ],
     "anxious": [
-      "میں پریشان محسوس",
+      "میں گھبراتا ہوں",
       "پریشان"
     ],
     "bothered": [
-      "کوئی مجھے پریشان کرہا ہے",
+      "کوئی مجھے پریشان کر رہا ہے",
       "مجھے پریشان کرنا"
     ]
   },

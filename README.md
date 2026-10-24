@@ -203,23 +203,23 @@ All numbers were measured on a MacBook Air (M2, 8 GB RAM). The scripts and test 
 - **Caveat:** this is a small sample with synthetic voices and noise. The full 6-language run and real voices are still to do.
 - **Tried earlier and dropped:** spectral noise reduction made 0 dB worse (68% to 65%).
 
-**27 languages, including all 22 scheduled languages of India, and what each one really covers.** `npm run languages` writes [docs/languages.md](docs/languages.md): one row per language, one column per layer — speech, understanding requests, passenger screens, crew replies, reading aloud, and who checked the wording. A language is never just "supported".
+**19 languages, including all 11 that Sarvam AI covers, and what each one really covers.** `npm run languages` writes [docs/languages.md](docs/languages.md): one row per language, one column per layer — speech, understanding requests, passenger screens, crew replies, reading aloud, and who checked the wording. A language is never just "supported".
 
 | | Speech | Understands | Screens | Replies | Checked by |
 | --- | --- | --- | --- | --- | --- |
 | Hindi, English, Japanese, Thai, Indonesian, Vietnamese | measured | all 40 needs | all | all 11 | non-native |
 | **Bengali, Tamil** | weak | all 40 needs | passenger path; rest in English | all 11 | non-native |
 | **Punjabi, Marathi** | not measured | all 40 needs | passenger path; rest in Hindi | all 11 | non-native |
-| **Assamese, Gujarati, Kannada, Malayalam, Nepali, Sanskrit, Sindhi, Telugu, Urdu** | Whisper has them; not measured | machine draft | machine draft, with a note | machine draft, with a note | machine only |
-| **Kashmiri, Maithili, Manipuri, Odia, Santali** | heard as Hindi (Kashmiri: Urdu) | machine draft | machine draft, with a note | machine draft, with a note | machine only |
-| **Bodo, Dogri, Konkani** | heard as Hindi (Konkani: Marathi) | via Hindi | in Hindi | in Hindi | nobody yet |
+| **Gujarati, Kannada, Malayalam, Telugu, Assamese, Nepali, Urdu** | Whisper has them; not measured | machine draft | machine draft, with a note | machine draft, with a note | machine only |
+| **Odia, Maithili** | heard as Hindi | machine draft | machine draft, with a note | machine draft, with a note | machine only |
 
-**The 17 newest languages are machine drafts, and say so.** `npm run draft-languages -w @hearme/hub` translated their screens, need labels, replies and matching words offline with NLLB-200, one string at a time:
-- Placeholders such as `{n}` are protected.
-- A matching word that would read as another need is dropped.
+**The newest nine languages are machine drafts, and say so.** `npm run draft-languages -w @hearme/hub` drafted them offline with NLLB-200, one string at a time: screen text from English, need names from Hindi.
+- Hindi words are unambiguous where single English words are not: "blanket" came out as "cup" in Telugu when drafted from English.
+- Placeholders such as `{n}` are protected, and a matching word that would read as another need is dropped.
+- A few need names that stayed clearly wrong were corrected by hand.
 - Safety texts are never drafted: they appear in Hindi or English.
 
-Passengers in these languages see a *machine-translated* note on screens and replies until a native speaker checks them. Urdu, Sindhi and Kashmiri screens run right to left. NLLB-200 has no Bodo, Dogri or Konkani, so those show Hindi until a native speaker writes the pack.
+Passengers in these languages see a *machine-translated* note on screens and replies until a native speaker checks them. Urdu screens run right to left. With Hindi, Bengali, Tamil, Punjabi, Marathi and English, Gujarati, Kannada, Malayalam, Odia and Telugu complete the 11 languages Sarvam AI covers.
 
 Bengali and Tamil used to be keyword-only: a passenger spoke Bengali at English screens. They now carry their own screens and replies, and Punjabi and Marathi are new. A pack language translates the 102-string passenger path (greeting, request grid, speaking, "Did you mean?", confirming, delivery status, the offline card, Care Mode), all 40 need labels and all 11 verified replies; anything else falls back to a core language the picker names before you choose it.
 

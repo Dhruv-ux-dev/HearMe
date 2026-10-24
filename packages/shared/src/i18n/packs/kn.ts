@@ -6,54 +6,54 @@ import type { LocalePack } from './types';
  */
 export const KN: LocalePack = {
   "code": "kn",
-  "provenance": "Machine draft: translated offline from English by NLLB-200 (distilled 600M) for the prototype. Nobody has checked it yet. Screens and replies in this language carry a \"machine-translated\" note until a native speaker reviews them. Safety texts are never drafted: they appear in the fallback language.",
+  "provenance": "Machine draft: translated offline by NLLB-200 (distilled 600M) for the prototype, screens from English and need names from Hindi. A few need names (sick_bag) were corrected by hand where the draft was clearly wrong. Nobody has checked the rest. Screens and replies in this language carry a \"machine-translated\" note until a native speaker reviews them. Safety texts are never drafted: they appear in the fallback language.",
   "needs": {
     "water": "ನೀರು",
     "hot_water": "ಬಿಸಿ ನೀರು",
     "tea": "ಚಹಾ",
     "coffee": "ಕಾಫಿ",
     "juice": "ಜ್ಯೂಸ್",
-    "milk": "ಹಾಲಿನ",
-    "soft_drink": "ಮೃದು ಪಾನೀಯ",
-    "ice": "ಐಸ್",
+    "milk": "ಹಾಲು",
+    "soft_drink": "ಶೀತಲ ಪಾನೀಯ",
+    "ice": "ಹಿಮ",
     "blanket": "ಕಂಬಳಿ",
-    "pillow": "ಮಸಾಲೆ",
-    "too_cold": "ನನಗೆ ಶೀತವಾಗಿದೆ",
-    "too_hot": "ನಾನು ಬೆಚ್ಚಗಾಗಿದ್ದೇನೆ",
-    "headphones": "ಕಿವಿಯೋಲೆಗಳು",
+    "pillow": "ದಿಂಬು",
+    "too_cold": "ಶೀತ ಕಾಣುತ್ತದೆ",
+    "too_hot": "ಬಿಸಿ",
+    "headphones": "ಹೆಡ್ಫೋನ್",
     "eye_mask": "ಕಣ್ಣಿನ ಮಾಸ್ಕ್",
-    "tissues": "ಅಂಗಾಂಶಗಳು / ತೇವ ಟವೆಲ್",
-    "seat_help": "ನನ್ನ ಆಸನಕ್ಕೆ ಸಹಾಯ ಮಾಡಿ",
+    "tissues": "ಅಂಗಾಂಶ / ತೇವ ಟವೆಲ್",
+    "seat_help": "ಸೀಟಿನಲ್ಲಿ ಸಹಾಯ",
     "screen_help": "ಪರದೆಯ ಸಹಾಯ",
-    "charger": "ಫೋನ್ ಚಾರ್ಜಿಂಗ್",
+    "charger": "ಫೋನ್ ಚಾರ್ಜ್",
     "meal": "ಆಹಾರ",
-    "snack": "ತಿಂಡಿ",
-    "veg_meal": "ಸಸ್ಯಾಹಾರಿ ಊಟ",
-    "baby_food": "ಶಿಶು ಆಹಾರ",
-    "allergy": "ಆಹಾರ ಅಲರ್ಜಿಯ ಪ್ರಶ್ನೆ",
+    "snack": "ಬೆಳಕಿನ ಉಪಹಾರ",
+    "veg_meal": "ಸಸ್ಯಾಹಾರಿ ಆಹಾರ",
+    "baby_food": "ಮಗುವಿನ ಆಹಾರ",
+    "allergy": "ಆಹಾರದ ಅಲರ್ಜಿಗಳು",
     "toilet": "ಶೌಚಾಲಯ",
     "medicine": "ಔಷಧ",
-    "unwell": "ನನಗೆ ಅನಾರೋಗ್ಯವಾಗಿದೆ",
-    "bag_help": "ನನ್ನ ಚೀಲಕ್ಕೆ ಸಹಾಯ ಮಾಡಿ",
+    "unwell": "ಆರೋಗ್ಯದ ದುರ್ಬಲ",
+    "bag_help": "ವಸ್ತುಗಳ ಸಹಾಯ",
     "call_crew": "ದಯವಿಟ್ಟು ನನ್ನ ಸೀಟಿಗೆ ಬನ್ನಿ",
-    "wheelchair_arrival": "ವ್ಹೀಲ್ ಚೇರ್ ಆಗಮನದ ಮೇಲೆ",
-    "arrival_form": "ಆಗಮನದ ಫಾರ್ಮ್ಗಳಲ್ಲಿ ಸಹಾಯ",
+    "wheelchair_arrival": "ವ್ಹೀಲ್ ಚೇರ್ ಆಗಮಿಸಿದಾಗ",
+    "arrival_form": "ಆಗಮನದ ಫಾರ್ಮ್ಗೆ ಸಹಾಯ",
     "connection": "ನನ್ನ ಸಂಪರ್ಕ ವಿಮಾನ",
-    "time_left": "ನಾವು ಇಳಿಯುವವರೆಗೆ ಎಷ್ಟು ಸಮಯ?",
-    "lost_item": "ನಾನು ಏನನ್ನಾದರೂ ಕಳೆದುಕೊಂಡೆ",
-    "diaper": "ಬೇಬಿ ಬದಲಾಯಿಸುವಿಕೆ / ಪ್ಯಾನ್ಗಳು",
-    "sanitary": "ನೈರ್ಮಲ್ಯ ಉತ್ಪನ್ನಗಳು",
-    "sick_bag": "ರೋಗಿಯ ಚೀಲ",
-    "toilet_assist": "ಶೌಚಾಲಯಕ್ಕೆ ಹೋಗಲು ಸಹಾಯ ಮಾಡಿ",
-    "private_talk": "ಖಾಸಗಿಯಾಗಿ ಸಿಬ್ಬಂದಿಯೊಂದಿಗೆ ಮಾತನಾಡಿ",
-    "anxious": "ನನಗೆ ಆತಂಕವಿದೆ",
-    "bothered": "ಯಾರೋ ನನಗೆ ತೊಂದರೆ ಕೊಡುತ್ತಿದ್ದಾರೆ"
+    "time_left": "ಎಷ್ಟು ಹೊತ್ತಿಗೆ ಇಳಿಯುತ್ತೀರಿ",
+    "lost_item": "ನಾನು ಏನನ್ನಾದರೂ ಕಳೆದುಕೊಂಡಿದ್ದೇನೆ",
+    "diaper": "ಮಗುವಿನ ಡೈಪರ್",
+    "sanitary": "ಸ್ಯಾನಿಟರಿ ಪ್ಯಾಡ್",
+    "sick_bag": "ವಾಂತಿ ಚೀಲ",
+    "toilet_assist": "ಶೌಚಾಲಯಕ್ಕೆ ಹೋಗಲು ಸಹಾಯ",
+    "private_talk": "ಸಿಬ್ಬಂದಿ ಖಾಸಗಿ ಮಾತು",
+    "anxious": "ನಾನು ಭಯಭೀತರಾಗಿದ್ದೇನೆ",
+    "bothered": "ಯಾರೋ ನನ್ನನ್ನು ತೊಂದರೆಗೊಳಗಾಗಿದ್ದಾರೆ"
   },
   "purposes": {
-    "for_medicine": "ಔಷಧಿಗಳನ್ನು ತೆಗೆದುಕೊಳ್ಳಲು",
+    "for_medicine": "ಔಷಧಕ್ಕಾಗಿ",
     "vegetarian": "ಸಸ್ಯಾಹಾರಿ",
     "for_child": "ಮಗುವಿಗೆ",
-    "urgent": "ತುರ್ತು"
+    "urgent": "ಬೇಗ"
   },
   "replies": {
     "bringing_now": "ನಾವು ಈಗ ಅದನ್ನು ನಿಮಗೆ ತರುತ್ತೇವೆ.",
@@ -180,52 +180,39 @@ export const KN: LocalePack = {
   ],
   "phrases": {
     "water": [
-      "ನೀರು",
       "ಕುಡಿಯುವ ನೀರು"
     ],
     "hot_water": [
       "ಬಿಸಿ ನೀರು",
       "ಬೆಚ್ಚಗಿನ ನೀರು"
     ],
-    "tea": [
-      "ಚಹಾ",
-      "ಚೈ"
-    ],
-    "coffee": [
-      "ಕಾಫಿ"
-    ],
+    "tea": [],
+    "coffee": [],
     "juice": [
       "ಜ್ಯೂಸ್",
       "ಆರೆಂಜ್ ರಸ"
     ],
-    "milk": [
-      "ಹಾಲಿನ"
-    ],
+    "milk": [],
     "soft_drink": [
-      "ಮೃದು ಪಾನೀಯ",
-      "ಕೋಕ್"
+      "ಶೀತಲ ಪಾನೀಯ"
     ],
     "ice": [
-      "ಐಸ್",
       "ಐಸ್ ಕ್ಯೂಬ್ಗಳು"
     ],
     "blanket": [
       "ಕಂಬಳಿ"
     ],
     "pillow": [
-      "ಮಸಾಲೆ",
       "ಕುಶನ್"
     ],
     "too_cold": [
-      "ನನಗೆ ಶೀತವಾಗಿದೆ",
+      "ಶೀತ ಕಾಣುತ್ತದೆ",
       "ತುಂಬಾ ತಂಪಾಗಿ"
     ],
     "too_hot": [
-      "ನಾನು ಬೆಚ್ಚಗಾಗಿದ್ದೇನೆ",
       "ತುಂಬಾ ಬಿಸಿ"
     ],
     "headphones": [
-      "ಕಿವಿಯೋಲೆಗಳು",
       "ಹೆಡ್ಫೋನ್"
     ],
     "eye_mask": [
@@ -233,38 +220,36 @@ export const KN: LocalePack = {
       "ನಿದ್ರೆಯ ಮಾಸ್ಕ್"
     ],
     "tissues": [
-      "ಅಂಗಾಂಶಗಳು / ತೇವ ಟವೆಲ್",
+      "ಅಂಗಾಂಶ / ತೇವ ಟವೆಲ್",
       "ಅಂಗಾಂಶ"
     ],
     "seat_help": [
-      "ನನ್ನ ಆಸನಕ್ಕೆ ಸಹಾಯ ಮಾಡಿ",
-      "ಬಾಗಿ"
+      "ಸೀಟಿನಲ್ಲಿ ಸಹಾಯ"
     ],
     "screen_help": [
       "ಪರದೆಯ ಸಹಾಯ",
       "ಪರದೆಯ"
     ],
     "charger": [
-      "ಫೋನ್ ಚಾರ್ಜಿಂಗ್",
-      "ದರ"
+      "ಫೋನ್ ಚಾರ್ಜ್"
     ],
     "meal": [
       "ಆಹಾರ"
     ],
     "snack": [
-      "ತಿಂಡಿ",
+      "ಬೆಳಕಿನ ಉಪಹಾರ",
       "ಬಿಸ್ಕೀಟ್"
     ],
     "veg_meal": [
-      "ಸಸ್ಯಾಹಾರಿ ಊಟ",
+      "ಸಸ್ಯಾಹಾರಿ ಆಹಾರ",
       "ತರಕಾರಿ ಆಹಾರ"
     ],
     "baby_food": [
-      "ಶಿಶು ಆಹಾರ",
+      "ಮಗುವಿನ ಆಹಾರ",
       "ನನ್ನ ಮಗುವಿಗೆ ಆಹಾರ"
     ],
     "allergy": [
-      "ಆಹಾರ ಅಲರ್ಜಿಯ ಪ್ರಶ್ನೆ",
+      "ಆಹಾರದ ಅಲರ್ಜಿಗಳು",
       "ಅಲರ್ಜಿಗಳು"
     ],
     "toilet": [
@@ -276,63 +261,61 @@ export const KN: LocalePack = {
       "ಮಾತ್ರೆಗಳು"
     ],
     "unwell": [
-      "ನನಗೆ ಅನಾರೋಗ್ಯವಾಗಿದೆ",
+      "ಆರೋಗ್ಯದ ದುರ್ಬಲ",
       "ಅನಾರೋಗ್ಯ"
     ],
     "bag_help": [
-      "ನನ್ನ ಚೀಲಕ್ಕೆ ಸಹಾಯ ಮಾಡಿ",
-      "ಚೀಲ"
+      "ವಸ್ತುಗಳ ಸಹಾಯ"
     ],
     "call_crew": [
       "ದಯವಿಟ್ಟು ನನ್ನ ಸೀಟಿಗೆ ಬನ್ನಿ",
       "ಇಲ್ಲಿಗೆ ಬನ್ನಿ"
     ],
     "wheelchair_arrival": [
-      "ವ್ಹೀಲ್ ಚೇರ್ ಆಗಮನದ ಮೇಲೆ",
+      "ವ್ಹೀಲ್ ಚೇರ್ ಆಗಮಿಸಿದಾಗ",
       "ಚಕ್ರ"
     ],
     "arrival_form": [
-      "ಆಗಮನದ ಫಾರ್ಮ್ಗಳಲ್ಲಿ ಸಹಾಯ",
-      "ರೂಪ"
+      "ಆಗಮನದ ಫಾರ್ಮ್ಗೆ ಸಹಾಯ"
     ],
     "connection": [
       "ನನ್ನ ಸಂಪರ್ಕ ವಿಮಾನ",
       "ಸಂಪರ್ಕ ವಿಮಾನ"
     ],
     "time_left": [
+      "ಎಷ್ಟು ಹೊತ್ತಿಗೆ ಇಳಿಯುತ್ತೀರಿ",
       "ನಾವು ಇಳಿಯುವವರೆಗೆ ಎಷ್ಟು ಸಮಯ",
       "ಎಷ್ಟು ಸಮಯ"
     ],
     "lost_item": [
-      "ನಾನು ಏನನ್ನಾದರೂ ಕಳೆದುಕೊಂಡೆ",
+      "ನಾನು ಏನನ್ನಾದರೂ ಕಳೆದುಕೊಂಡಿದ್ದೇನೆ",
       "ಕಳೆದುಹೋದ"
     ],
     "diaper": [
-      "ಬೇಬಿ ಬದಲಾಯಿಸುವಿಕೆ / ಪ್ಯಾನ್ಗಳು",
+      "ಮಗುವಿನ ಡೈಪರ್",
       "ಪ್ಯಾನ್"
     ],
     "sanitary": [
-      "ನೈರ್ಮಲ್ಯ ಉತ್ಪನ್ನಗಳು",
+      "ಸ್ಯಾನಿಟರಿ ಪ್ಯಾಡ್",
       "ಆರೋಗ್ಯ"
     ],
     "sick_bag": [
-      "ರೋಗಿಯ ಚೀಲ",
+      "ವಾಂತಿ ಚೀಲ",
       "ವಾಕರಿಕೆ"
     ],
     "toilet_assist": [
-      "ಶೌಚಾಲಯಕ್ಕೆ ಹೋಗಲು ಸಹಾಯ ಮಾಡಿ",
+      "ಶೌಚಾಲಯಕ್ಕೆ ಹೋಗಲು ಸಹಾಯ",
       "ಶೌಚಾಲಯಕ್ಕೆ ಸಹಾಯ"
     ],
     "private_talk": [
-      "ಖಾಸಗಿಯಾಗಿ ಸಿಬ್ಬಂದಿಯೊಂದಿಗೆ ಮಾತನಾಡಿ",
+      "ಸಿಬ್ಬಂದಿ ಖಾಸಗಿ ಮಾತು",
       "ಖಾಸಗಿಯಾಗಿ"
     ],
     "anxious": [
-      "ನನಗೆ ಆತಂಕವಿದೆ",
-      "ಚಿಂತೆ"
+      "ನಾನು ಭಯಭೀತರಾಗಿದ್ದೇನೆ"
     ],
     "bothered": [
-      "ಯಾರೋ ನನಗೆ ತೊಂದರೆ ಕೊಡುತ್ತಿದ್ದಾರೆ",
+      "ಯಾರೋ ನನ್ನನ್ನು ತೊಂದರೆಗೊಳಗಾಗಿದ್ದಾರೆ",
       "ನನ್ನನ್ನು ತೊಂದರೆಗೊಳಗಾಗುವುದು"
     ]
   },

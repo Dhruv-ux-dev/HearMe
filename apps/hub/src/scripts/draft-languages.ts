@@ -74,18 +74,18 @@ function asciiDigits(s: string): string {
   });
 }
 
-async function draft(code: string, translate: (text: string) => Promise<string>): Promise<Draft> {
+async function draft(code: string, translate: (text: string, from?: string) => Promise<string>): Promise<Draft> {
   const script = DRAFTABLE[code]!.nllb.split('_')[1]!;
   const own = new RegExp(`\\p{Script=${script === 'Beng' ? 'Bengali' : script}}`, 'u');
   const dropped: string[] = [];
-  const mt = async (text: string) => (await translate(text)).trim();
+  const mt = async (text: string, from = 'en') => (await translate(text, from)).trim();
 
   /** Screen text: placeholders and the product name are swapped for numbers NLLB leaves alone. */
-  const screen = async (key: string, en: string): Promise<string | null> => {
+  const screen = async (key: string, en: string, from = 'en'): Promise<string | null> => {
     const tokens = [...new Set(en.match(/\{\w+\}|HearMe/g) ?? [])];
     let src = en;
     tokens.forEach((t, i) => (src = src.split(t).join(String(7101 + i))));
-    let out = asciiDigits(await mt(src));
+    let out = asciiDigits(await mt(src, from));
     for (const [i, t] of tokens.entries()) {
       if (!out.includes(String(7101 + i))) {
         dropped.push(`${key}: lost ${t}`);
@@ -116,7 +116,8 @@ async function draft(code: string, translate: (text: string) => Promise<string>)
   };
   for (const need of CORE_NEEDS) {
     const label = need.label.en;
-    const drafted = await screen(`need ${need.id}`, label);
+    // From Hindi: a single English word is ambiguous to NLLB ("Blanket" came out as "cup" in Telugu), the Hindi word is not.
+    const drafted = await screen(`need ${need.id}`, need.label.hi, 'hi');
     needs[need.id] = drafted ?? label;
     // The label's translation is the first matching word; one more English phrase gives a second.
     const extra = (need.phrases.en ?? []).find((p) => p.toLowerCase() !== label.toLowerCase());
@@ -129,7 +130,7 @@ async function draft(code: string, translate: (text: string) => Promise<string>)
     }
   }
   const purposes: Record<string, string> = {};
-  for (const p of PURPOSES) purposes[p.id] = (await screen(`purpose ${p.id}`, p.label.en)) ?? p.label.en;
+  for (const p of PURPOSES) purposes[p.id] = (await screen(`purpose ${p.id}`, p.label.hi, 'hi')) ?? p.label.en;
   const replies: Record<string, string> = {};
   for (const r of REPLIES) {
     const out = await screen(`reply ${r.id}`, r.text.en);
@@ -144,6 +145,17 @@ async function draft(code: string, translate: (text: string) => Promise<string>)
  * confidently reads as another need.
  */
 function cleanVocabulary(drafts: Draft[]): void {
+  // Too short to be safe: Assamese "ক'ক" (Coke) reads as "ক ক", which sits inside Bengali "এক কাপ".
+  const tooShort = (w: string) => /['’ʼ]/u.test(w) || (w.match(/\p{L}/gu) ?? []).length < 3;
+  for (const d of drafts) {
+    for (const [id, words] of Object.entries(d.phrases)) {
+      d.phrases[id] = words.filter((w) => {
+        if (!tooShort(w)) return true;
+        d.dropped.push(`keyword "${w}" (${id}) too short`);
+        return false;
+      });
+    }
+  }
   for (const d of drafts) {
     const seen = new Map<string, number>();
     for (const words of Object.values(d.phrases)) for (const w of words) seen.set(w, (seen.get(w) ?? 0) + 1);
@@ -178,7 +190,7 @@ function writePack(d: Draft): void {
   const name = d.code.toUpperCase();
   const pack = {
     code: d.code,
-    provenance: `Machine draft: translated offline from English by NLLB-200 (distilled 600M) for the prototype. Nobody has checked it yet. Screens and replies in this language carry a "machine-translated" note until a native speaker reviews them. Safety texts are never drafted: they appear in the fallback language.`,
+    provenance: `Machine draft: translated offline by NLLB-200 (distilled 600M) for the prototype, screens from English and need names from Hindi.${CORRECTIONS[d.code] ? ` A few need names (${Object.keys(CORRECTIONS[d.code]!).join(', ')}) were corrected by hand where the draft was clearly wrong.` : ''} Nobody has checked the rest. Screens and replies in this language carry a "machine-translated" note until a native speaker reviews them. Safety texts are never drafted: they appear in the fallback language.`,
     needs: d.needs,
     purposes: d.purposes,
     replies: d.replies,
@@ -194,12 +206,38 @@ function writePack(d: Draft): void {
   );
 }
 
+/**
+ * Need labels the machine draft gets clearly wrong even from Hindi ("blanket" as "frog" in Telugu,
+ * "sick bag" as "pumpkin bag" in Urdu), corrected by hand. Only words the author is sure of; the
+ * pack's provenance says so.
+ */
+const CORRECTIONS: Record<string, Record<string, string>> = {
+  te: { blanket: 'దుప్పటి', sick_bag: 'వాంతి సంచి' },
+  ur: { sick_bag: 'الٹی کا تھیلا' },
+  ml: { sick_bag: 'ഛർദ്ദി ബാഗ്' },
+  kn: { sick_bag: 'ವಾಂತಿ ಚೀಲ' },
+  gu: { blanket: 'ધાબળો', sick_bag: 'ઉલ્ટીની થેલી' },
+  or: { blanket: 'କମ୍ବଳ', sick_bag: 'ବାନ୍ତି ବ୍ୟାଗ' },
+  as: { blanket: 'কম্বল', pillow: 'গাৰু' },
+  mai: { blanket: 'कम्बल', sick_bag: 'उल्टीक थैली' },
+};
+
+function applyCorrections(d: Draft): void {
+  const script = DRAFTABLE[d.code]!.nllb.split('_')[1]!;
+  for (const [id, word] of Object.entries(CORRECTIONS[d.code] ?? {})) {
+    const old = d.needs[id];
+    d.needs[id] = word;
+    d.phrases[id] = [...new Set([keepTarget(word, script), ...(d.phrases[id] ?? []).filter((w) => w !== keepTarget(old ?? '', script))])];
+  }
+}
+
 /** Clean every finished draft, write its pack, and list them all in packs/index.ts. */
 function assemble(): void {
   const drafts = readdirSync(DRAFT_DIR)
     .filter((f) => f.endsWith('.json'))
     .map((f) => JSON.parse(readFileSync(join(DRAFT_DIR, f), 'utf8')) as Draft)
     .sort((a, b) => a.code.localeCompare(b.code));
+  drafts.forEach(applyCorrections);
   cleanVocabulary(drafts);
   for (const d of drafts) {
     writePack(d);
@@ -227,15 +265,39 @@ if (mode === 'draft') {
     }
     const t0 = Date.now();
     let n = 0;
-    const d = await draft(code, (text) => {
+    const d = await draft(code, (text, from) => {
       if (++n % 25 === 0) console.log(`  ${code}: ${n} strings, ${((Date.now() - t0) / n / 1000).toFixed(1)} s each`);
-      return nllb.translate(text, 'en', code, Math.min(96, 12 + Math.ceil(text.length * 1.2)));
+      return nllb.translate(text, from ?? 'en', code, Math.min(96, 12 + Math.ceil(text.length * 1.2)));
     });
     writeFileSync(join(DRAFT_DIR, `${code}.json`), JSON.stringify(d, null, 2));
     // Each finished language goes straight into the app, so the tree is always consistent.
     assemble();
     console.log(`${code}: ${n} translations in ${Math.round((Date.now() - t0) / 1000)} s; ui ${Object.keys(d.ui).length}/${PASSENGER_PATH_KEYS.length}, replies ${Object.keys(d.replies).length}/${REPLIES.length}, dropped ${d.dropped.length}`);
   }
+} else if (mode === 'relabel') {
+  const nllb = await createNllb(inferenceThreads());
+  for (const code of codes) {
+    const file = join(DRAFT_DIR, `${code}.json`);
+    const d = JSON.parse(readFileSync(file, 'utf8')) as Draft;
+    const script = DRAFTABLE[code]!.nllb.split('_')[1]!;
+    const own = new RegExp(`\\p{Script=${script}}`, 'u');
+    const tr = async (hi: string) => {
+      const out = asciiDigits((await nllb.translate(hi, 'hi', code, 24)).trim()).replace(/[.!?।॥。]+$/u, '').trim();
+      return own.test(out) && out.length <= 60 ? out : null;
+    };
+    for (const need of CORE_NEEDS) {
+      const label = await tr(need.label.hi);
+      if (!label) continue;
+      const old = d.needs[need.id];
+      d.needs[need.id] = label;
+      const kw = keepTarget(label, script);
+      d.phrases[need.id] = [...new Set([...(kw && kw.length <= 40 ? [kw] : []), ...(d.phrases[need.id] ?? []).filter((w) => w !== keepTarget(old ?? '', script))])];
+    }
+    for (const p of PURPOSES) d.purposes[p.id] = (await tr(p.label.hi)) ?? d.purposes[p.id]!;
+    writeFileSync(file, JSON.stringify(d, null, 2));
+    console.log(`${code}: need labels and purposes redrafted from Hindi`);
+  }
+  assemble();
 } else if (mode === 'assemble') {
   assemble();
 } else {
