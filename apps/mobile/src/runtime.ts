@@ -10,7 +10,7 @@ import {
   type SpeechRecognizer,
 } from '@hearme/shared';
 import { createBrowserVoice, type ReplyVoice, type SpeakOutcome } from '@hearme/shared/tts';
-import { HubSpeechRecognizer, MicRecorder } from '@hearme/shared/web';
+import { HubSpeechRecognizer } from '@hearme/shared/web';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Haptics from 'expo-haptics';
 import * as Speech from 'expo-speech';
@@ -80,6 +80,17 @@ export async function connectHub(explicit?: string): Promise<boolean> {
   return false;
 }
 
+/**
+ * Keep looking while there is no hub: it may still be starting, or restarting.
+ * Looking only once at load left a page opened in that gap on the simulation for good.
+ */
+export function watchForHub(everyMs = 5000): () => void {
+  const timer = setInterval(() => {
+    if (!hubUrl) void connectHub().catch(() => false);
+  }, everyMs);
+  return () => clearInterval(timer);
+}
+
 export async function forgetHub(): Promise<void> {
   await AsyncStorage.removeItem(HUB_KEY).catch(() => undefined);
   setHub(null);
@@ -90,9 +101,13 @@ export async function forgetHub(): Promise<void> {
 export const mockSpeech = new MockSpeechRecognizer();
 const hubSpeech = Platform.OS === 'web' ? new HubSpeechRecognizer(() => hubUrl) : null;
 
-/** The real recognizer when this device can record and a hub can understand; otherwise the simulation. */
+/**
+ * The real recognizer whenever a hub can understand; the simulation only without one.
+ * A device that cannot record (e.g. a phone on plain http) gets the hub recognizer too,
+ * which says the microphone is unavailable, instead of a scripted "hot water" sentence.
+ */
 export function currentSpeech(): SpeechRecognizer {
-  return hubSpeech && hubUrl && MicRecorder.supported() ? hubSpeech : mockSpeech;
+  return hubSpeech && hubUrl ? hubSpeech : mockSpeech;
 }
 
 /**
