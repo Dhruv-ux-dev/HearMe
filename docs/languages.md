@@ -18,11 +18,11 @@ HearMe does not have a list of "supported languages". Speech recognition, unders
 | **தமிழ்** | Tamil (pack) | weak | all 40 needs | 105/178, rest in English | all 11 | rare | non-native |
 | **ਪੰਜਾਬੀ** | Punjabi (pack) | untested | all 40 needs | 105/178, rest in Hindi | all 11 | rare | non-native |
 | **मराठी** | Marathi (pack) | untested | all 40 needs | 105/178, rest in Hindi | all 11 | rare | non-native |
-| **ગુજરાતી** | Gujarati (pack) | untested | machine | 171/178, rest in Hindi | machine | rare | machine |
-| **ಕನ್ನಡ** | Kannada (pack) | untested | machine | 171/178, rest in English | machine | rare | machine |
-| **മലയാളം** | Malayalam (pack) | untested | machine | 171/178, rest in English | machine | rare | machine |
-| **ଓଡ଼ିଆ** | Odia (pack) | none | machine | 169/178, rest in Hindi | machine | rare | machine |
-| **తెలుగు** | Telugu (pack) | untested | machine | 171/178, rest in English | machine | rare | machine |
+| **ગુજરાતી** | Gujarati (pack) | untested | all 40 needs | 171/178, rest in Hindi | all 11 | rare | non-native |
+| **ಕನ್ನಡ** | Kannada (pack) | untested | all 40 needs | 171/178, rest in English | all 11 | rare | non-native |
+| **മലയാളം** | Malayalam (pack) | untested | all 40 needs | 171/178, rest in English | all 11 | rare | non-native |
+| **ଓଡ଼ିଆ** | Odia (pack) | none | all 40 needs | 171/178, rest in Hindi | all 11 | rare | non-native |
+| **తెలుగు** | Telugu (pack) | untested | all 40 needs | 171/178, rest in English | all 11 | rare | non-native |
 
 A "pack" language is one added as a data file (`packages/shared/src/i18n/packs/<code>.ts`) rather than written into every catalogue. It carries its own request vocabulary, its 105-string passenger path, all 11 verified replies and all 40 need labels, and falls back to a core language for the screens it has not translated — settings detail, the announcement list, and the safety briefing.
 
@@ -34,11 +34,11 @@ A "pack" language is one added as a data file (`packages/shared/src/i18n/packs/<
 - **Tamil** (தமிழ்) — Began as an offline NLLB-200 draft of the English catalogue, then corrected by hand — the machine draft had called a pillow “powder”, a blanket “cloth”, a soft drink “alcohol” and tissues “AIDS”. Needs a native speaker’s review before any pilot. Vocabulary began as an NLLB-200 machine draft and was corrected by hand; still needs a native speaker.
 - **Punjabi** (ਪੰਜਾਬੀ) — Written for the prototype by a non-native author who reads Gurmukhi. Needs a native speaker’s review before any pilot. Not yet measured on speech. Untranslated screen text appears in Hindi.
 - **Marathi** (मराठी) — Written for the prototype by a non-native author who reads Devanagari. Needs a native speaker’s review before any pilot. Not yet measured on speech. Untranslated screen text appears in Hindi.
-- **Gujarati** (ગુજરાતી) — Machine draft: translated offline by NLLB-200 (distilled 600M) for the prototype, screens from English and need names from Hindi. A few need names (blanket, sick_bag) were corrected by hand where the draft was clearly wrong. Nobody has checked the rest. Screens and replies in this language carry a "machine-translated" note until a native speaker reviews them. Safety texts are never drafted: they appear in the fallback language. Machine draft (NLLB-200), not yet checked by a native speaker: screens and replies show a “machine-translated” note. Speech not yet measured.
-- **Kannada** (ಕನ್ನಡ) — Machine draft: translated offline by NLLB-200 (distilled 600M) for the prototype, screens from English and need names from Hindi. A few need names (sick_bag) were corrected by hand where the draft was clearly wrong. Nobody has checked the rest. Screens and replies in this language carry a "machine-translated" note until a native speaker reviews them. Safety texts are never drafted: they appear in the fallback language. Machine draft (NLLB-200), not yet checked by a native speaker: screens and replies show a “machine-translated” note. Speech not yet measured.
-- **Malayalam** (മലയാളം) — Machine draft: translated offline by NLLB-200 (distilled 600M) for the prototype, screens from English and need names from Hindi. A few need names (sick_bag) were corrected by hand where the draft was clearly wrong. Nobody has checked the rest. Screens and replies in this language carry a "machine-translated" note until a native speaker reviews them. Safety texts are never drafted: they appear in the fallback language. Machine draft (NLLB-200), not yet checked by a native speaker: screens and replies show a “machine-translated” note. Speech not yet measured.
-- **Odia** (ଓଡ଼ିଆ) — Machine draft: translated offline by NLLB-200 (distilled 600M) for the prototype, screens from English and need names from Hindi. A few need names (blanket, sick_bag) were corrected by hand where the draft was clearly wrong. Nobody has checked the rest. Screens and replies in this language carry a "machine-translated" note until a native speaker reviews them. Safety texts are never drafted: they appear in the fallback language. Machine draft (NLLB-200), not yet checked by a native speaker: screens and replies show a “machine-translated” note. Whisper has no Odia, so speech is heard as Hindi: speak Hindi or type.
-- **Telugu** (తెలుగు) — Machine draft: translated offline by NLLB-200 (distilled 600M) for the prototype, screens from English and need names from Hindi. A few need names (blanket, sick_bag) were corrected by hand where the draft was clearly wrong. Nobody has checked the rest. Screens and replies in this language carry a "machine-translated" note until a native speaker reviews them. Safety texts are never drafted: they appear in the fallback language. Machine draft (NLLB-200), not yet checked by a native speaker: screens and replies show a “machine-translated” note. Speech not yet measured.
+- **Gujarati** (ગુજરાતી) — Written directly in Gujarati for the prototype by a non-native author, not translated from English or Hindi. Needs a native speaker’s review before any pilot. Not yet measured on speech. Untranslated screen text appears in Hindi.
+- **Kannada** (ಕನ್ನಡ) — Written directly in Kannada for the prototype by a non-native author, not translated from English or Hindi. Needs a native speaker’s review before any pilot. Not yet measured on speech.
+- **Malayalam** (മലയാളം) — Written directly in Malayalam for the prototype by a non-native author, not translated from English or Hindi. Needs a native speaker’s review before any pilot. Not yet measured on speech.
+- **Odia** (ଓଡ଼ିଆ) — Written directly in Odia for the prototype by a non-native author, not translated from English or Hindi. Needs a native speaker’s review before any pilot. Whisper has no Odia: speech is transcribed as Hindi and moved into Odia letters, so spoken Odia is matched by sound. Typing works fully.
+- **Telugu** (తెలుగు) — Written directly in Telugu for the prototype by a non-native author, not translated from English or Hindi. Needs a native speaker’s review before any pilot. Not yet measured on speech.
 
 ## Measured: the keyword matcher alone, on held-out sentences
 
@@ -113,44 +113,44 @@ Twelve requests per language, one phrasing each, written after the vocabulary wa
 ### ગુજરાતી — Gujarati
 
 - **Speech recognition:** Whisper supports it; not measured here yet
-- **Understanding requests:** machine draft (NLLB-200), shown with a “machine-translated” note; safety texts in Hindi
-- **Passenger screens:** machine draft (NLLB-200), shown with a “machine-translated” note; safety texts in Hindi
-- **Crew replies:** machine draft (NLLB-200), shown with a “machine-translated” note; safety texts in Hindi
+- **Understanding requests:** all of it
+- **Passenger screens:** the passenger path; the rest in Hindi
+- **Crew replies:** all of it
 - **Replies read aloud:** many phones have no voice — big text and vibration instead
-- **Wording checked by:** machine translation only
+- **Wording checked by:** a non-native author — needs native review
 
 ### ಕನ್ನಡ — Kannada
 
 - **Speech recognition:** Whisper supports it; not measured here yet
-- **Understanding requests:** machine draft (NLLB-200), shown with a “machine-translated” note; safety texts in English
-- **Passenger screens:** machine draft (NLLB-200), shown with a “machine-translated” note; safety texts in English
-- **Crew replies:** machine draft (NLLB-200), shown with a “machine-translated” note; safety texts in English
+- **Understanding requests:** all of it
+- **Passenger screens:** the passenger path; the rest in English
+- **Crew replies:** all of it
 - **Replies read aloud:** many phones have no voice — big text and vibration instead
-- **Wording checked by:** machine translation only
+- **Wording checked by:** a non-native author — needs native review
 
 ### മലയാളം — Malayalam
 
 - **Speech recognition:** Whisper supports it; not measured here yet
-- **Understanding requests:** machine draft (NLLB-200), shown with a “machine-translated” note; safety texts in English
-- **Passenger screens:** machine draft (NLLB-200), shown with a “machine-translated” note; safety texts in English
-- **Crew replies:** machine draft (NLLB-200), shown with a “machine-translated” note; safety texts in English
+- **Understanding requests:** all of it
+- **Passenger screens:** the passenger path; the rest in English
+- **Crew replies:** all of it
 - **Replies read aloud:** many phones have no voice — big text and vibration instead
-- **Wording checked by:** machine translation only
+- **Wording checked by:** a non-native author — needs native review
 
 ### ଓଡ଼ିଆ — Odia
 
 - **Speech recognition:** not available
-- **Understanding requests:** machine draft (NLLB-200), shown with a “machine-translated” note; safety texts in Hindi
-- **Passenger screens:** machine draft (NLLB-200), shown with a “machine-translated” note; safety texts in Hindi
-- **Crew replies:** machine draft (NLLB-200), shown with a “machine-translated” note; safety texts in Hindi
+- **Understanding requests:** all of it
+- **Passenger screens:** the passenger path; the rest in Hindi
+- **Crew replies:** all of it
 - **Replies read aloud:** many phones have no voice — big text and vibration instead
-- **Wording checked by:** machine translation only
+- **Wording checked by:** a non-native author — needs native review
 
 ### తెలుగు — Telugu
 
 - **Speech recognition:** Whisper supports it; not measured here yet
-- **Understanding requests:** machine draft (NLLB-200), shown with a “machine-translated” note; safety texts in English
-- **Passenger screens:** machine draft (NLLB-200), shown with a “machine-translated” note; safety texts in English
-- **Crew replies:** machine draft (NLLB-200), shown with a “machine-translated” note; safety texts in English
+- **Understanding requests:** all of it
+- **Passenger screens:** the passenger path; the rest in English
+- **Crew replies:** all of it
 - **Replies read aloud:** many phones have no voice — big text and vibration instead
-- **Wording checked by:** machine translation only
+- **Wording checked by:** a non-native author — needs native review

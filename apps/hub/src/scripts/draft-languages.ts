@@ -237,6 +237,13 @@ function assemble(): void {
   const drafts = readdirSync(DRAFT_DIR)
     .filter((f) => f.endsWith('.json'))
     .map((f) => JSON.parse(readFileSync(join(DRAFT_DIR, f), 'utf8')) as Draft)
+    .filter((d) => {
+      // A pack written by a person is never replaced by a machine draft.
+      const file = join(PACK_DIR, `${d.code}.ts`);
+      if (!existsSync(file) || readFileSync(file, 'utf8').includes('Machine draft —')) return true;
+      console.warn(`${d.code}: skipped, packs/${d.code}.ts is written by hand`);
+      return false;
+    })
     .sort((a, b) => a.code.localeCompare(b.code));
   drafts.forEach(applyCorrections);
   cleanVocabulary(drafts);

@@ -403,7 +403,9 @@ export class AiEngine {
         return out;
       });
       this.asrFailures = 0;
-      return fromDevanagari(text, pack?.script);
+      // Whisper often writes Indian languages in Hindi letters, and has no Odia at all (asked
+      // for Hindi): move the text into the passenger's own script so their words can match.
+      return fromDevanagari(text, pack?.script ?? findLanguage(lang)?.script);
     } catch (e) {
       if (++this.asrFailures >= 2) void this.loadAsr(this.options.asrSize);
       throw e;

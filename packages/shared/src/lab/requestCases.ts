@@ -128,4 +128,44 @@ export const REQUEST_CASES: RequestCase[] = [
   { lang: 'mr', text: 'जेवण पाठवू नका, फक्त चहा द्या', want: ['tea'], refused: ['meal'] },
   { lang: 'mr', text: 'चहा नको, कॉफी हवी', want: ['coffee'], refused: ['tea'] },
   { lang: 'mr', text: 'मला बरे वाटत नाही', want: ['unwell'] },
+
+  // Telugu
+  { lang: 'te', text: 'నాకు చల్లని నీళ్ళు వద్దు, వేడి నీళ్ళు మరియు ఒక దుప్పటి కావాలి', want: ['blanket', 'hot_water'], refused: ['water'] },
+  { lang: 'te', text: 'భోజనం పంపకండి, టీ మాత్రమే ఇవ్వండి', want: ['tea'], refused: ['meal'] },
+  { lang: 'te', text: 'టీ వద్దు, కాఫీ కావాలి', want: ['coffee'], refused: ['tea'] },
+  { lang: 'te', text: 'ఐస్ లేకుండా నీళ్ళు ఇవ్వండి', want: ['water'], refused: ['ice'] },
+  { lang: 'te', text: 'నాకు ఒంట్లో బాగాలేదు', want: ['unwell'] },
+  { lang: 'te', text: 'టీవీ పనిచేయడం లేదు', want: ['screen_help'] },
+
+  // Kannada
+  { lang: 'kn', text: 'ನನಗೆ ತಣ್ಣನೆಯ ನೀರು ಬೇಡ, ಬಿಸಿ ನೀರು ಮತ್ತು ಒಂದು ಹೊದಿಕೆ ಬೇಕು', want: ['blanket', 'hot_water'], refused: ['water'] },
+  { lang: 'kn', text: 'ಊಟ ಕಳುಹಿಸಬೇಡಿ, ಟೀ ಮಾತ್ರ ಕೊಡಿ', want: ['tea'], refused: ['meal'] },
+  { lang: 'kn', text: 'ಟೀ ಬೇಡ, ಕಾಫಿ ಬೇಕು', want: ['coffee'], refused: ['tea'] },
+  { lang: 'kn', text: 'ಐಸ್ ಇಲ್ಲದೆ ನೀರು ಕೊಡಿ', want: ['water'], refused: ['ice'] },
+  { lang: 'kn', text: 'ನನಗೆ ಮೈ ಹುಷಾರಿಲ್ಲ', want: ['unwell'] },
+
+  // Malayalam
+  { lang: 'ml', text: 'എനിക്ക് തണുത്ത വെള്ളം വേണ്ട, ചൂടുവെള്ളം വേണം, പിന്നെ ഒരു പുതപ്പ് തരൂ', want: ['blanket', 'hot_water'], refused: ['water'] },
+  { lang: 'ml', text: 'ഭക്ഷണം കൊണ്ടുവരരുത്, ചായ മാത്രം മതി', want: ['tea'], refused: ['meal'] },
+  { lang: 'ml', text: 'ചായ വേണ്ട, കാപ്പി വേണം', want: ['coffee'], refused: ['tea'] },
+  { lang: 'ml', text: 'ഐസ് ഇല്ലാതെ വെള്ളം തരൂ', want: ['water'], refused: ['ice'] },
+  { lang: 'ml', text: 'കുഞ്ഞിന് വേണ്ടി പാൽ തരാമോ', want: ['milk'], purpose: ['milk', 'for_child'] },
+  { lang: 'ml', text: 'എനിക്ക് സുഖമില്ല', want: ['unwell'] },
+
+  // Gujarati
+  { lang: 'gu', text: 'મારે ઠંડું પાણી નથી જોઈતું, ગરમ પાણી અને એક ધાબળો જોઈએ છે', want: ['blanket', 'hot_water'], refused: ['water'] },
+  { lang: 'gu', text: 'જમવાનું ના મોકલશો, ફક્ત ચા આપો', want: ['tea'], refused: ['meal'] },
+  { lang: 'gu', text: 'ચા નથી જોઈતી, કોફી જોઈએ', want: ['coffee'], refused: ['tea'] },
+  { lang: 'gu', text: 'બરફ વગરનું પાણી આપો', want: ['water'], refused: ['ice'] },
+  { lang: 'gu', text: 'મારી તબિયત સારી નથી', want: ['unwell'] },
+  { lang: 'gu', text: 'ટીવી ચાલતું નથી', want: ['screen_help'] },
+
+  // Odia, typed, and spoken (Whisper writes it as Hindi, moved into Odia letters)
+  { lang: 'or', text: 'ମୋତେ ଥଣ୍ଡା ପାଣି ଦରକାର ନାହିଁ, ଗରମ ପାଣି ଏବଂ ଗୋଟିଏ କମ୍ବଳ ଦିଅନ୍ତୁ', want: ['blanket', 'hot_water'], refused: ['water'] },
+  { lang: 'or', text: 'ଖାଦ୍ୟ ପଠାନ୍ତୁ ନାହିଁ, କେବଳ ଚା ଦିଅନ୍ତୁ', want: ['tea'], refused: ['meal'] },
+  { lang: 'or', text: 'ଚା ଦରକାର ନାହିଁ, କଫି ଦିଅନ୍ତୁ', want: ['coffee'], refused: ['tea'] },
+  { lang: 'or', text: 'ବରଫ ବିନା ପାଣି ଦିଅନ୍ତୁ', want: ['water'], refused: ['ice'] },
+  { lang: 'or', text: 'ମୋର ଦେହ ଭଲ ନାହିଁ', want: ['unwell'] },
+  { lang: 'or', text: 'ମୋତେ ପାଣି ଚାହିଁ', want: ['water'] },
+  { lang: 'or', text: 'ପାନୀ ନହୀଂ ଚାହିଏ', refused: ['water'], want: [] },
 ];

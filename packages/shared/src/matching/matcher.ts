@@ -62,12 +62,18 @@ export function normalize(text: string): string {
       .replace(/[̀-ͯ]/g, '')
       .replace(/đ/g, 'd')
       .normalize('NFC')
+      // Malayalam chillu letters typed the old way (ന്‍) are one letter (ൻ); then the joiners
+      // that only change how Indian scripts draw a conjunct (ഹെഡ്‌ഫോൺ, హెడ్‌ఫోన్) are dropped.
+      .replace(/([ണനരലളക])\u0D4D\u200D/g, (_, c: string) => MALAYALAM_CHILLU[c]!)
+      .replace(/[\u200C\u200D]/g, '')
       .replace(/[.,!?;:"'“”‘’()[\]{}…、。！？「」·\-–—/\\]+/g, ' ')
       .replace(/\s+/g, ' ')
       .trim() +
     ' '
   );
 }
+
+const MALAYALAM_CHILLU: Record<string, string> = { ണ: 'ൺ', ന: 'ൻ', ര: 'ർ', ല: 'ൽ', ള: 'ൾ', ക: 'ൿ' };
 
 const LATIN_ONLY = /^[a-z0-9 ]+$/;
 
@@ -122,6 +128,10 @@ function dropFalseFriends(input: string): string {
       .replace(/ਚਾਹੀਦ\S*|ਚਾਹੁੰਦ\S*/gu, ' ')
       .replace(/(?<=^|\s)চাই\S*/gu, ' ')
       .replace(/\bchai(?:ye|ie|yee)\b/g, ' ')
+      // "ચા"/"ଚା" (tea) starts other words: Gujarati ચાલે (works), ચાર (four), ચાવી (key);
+      // Odia ଚାହିଁ (want), ଚାଲୁ (works), ଚାରି (four), ଚାବି (key). ચાર્જ / ଚାର୍ଜ (charge) stays.
+      .replace(/ચા(?=લ|વ|ર(?!્)|ટ)/gu, 'ચ')
+      .replace(/ଚା(?=ହ|ଲ|ର(?!୍)|ବ)/gu, 'ଚ')
   );
 }
 

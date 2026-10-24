@@ -1,5 +1,4 @@
 import type { CoreLang, LangCode } from '../types';
-import { hasLocalePack } from './packs';
 
 /**
  * Which languages HearMe offers, and — layer by layer — how far each one
@@ -148,56 +147,69 @@ export const LANGUAGES: LanguageInfo[] = [
   },
 
   // ── More languages of India ───────────────────────────────────────────────
-  // Machine drafts: screens, replies and vocabulary translated offline by NLLB-200
-  // (npm run draft-languages -w @hearme/hub), shown with a "machine-translated" note until a
-  // native speaker checks them. With Hindi, Bengali, Tamil, Punjabi, Marathi and English these
-  // complete the 11 languages Sarvam AI covers.
-  draft('gu', 'ગુજરાતી', 'Gujarati', 'Gujr', 'gujarati', 'hi'),
-  draft('kn', 'ಕನ್ನಡ', 'Kannada', 'Knda', 'kannada', 'en'),
-  draft('ml', 'മലയാളം', 'Malayalam', 'Mlym', 'malayalam', 'en'),
-  draft('or', 'ଓଡ଼ିଆ', 'Odia', 'Orya', 'hindi', 'hi', 'Hindi'),
-  draft('te', 'తెలుగు', 'Telugu', 'Telu', 'telugu', 'en'),
-];
-
-function draft(code: LangCode, nativeName: string, englishName: string, script: string, whisper: string, fallback: CoreLang, heardAs?: string, extra?: string): LanguageInfo {
-  // Until its draft is generated, a language shows its fallback and says so.
-  if (!hasLocalePack(code)) {
-    return { ...notYet(code, nativeName, englishName, whisper, heardAs ?? englishName), script, fallback, note: `Being drafted: until then screens and replies appear in ${fallback === 'hi' ? 'Hindi' : 'English'}.` };
-  }
-  return {
-    code,
-    nativeName,
-    englishName,
-    bcp47: `${code}-IN`,
-    script,
-    whisper,
-    core: false,
-    fallback,
-    coverage: { speech: heardAs ? 'none' : 'untested', intent: 'machine', ui: 'machine', replies: 'machine', tts: 'rare', review: 'machine' },
-    note: [
-      'Machine draft (NLLB-200), not yet checked by a native speaker: screens and replies show a “machine-translated” note.',
-      heardAs ? `Whisper has no ${englishName}, so speech is heard as ${heardAs}: speak ${heardAs} or type.` : 'Speech not yet measured.',
-      extra,
-    ]
-      .filter(Boolean)
-      .join(' '),
-  };
-}
-
-function notYet(code: LangCode, nativeName: string, englishName: string, whisper: string, heardAs: string): LanguageInfo {
-  return {
-    code,
-    nativeName,
-    englishName,
-    bcp47: `${code}-IN`,
-    script: 'Deva',
-    whisper,
+  // Written directly in each language (not translated from English or Hindi). With Hindi,
+  // Bengali, Tamil, Punjabi, Marathi and English these complete the 11 languages Sarvam AI covers.
+  {
+    code: 'gu',
+    nativeName: 'ગુજરાતી',
+    englishName: 'Gujarati',
+    bcp47: 'gu-IN',
+    script: 'Gujr',
+    whisper: 'gujarati',
     core: false,
     fallback: 'hi',
-    coverage: { speech: 'none', intent: 'fallback', ui: 'fallback', replies: 'fallback', tts: 'none', review: 'none' },
-    note: `The offline translator has no ${englishName} yet: screens and replies appear in Hindi, and speech is heard as ${heardAs}. A native speaker can add the pack as one data file.`,
-  };
-}
+    coverage: { speech: 'untested', intent: 'complete', ui: 'partial', replies: 'complete', tts: 'rare', review: 'non-native' },
+    note: 'Not yet measured on speech. Untranslated screen text appears in Hindi.',
+  },
+  {
+    code: 'kn',
+    nativeName: 'ಕನ್ನಡ',
+    englishName: 'Kannada',
+    bcp47: 'kn-IN',
+    script: 'Knda',
+    whisper: 'kannada',
+    core: false,
+    fallback: 'en',
+    coverage: { speech: 'untested', intent: 'complete', ui: 'partial', replies: 'complete', tts: 'rare', review: 'non-native' },
+    note: 'Not yet measured on speech.',
+  },
+  {
+    code: 'ml',
+    nativeName: 'മലയാളം',
+    englishName: 'Malayalam',
+    bcp47: 'ml-IN',
+    script: 'Mlym',
+    whisper: 'malayalam',
+    core: false,
+    fallback: 'en',
+    coverage: { speech: 'untested', intent: 'complete', ui: 'partial', replies: 'complete', tts: 'rare', review: 'non-native' },
+    note: 'Not yet measured on speech.',
+  },
+  {
+    code: 'or',
+    nativeName: 'ଓଡ଼ିଆ',
+    englishName: 'Odia',
+    bcp47: 'or-IN',
+    script: 'Orya',
+    whisper: 'hindi',
+    core: false,
+    fallback: 'hi',
+    coverage: { speech: 'none', intent: 'complete', ui: 'partial', replies: 'complete', tts: 'rare', review: 'non-native' },
+    note: 'Whisper has no Odia: speech is transcribed as Hindi and moved into Odia letters, so spoken Odia is matched by sound. Typing works fully.',
+  },
+  {
+    code: 'te',
+    nativeName: 'తెలుగు',
+    englishName: 'Telugu',
+    bcp47: 'te-IN',
+    script: 'Telu',
+    whisper: 'telugu',
+    core: false,
+    fallback: 'en',
+    coverage: { speech: 'untested', intent: 'complete', ui: 'partial', replies: 'complete', tts: 'rare', review: 'non-native' },
+    note: 'Not yet measured on speech.',
+  },
+];
 
 /** The six languages every catalogue is complete in. */
 export const CORE_LANGS: CoreLang[] = ['hi', 'en', 'ja', 'th', 'id', 'vi'];
