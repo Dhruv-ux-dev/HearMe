@@ -21,9 +21,9 @@ export type AsrSize = keyof typeof ASR_MODELS;
 export const EMBED_MODEL = 'Xenova/multilingual-e5-small';
 
 /**
- * Offline translation (NLLB-200, 200 languages), used only to *draft* the
- * vocabulary of a new language pack (`npm run add-language -- <code> --draft`).
- * Its output never reaches passengers: they only see verified phrases.
+ * Offline translation (NLLB-200): crew own-word replies and language-pack drafts.
+ * Crew preview each translation before sending; passenger messages are labelled
+ * as machine translations, separately from the verified reply templates.
  */
 export const TRANSLATE_MODEL = 'Xenova/nllb-200-distilled-600M';
 

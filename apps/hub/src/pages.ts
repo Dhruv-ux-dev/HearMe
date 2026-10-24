@@ -71,7 +71,7 @@ export async function seatCardsPage(urlFor: (seat: string) => string, seats: str
   <div class="grid">${cards.join('')}</div></body></html>`;
 }
 
-export async function joinPage(phoneUrl: string, crewUrl: string, stageUrl: string, viaTrust = false): Promise<string> {
+export async function joinPage(phoneUrl: string, crewUrl: string, stageUrl: string): Promise<string> {
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Join HearMe</title><style>${BASE_CSS}
   body{min-height:100vh;display:grid;place-items:center;padding:24px}
@@ -87,11 +87,8 @@ export async function joinPage(phoneUrl: string, crewUrl: string, stageUrl: stri
   <h1>Try it on your phone</h1>
   <p>Join the same Wi-Fi as this laptop, then scan. You become the passenger in seat 23C.</p>
   <p><code>${esc(phoneUrl)}</code></p>
-  ${
-    viaTrust
-      ? `<p class="note">First time? The page helps your phone trust this hub's certificate once, so the microphone works with no warning screen. Phones that already trust it go straight to HearMe.</p>`
-      : `<p class="note">The microphone only works on secure pages. If your browser warns you, choose “Advanced → Continue”.</p>`
-  }
+  <p><a href="${esc(phoneUrl)}">Open HearMe in your browser</a></p>
+  <p class="note">No app download or installation needed. Tap a picture or type your request. Voice input is available when the cabin uses trusted HTTPS.</p>
   <p><a href="${esc(crewUrl)}">Crew console</a> · <a href="${esc(stageUrl)}">Demo stage</a> · <a href="/seats">Seat cards</a></p></div>
   </main></body></html>`;
 }

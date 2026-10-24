@@ -44,12 +44,16 @@ const lan = [...new Set([process.env.HEARME_HOST, ...lanAddresses()].filter((h):
 let httpsOk = false;
 let certificate: HubCertificate | null = null;
 const urls = (): PublicUrls => {
-  const host = lan[0] ?? 'localhost';
+  // Wi-Fi/hotspot addresses can change while the demo is running. Status is
+  // polled by IFE screens, so rebuild advertised URLs from the current network.
+  const currentLan = [...new Set([process.env.HEARME_HOST, ...lanAddresses()].filter((h): h is string => !!h))];
+  const host = currentLan[0] ?? 'localhost';
   const http = `http://${host}:${HTTP_PORT}`;
   const base = httpsOk ? `https://${host}:${HTTPS_PORT}` : http;
-  // Phones that do not trust the hub's root yet go through the install page first.
+  // Keep certificate setup optional. Casual passengers open the app directly.
   const trust = httpsOk && certificate?.caPem ? `${http}/trust` : undefined;
-  const out: PublicUrls = { base, lan, trust };
+  const passengerBase = httpsOk && certificate?.source === 'custom' && !certificate.caPem ? base : http;
+  const out: PublicUrls = { base, lan: currentLan, trust, passengerBase };
   out.join = joinUrl(out, '23C');
   return out;
 };

@@ -3756,3 +3756,20 @@ a:focus-visible {
     scroll-behavior: auto !important;
   }
 }
+
+/* Seat-specific browser access, alongside the touch-first IFE experience. */
+.ife-welcome { grid-area: 1 / 1 / -1 / -1; position: relative; min-height: 0; }
+.ife-home__aside { display: grid; gap: 1em; min-width: 0; }
+.ife-phone-join { display: grid; justify-items: center; gap: .8em; padding: 1.2em; border-radius: 12px; background: var(--c-surface); color: var(--c-text); border: 1px solid var(--c-border); text-align: center; }
+.ife-phone-join img { display: block; width: 160px; height: 160px; max-width: 100%; background: #fff; padding: 4px; border-radius: 4px; }
+.ife-phone-join h2 { font-size: 1.25em; margin: 0 0 .4em; }
+.ife-phone-join p { font-size: 1em; line-height: 1.5; margin: 0; color: var(--c-text-muted); }
+.ife-phone-join__seat { display: inline-block; margin-top: .6em; font-weight: 700; color: var(--c-primary); }
+.ife-welcome > .ife-phone-join { position: absolute; right: 3em; top: 50%; transform: translateY(-50%); width: 18em; }
+.ife-welcome .ife-attract { padding-right: 24em; }
+.ife-welcome .ife-attract__langs { max-width: 36em; line-height: 1.6; }
+@media (orientation: portrait) {
+  .ife-welcome { display: flex; flex-direction: column; background: var(--c-navy); }
+  .ife-welcome .ife-attract { padding: 2em; min-height: 65vh; }
+  .ife-welcome > .ife-phone-join { position: static; transform: none; width: auto; margin: 0 2em 2em; grid-template-columns: auto 1fr; text-align: left; align-items: center; }
+}

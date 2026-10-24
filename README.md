@@ -52,7 +52,7 @@ npm run demo
 | `http://localhost:8080/#/crew` | Crew console. |
 | `http://localhost:8080/?seat=23C#/ife` | Seatback (IFE) screen. |
 | `https://<laptop-ip>:8443/seats` | Printable seat-pocket cards: a QR code per seat, plus a picture card for passengers without a phone. |
-| `http://<laptop-ip>:8080/trust` | Installs the hub's certificate on a phone, so there is no warning screen (the seat QR codes open it first). |
+| `http://<laptop-ip>:8080/trust` | Installs the hub's certificate on a phone, so there is no warning screen (optional development setup). |
 | `http://localhost:8080/#/lab` | [Voice lab](#voice-lab-real-voices-logged): teammates speak into a real microphone; every take is scored and logged. |
 
 Options:
@@ -70,9 +70,15 @@ The hub loads both AI models and **warms them up** with a short practice run whe
 - **Judge, try it** hands over to the judges: the stage phone switches to their language with phrases to try, the crew can answer automatically so one person can try it alone, and a QR code puts seat 23C on their own phone.
 - The **Whisper** chip switches live between *small*, which is more accurate, and *base*, which is about 4× faster.
 
-### Phones: HTTPS without the warning screen
+### Phones: open in the browser, no app installation
 
-Phone browsers only allow the microphone on HTTPS pages. The hub makes its certificate the way **mkcert** does: a small root certificate that stays on the laptop, and a server certificate for the laptop's addresses. If `mkcert` is installed (`brew install mkcert && mkcert -install`), the hub uses your mkcert root instead. A phone installs the root **once**, from the page the seat QR code opens. After that there is no warning screen, even when the laptop's Wi-Fi address changes.
+Scan the seat QR on the IFE welcome or home screen (or a printed seat card) after connecting to cabin Wi-Fi. The full passenger web app opens immediately with that seat selected: language selection, requests, captions, replies, and accessibility controls all run in the browser. No app download, installation, or certificate setup is required. The `/join` page also offers a direct **Open HearMe in your browser** link.
+
+With a local development certificate, QR codes use the existing HTTP listener so passengers can use pictures and typing immediately. Voice input needs trusted HTTPS. Configure a publicly trusted certificate for the cabin domain to enable browser voice without passenger setup; local certificate setup below remains an optional development tool.
+
+### Optional development HTTPS setup
+
+Phone browsers only allow the microphone on HTTPS pages. The hub makes its certificate the way **mkcert** does: a small root certificate that stays on the laptop, and a server certificate for the laptop's addresses. If `mkcert` is installed (`brew install mkcert && mkcert -install`), the hub uses your mkcert root instead. Developers can visit `/trust` explicitly to configure a test phone. Passenger QR codes open the web app directly.
 
 How many taps that takes depends on the phone. Apple and Google deliberately make installing a root certificate a Settings task, so "three taps" is only possible on older Android:
 
@@ -386,3 +392,4 @@ Settings for the hub (environment variables):
 - UI in more languages. Matching already reaches unseen languages (see above); the screens, replies and captions need translating.
 - Integration with the airline booking/PNR system and the ground handover. Certified crew-tablet and IFE hardware.
 - Native device testing of the Expo app. In this environment it has been exercised on the web build only.
+

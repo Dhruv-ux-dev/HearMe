@@ -27,7 +27,7 @@ import {
 } from '@hearme/shared';
 import { useSession } from '@hearme/shared/react';
 import { Check, ChevronLeft, ChevronRight, CircleAlert, Clock, HeartPulse, Lock, Plus, RotateCcw, Wifi, WifiOff, X } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { NeedIcon } from '../common/Icon';
 import type { IfeScreen } from './IfeApp';
 
@@ -128,7 +128,7 @@ export function LanguageScreen({ current, onChoose, onBack }: { current?: LangCo
 }
 
 // ── Home ──────────────────────────────────────────────────────────────────
-export function HomeScreen({ session, lang, go }: { session: PassengerSession; lang: LangCode; go: Go }) {
+export function HomeScreen({ session, lang, go, phoneJoin }: { session: PassengerSession; lang: LangCode; go: Go; phoneJoin?: ReactNode }) {
   const tr = translator(lang);
   return (
     <div className="ife-home">
@@ -154,7 +154,10 @@ export function HomeScreen({ session, lang, go }: { session: PassengerSession; l
           <Lock aria-hidden /> {tr('home.private')}
         </button>
       </section>
-      <RequestsPanel session={session} lang={lang} go={go} compact />
+      <div className="ife-home__aside">
+        <RequestsPanel session={session} lang={lang} go={go} compact />
+        {phoneJoin}
+      </div>
     </div>
   );
 }

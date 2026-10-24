@@ -34,6 +34,15 @@ if (!noAi && !modelsReady) {
   run('models', ['--', 'all']); // Whisper-small, Whisper-base (the stage's fast mode) and e5
 }
 
+// Crew "Translate" needs its own model, independently of speech and matching.
+// Include it in normal demo setup so a fresh checkout does not expose a broken action.
+const translationReady = ['config.json', 'generation_config.json', 'tokenizer.json', 'tokenizer_config.json', 'special_tokens_map.json', 'onnx/encoder_model_quantized.onnx', 'onnx/decoder_model_merged_quantized.onnx']
+  .every((file) => existsSync(new URL(`../apps/hub/.models/Xenova/nllb-200-distilled-600M/${file}`, import.meta.url)));
+if (!noAi && !translationReady) {
+  console.log('\n▶ Downloading the offline crew translation model (about 900 MB, one time)…');
+  run('models', ['--', 'translate']);
+}
+
 const built = existsSync(new URL('../apps/ife/dist/index.html', import.meta.url)) && existsSync(new URL('../apps/ife/dist/mobile/index.html', import.meta.url));
 if (!built || args.includes('--rebuild')) {
   console.log('\n▶ Building the phone app and the web apps…');

@@ -333,9 +333,7 @@ export function Stage() {
             <p>Same Wi-Fi as this laptop. You become seat 23C.</p>
             <code>{phoneUrl}</code>
             <p className="stage-qr__note">
-              {status?.urls?.trust
-                ? 'First time on this phone? It installs the hub’s certificate once (no warning screen afterwards), then opens HearMe.'
-                : 'If the browser warns about the certificate, choose Advanced → Continue (the microphone needs HTTPS).'}
+              No app to install. HearMe opens in your browser. Tap pictures or type; voice input requires trusted HTTPS.
             </p>
           </div>
         </div>
@@ -383,7 +381,7 @@ export function Stage() {
 
         <section className="stage-flow" aria-label="What travels between them" aria-live="polite">
           <div className="stage-label center">On the cabin network</div>
-          {story.mode === 'judge' && <JudgePanel story={story} phoneUrl={phoneUrl} trust={!!status?.urls?.trust} />}
+          {story.mode === 'judge' && <JudgePanel story={story} phoneUrl={phoneUrl} />}
           {story.mode === 'ended' && <StoryEnd story={story} onVideo={() => setShowVideo(true)} />}
           {items.length === 0 && story.mode === 'idle' && (
             <div className="stage-empty">

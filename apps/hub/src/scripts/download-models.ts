@@ -4,6 +4,7 @@
  *   npm run models            # whisper-small + e5 (default)
  *   npm run models -- base    # whisper-base + e5 (lighter)
  *   npm run models -- all     # both whisper sizes + e5
+ *   npm run models -- translate # NLLB for crew replies and language-pack drafts
  */
 import { createWriteStream, existsSync, mkdirSync, renameSync, statSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -12,7 +13,7 @@ import { pipeline } from 'node:stream/promises';
 import { ASR_MODELS, EMBED_MODEL, MODEL_DIR, MODEL_FILES, TRANSLATE_MODEL, asrSizeFromEnv } from '../models';
 
 const arg = process.argv[2];
-// all: both Whisper sizes + e5 · translate: the NLLB model for drafting language packs (~900 MB, optional)
+// all: both Whisper sizes + e5 · translate: NLLB for crew replies and language packs (~900 MB)
 const repos =
   arg === 'translate'
     ? [TRANSLATE_MODEL]
