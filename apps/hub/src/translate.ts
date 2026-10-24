@@ -4,11 +4,11 @@
  * verified replies nobody has checked these, so the passenger is told the
  * message is machine-translated.
  */
-import { existsSync } from 'node:fs';
+import { existsSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { Worker } from 'node:worker_threads';
 import { loadTransformers } from './ai';
-import { MODEL_DIR, TRANSLATE_MODEL } from './models';
+import { MODEL_DIR, MODEL_FILES, TRANSLATE_MODEL } from './models';
 
 /** NLLB-200 codes for the languages HearMe reads. */
 export const NLLB_CODES: Record<string, string> = {
@@ -60,7 +60,10 @@ export function keepTarget(text: string, script: string): string {
 }
 
 export function translationModelInstalled(): boolean {
-  return existsSync(join(MODEL_DIR, TRANSLATE_MODEL, 'onnx'));
+  return MODEL_FILES[TRANSLATE_MODEL]!.every((name) => {
+    const file = join(MODEL_DIR, TRANSLATE_MODEL, name);
+    return existsSync(file) && statSync(file).size > 0;
+  });
 }
 
 /** NLLB in a worker thread, so loading and translating never stall the hub's network handling. */

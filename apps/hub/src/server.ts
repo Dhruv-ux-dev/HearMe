@@ -16,19 +16,22 @@ export interface PublicUrls {
   /** Best URL for other devices (LAN + HTTPS when available). */
   base: string;
   lan: string[];
+  /** Direct passenger browser origin; local certificates use the existing HTTP listener. */
+  passengerBase?: string;
   /**
    * Plain-http page that installs the hub's root certificate on a phone and
    * then opens the app (set when phones may need to install it first).
    */
   trust?: string;
-  /** What seat 23C's QR code opens (the trust page when there is one). */
+  /** Direct browser app URL for seat 23C. */
   join?: string;
 }
 
-/** The address a seat's QR code should open: through /trust when phones may need the root first. */
+/** Open the passenger web app immediately, without a certificate or app installation step. */
 export function joinUrl(urls: PublicUrls, seat: string): string {
   const app = `/mobile/?seat=${encodeURIComponent(seat)}`;
-  return urls.trust ? `${urls.trust}?next=${encodeURIComponent(app)}` : `${urls.base}${app}`;
+  const base = urls.passengerBase ?? (urls.trust ? new URL(urls.trust).origin : urls.base);
+  return `${base}${app}`;
 }
 
 /** Only same-site paths may follow the trust check (no open redirects). */
@@ -512,7 +515,7 @@ export function createHandler(opts: HandlerOptions) {
         return send(res, 404, 'not found', 'text/plain; charset=utf-8');
       }
       if (url.pathname === '/join') {
-        return send(res, 200, await joinPage(joinUrl(urls, '23C'), `${urls.base}/#/crew`, `${urls.base}/#/stage`, !!urls.trust), 'text/html; charset=utf-8');
+        return send(res, 200, await joinPage(joinUrl(urls, '23C'), `${urls.base}/#/crew`, `${urls.base}/#/stage`), 'text/html; charset=utf-8');
       }
       if (url.pathname === '/seats') {
         const rows = [21, 22, 23, 24, 25, 26];

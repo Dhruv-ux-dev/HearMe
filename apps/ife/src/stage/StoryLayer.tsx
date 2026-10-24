@@ -350,7 +350,7 @@ const TRY: Partial<Record<LangCode, [string, string][]>> = {
 };
 
 /** "Judge, try it": the stage phone in the judge's language, their own phone by QR, and a one-person crew. */
-export function JudgePanel({ story, phoneUrl, trust }: { story: Story; phoneUrl: string | null; trust: boolean }) {
+export function JudgePanel({ story, phoneUrl }: { story: Story; phoneUrl: string | null }) {
   const lang = story.judgeLang;
   return (
     <div className="judge" role="region" aria-label="Judge, try it">
@@ -382,7 +382,7 @@ export function JudgePanel({ story, phoneUrl, trust }: { story: Story; phoneUrl:
           <img src={`/api/qr.svg?size=150&data=${encodeURIComponent(phoneUrl)}`} alt="QR code: use your own phone as seat 23C" width={150} height={150} />
           <span>
             <b>Or use your own phone</b> (same Wi-Fi).{' '}
-            {trust ? 'The first time, it installs the hub’s certificate so the microphone works without a warning.' : 'Choose Advanced → Continue if the browser warns.'}
+            Opens in your browser. No app to install.
           </span>
         </div>
       )}

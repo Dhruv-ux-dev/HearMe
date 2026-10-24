@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { mkdtempSync, readFileSync, statSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { createServer, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { tmpdir } from 'node:os';
@@ -98,6 +98,8 @@ describe('trust page and downloads', () => {
   const start = async (withCert: boolean) => {
     const staticDir = mkdtempSync(join(tmpdir(), 'hearme-static-'));
     writeFileSync(join(staticDir, 'index.html'), '<!doctype html>');
+    mkdirSync(join(staticDir, 'mobile'));
+    writeFileSync(join(staticDir, 'mobile', 'index.html'), '<!doctype html><div id="root">Passenger browser app</div>');
     const certificate = withCert ? await loadOrCreateCert(['192.168.1.20']) : null;
     relay = new CabinRelay({ pingMs: 60_000 });
     const urls = () => ({ base: 'https://192.168.1.20:8443', lan: ['192.168.1.20'], trust: withCert ? 'http://192.168.1.20:8080/trust' : undefined });
@@ -145,8 +147,20 @@ describe('trust page and downloads', () => {
     expect(await (await fetch(`${base}/trust`)).text()).toContain('without HTTPS');
   });
 
-  it('sends seat QR codes through the trust page only when phones may need it', () => {
-    expect(joinUrl({ base: 'https://h:8443', lan: [], trust: 'http://h:8080/trust' }, '21A')).toBe('http://h:8080/trust?next=%2Fmobile%2F%3Fseat%3D21A');
+  it('opens the browser app directly without requiring certificate installation', () => {
+    expect(joinUrl({ base: 'https://h:8443', lan: [], trust: 'http://h:8080/trust' }, '21A')).toBe('http://h:8080/mobile/?seat=21A');
     expect(joinUrl({ base: 'https://hub.example', lan: [] }, '21A')).toBe('https://hub.example/mobile/?seat=21A');
+    expect(joinUrl({ base: 'https://h:8443', lan: [], passengerBase: 'http://h:8080' }, '31A')).toBe('http://h:8080/mobile/?seat=31A');
+  });
+
+  it('serves the passenger app and join link without an installation gate', async () => {
+    await start(true);
+    const app = await fetch(`${base}/mobile/?seat=31A`);
+    expect(app.status).toBe(200);
+    expect(await app.text()).toContain('Passenger browser app');
+    const join = await (await fetch(`${base}/join`)).text();
+    expect(join).toContain('http://192.168.1.20:8080/mobile/?seat=23C');
+    expect(join).toContain('Open HearMe in your browser');
+    expect(join).not.toContain('/trust?next=');
   });
 });

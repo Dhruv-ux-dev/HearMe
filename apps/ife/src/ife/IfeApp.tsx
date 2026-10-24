@@ -13,6 +13,8 @@ import { useCrewMode, useSession } from '@hearme/shared/react';
 import { Captions, Hand, House, LogOut, Monitor, Settings2, ShieldCheck, SlidersHorizontal } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { DemoControls } from '../common/DemoControls';
+import { useHubStatus } from '../common/hub';
+import { passengerUrl, PhoneJoin } from '../common/PhoneJoin';
 import { CareScreen } from './CareScreen';
 import { themeVars } from '../common/theme';
 import { browserSpeaker } from '../common/webAdapters';
@@ -69,6 +71,8 @@ export function IfeApp({ session, link, seat, idleMs = 180_000, idleGraceSeconds
   const [showDemo, setShowDemo] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const mainRef = useRef<HTMLElement>(null);
+  const hub = useHubStatus(10_000);
+  const phoneUrl = passengerUrl(hub?.urls?.join ?? (hub?.urls ? `${hub.urls.passengerBase ?? hub.urls.base}/mobile/` : undefined), seat);
 
   const lang: LangCode = profile?.lang ?? 'en';
   const tr = translator(lang);
@@ -135,7 +139,10 @@ export function IfeApp({ session, link, seat, idleMs = 180_000, idleGraceSeconds
   if (stage === 'attract') {
     return (
       <div className={rootClass} style={rootStyle} lang="en">
-        <AttractScreen seat={seat} onStart={() => setStage('language')} />
+        <div className="ife-welcome">
+          <AttractScreen seat={seat} onStart={() => setStage('language')} />
+          <PhoneJoin url={phoneUrl} seat={seat} />
+        </div>
         <DemoToggle open={showDemo} setOpen={setShowDemo} link={link} />
       </div>
     );
@@ -202,7 +209,7 @@ export function IfeApp({ session, link, seat, idleMs = 180_000, idleGraceSeconds
             {notice}
           </p>
         )}
-        {screen.name === 'home' && <HomeScreen session={session} lang={lang} go={go} />}
+        {screen.name === 'home' && <HomeScreen session={session} lang={lang} go={go} phoneJoin={<PhoneJoin url={phoneUrl} seat={seat} lang={lang} />} />}
         {screen.name === 'request' && <RequestScreen lang={lang} category={screen.category} go={go} />}
         {screen.name === 'review' && (
           <ReviewScreen

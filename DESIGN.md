@@ -14,6 +14,8 @@ The user's chosen visual reference is Japan Airlines inflight entertainment. Pre
 
 IFE: white brand header, charcoal navigation rail, red active destination, pale content surface. Welcome screen uses the existing cabin photo with a dark scrim, airline logo, and prominent start action. Portrait stacks the navigation and content instead of shrinking text indefinitely.
 
+Passenger phone access: a seat-specific QR appears beside the welcome action and beneath requests on Home. It opens the complete passenger web app directly, with no app or certificate installation gate. Keep the QR outside the touch-to-start button, on a white background, with a cabin Wi-Fi instruction. Portrait layouts place it below the welcome content. Local development voice still requires trusted HTTPS; pictures and typing remain available immediately in the browser.
+
 Crew: light tablet console with seat map, request queue, reply detail, and announcements. A full red outline marks selection; urgent medical requests retain labels and semantic treatment. At tablet widths announcements follow the main workspace; narrow screens stack all panels.
 
 Mobile: shared crimson/white tokens, bundled logo on onboarding and home, native interactions and accessibility behavior preserved. This is a themed prototype, not an airline-system integration.
