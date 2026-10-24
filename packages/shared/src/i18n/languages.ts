@@ -151,16 +151,12 @@ export const LANGUAGES: LanguageInfo[] = [
   // Machine drafts: screens, replies and vocabulary translated offline by NLLB-200
   // (npm run draft-languages -w @hearme/hub), shown with a "machine-translated" note until a
   // native speaker checks them. With Hindi, Bengali, Tamil, Punjabi, Marathi and English these
-  // complete the 11 languages Sarvam AI covers; Assamese, Maithili, Nepali and Urdu were drafted too.
+  // complete the 11 languages Sarvam AI covers.
   draft('gu', 'ગુજરાતી', 'Gujarati', 'Gujr', 'gujarati', 'hi'),
   draft('kn', 'ಕನ್ನಡ', 'Kannada', 'Knda', 'kannada', 'en'),
   draft('ml', 'മലയാളം', 'Malayalam', 'Mlym', 'malayalam', 'en'),
   draft('or', 'ଓଡ଼ିଆ', 'Odia', 'Orya', 'hindi', 'hi', 'Hindi'),
   draft('te', 'తెలుగు', 'Telugu', 'Telu', 'telugu', 'en'),
-  draft('as', 'অসমীয়া', 'Assamese', 'Beng', 'assamese', 'hi'),
-  draft('mai', 'मैथिली', 'Maithili', 'Deva', 'hindi', 'hi', 'Hindi'),
-  draft('ne', 'नेपाली', 'Nepali', 'Deva', 'nepali', 'hi'),
-  draft('ur', 'اردو', 'Urdu', 'Arab', 'urdu', 'en'),
 ];
 
 function draft(code: LangCode, nativeName: string, englishName: string, script: string, whisper: string, fallback: CoreLang, heardAs?: string, extra?: string): LanguageInfo {
@@ -230,7 +226,7 @@ export function languageNativeName(code: string): string {
   return BY_CODE.get(code)?.nativeName ?? languageName(code);
 }
 
-/** Urdu is written right to left in Perso-Arabic script. */
+/** Perso-Arabic scripts (such as Urdu, if a pack is added) run right to left. */
 export function isRtl(code: string): boolean {
   return findLanguage(code)?.script === 'Arab';
 }

@@ -209,23 +209,23 @@ All numbers were measured on a MacBook Air (M2, 8 GB RAM). The scripts and test 
 - **Caveat:** this is a small sample with synthetic voices and noise. The full 6-language run and real voices are still to do.
 - **Tried earlier and dropped:** spectral noise reduction made 0 dB worse (68% to 65%).
 
-**19 languages, including all 11 that Sarvam AI covers, and what each one really covers.** `npm run languages` writes [docs/languages.md](docs/languages.md): one row per language, one column per layer — speech, understanding requests, passenger screens, crew replies, reading aloud, and who checked the wording. A language is never just "supported".
+**15 languages, including all 11 that Sarvam AI covers, and what each one really covers.** `npm run languages` writes [docs/languages.md](docs/languages.md): one row per language, one column per layer — speech, understanding requests, passenger screens, crew replies, reading aloud, and who checked the wording. A language is never just "supported".
 
 | | Speech | Understands | Screens | Replies | Checked by |
 | --- | --- | --- | --- | --- | --- |
 | Hindi, English, Japanese, Thai, Indonesian, Vietnamese | measured | all 40 needs | all | all 11 | non-native |
 | **Bengali, Tamil** | weak | all 40 needs | passenger path; rest in English | all 11 | non-native |
 | **Punjabi, Marathi** | not measured | all 40 needs | passenger path; rest in Hindi | all 11 | non-native |
-| **Gujarati, Kannada, Malayalam, Telugu, Assamese, Nepali, Urdu** | Whisper has them; not measured | machine draft | machine draft, with a note | machine draft, with a note | machine only |
-| **Odia, Maithili** | heard as Hindi | machine draft | machine draft, with a note | machine draft, with a note | machine only |
+| **Gujarati, Kannada, Malayalam, Telugu** | Whisper has them; not measured | machine draft | machine draft, with a note | machine draft, with a note | machine only |
+| **Odia** | heard as Hindi | machine draft | machine draft, with a note | machine draft, with a note | machine only |
 
-**The newest nine languages are machine drafts, and say so.** `npm run draft-languages -w @hearme/hub` drafted them offline with NLLB-200, one string at a time: screen text from English, need names from Hindi.
+**The newest five languages are machine drafts, and say so.** `npm run draft-languages -w @hearme/hub` drafted them offline with NLLB-200, one string at a time: screen text from English, need names from Hindi.
 - Hindi words are unambiguous where single English words are not: "blanket" came out as "cup" in Telugu when drafted from English.
 - Placeholders such as `{n}` are protected, and a matching word that would read as another need is dropped.
 - A few need names that stayed clearly wrong were corrected by hand.
 - Safety texts are never drafted: they appear in Hindi or English.
 
-Passengers in these languages see a *machine-translated* note on screens and replies until a native speaker checks them. Urdu screens run right to left. With Hindi, Bengali, Tamil, Punjabi, Marathi and English, Gujarati, Kannada, Malayalam, Odia and Telugu complete the 11 languages Sarvam AI covers.
+Every screen string is drafted except the Care Mode medical lists and the safety briefing, which stay human-written in Hindi or English. Passengers in these languages see a *machine-translated* note on screens and replies until a native speaker checks them. With Hindi, Bengali, Tamil, Punjabi, Marathi and English, Gujarati, Kannada, Malayalam, Odia and Telugu complete the 11 languages Sarvam AI covers.
 
 Bengali and Tamil used to be keyword-only: a passenger spoke Bengali at English screens. They now carry their own screens and replies, and Punjabi and Marathi are new. A pack language translates the 102-string passenger path (greeting, request grid, speaking, "Did you mean?", confirming, delivery status, the offline card, Care Mode), all 40 need labels and all 11 verified replies; anything else falls back to a core language the picker names before you choose it.
 

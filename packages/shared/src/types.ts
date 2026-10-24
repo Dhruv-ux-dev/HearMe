@@ -18,8 +18,8 @@ export type CoreLang = 'hi' | 'en' | 'ja' | 'th' | 'id' | 'vi';
  * each one is, layer by layer, is declared in `i18n/languages.ts` — ask
  * `coverageOf(lang)` rather than assuming.
  */
-/** The six core languages, then language packs: Sarvam's 11 languages of India and four more that were drafted. */
-export type LangCode = CoreLang | 'bn' | 'ta' | 'pa' | 'mr' | 'gu' | 'kn' | 'ml' | 'or' | 'te' | 'as' | 'mai' | 'ne' | 'ur';
+/** The six core languages, then language packs: with Hindi and English, the 11 languages Sarvam AI covers. */
+export type LangCode = CoreLang | 'bn' | 'ta' | 'pa' | 'mr' | 'gu' | 'kn' | 'ml' | 'or' | 'te';
 
 /**
  * Text available in every core language, and in whichever pack languages have

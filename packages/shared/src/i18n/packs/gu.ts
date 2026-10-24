@@ -173,26 +173,102 @@ export const GU: LocalePack = {
     "settings.title": "સેટિંગ્સ",
     "settings.language": "ભાષા",
     "onboard.chooseLanguage": "તમારી ભાષા પસંદ કરો",
-    "onboard.start": "શરૂ કરો"
+    "onboard.start": "શરૂ કરો",
+    "voice.checkTitle": "શું તમે ક્રૂના જવાબો સાંભળી શકો છો?",
+    "voice.checkHint": "ક્રૂના જવાબો તમારી ભાષામાં મોટેથી વાંચવામાં આવે છે. તમારા ઇયરફોન મૂકીને પરીક્ષણ રમો.",
+    "voice.play": "એક પરીક્ષણ રમો",
+    "voice.playing": "રમતા.",
+    "voice.heard": "તમે તેને સાંભળ્યું?",
+    "voice.yes": "હા, મેં સાંભળ્યું છે",
+    "voice.no": "કોઈ અવાજ નથી",
+    "voice.ok": "જવાબો મોટેથી વાંચવામાં આવશે",
+    "voice.fixTips": "જો કોઈ અવાજ ન હોય તો જવાબો મોટા ટેક્સ્ટમાં બતાવવામાં આવે છે અને ફોન વાઇબ્રેટ કરે છે.",
+    "voice.noVoice": "આ ફોન {language} અવાજ નથી, તેથી જવાબો મોટા ટેક્સ્ટમાં બતાવવામાં આવે છે અને ફોન વાઇબ્રેટ કરે છે. તમે ફોન પર ટેક્સ્ટ-ટુ-સ્પીક સેટિંગ્સમાં અવાજ ઉમેરી શકો છો.",
+    "voice.blocked": "ફોન અવાજ અવરોધિત. ટેપ કરો",
+    "voice.textOnly": "ફક્ત ટેક્સ્ટ અને સ્પંદનનો ઉપયોગ કરો",
+    "voice.speakingIn": "{language} માં તેને મોટેથી વાંચીને...",
+    "voice.spoke": "{language} માં મોટેથી વાંચો",
+    "speech.unavailable": "આ સ્ક્રીન પર અવાજ ઇનપુટ ઉપલબ્ધ નથી. તેના બદલે ચિત્ર પર ટેપ કરો.",
+    "link.demo": "ડેમો ક્રૂ (સિમ્યુલેટેડ)",
+    "link.no_crew": "ક્રૂ ટેબ્લેટ પ્રતિસાદ આપતું નથી",
+    "captions.title": "જાહેરાતો",
+    "captions.empty": "હજુ સુધી કોઈ જાહેરાત નથી. તે તમારી ભાષામાં અહીં દેખાશે.",
+    "captions.needsConnection": "નવી જાહેરાતો કેબિન કનેક્શનની જરૂર છે.",
+    "arrival.title": "આગમન પર સહાય",
+    "arrival.hint": "હવે પૂછો જેથી ક્રૂ જમીન સ્ટાફને ઉતરાણ પહેલાં કહી શકે.",
+    "settings.textSize": "ટેક્સ્ટ કદ",
+    "settings.highContrast": "ઉચ્ચ વિપરીતતા",
+    "settings.reduceMotion": "ગતિ ઘટાડવી",
+    "settings.replies": "જવાબો તમને કેવી રીતે પહોંચવા જોઈએ?",
+    "settings.repliesHint": "ટેક્સ્ટ હંમેશા બતાવવામાં આવે છે.",
+    "settings.needs": "ક્રૂને જાણવું જોઈએ તે કંઈ?",
+    "settings.share": "આ ક્રૂ સાથે શેર કરો",
+    "settings.reset": "મારા ડેટા સાફ કરો અને ફરી શરૂ કરો",
+    "settings.resetConfirm": "આ તમારા બેઠક, ભાષા, જરૂરિયાતો અને વિનંતીઓ આ ફોનમાંથી દૂર કરે છે.",
+    "channel.text": "ટેક્સ્ટ",
+    "channel.voice": "અવાજ",
+    "channel.buzz": "બઝ",
+    "tag.senior": "વરિષ્ઠ",
+    "tag.hard_of_hearing": "સાંભળવા માટે મુશ્કેલ",
+    "tag.low_vision": "નબળી દ્રષ્ટિ",
+    "tag.wheelchair": "વ્હીલચેર વપરાશકર્તા",
+    "tag.medical": "તબીબી સ્થિતિ",
+    "tag.travelling_with_child": "બાળક સાથે મુસાફરી",
+    "onboard.seatTitle": "તમારી સીટ",
+    "onboard.seatHint": "તમારી સીટ પર",
+    "onboard.scanQr": "સીટ",
+    "onboard.name": "તમારું નામ (વૈકલ્પિક)",
+    "onboard.nameHint": "આ ફોન પર ફક્ત તમારા શુભેચ્છા માટે વપરાય છે.",
+    "onboard.needsHint": "વૈકલ્પિક. ક્રૂ તમને મદદ કરે છે. ફક્ત જો તમે તેને મંજૂરી આપો તો શેર કરો.",
+    "onboard.useBooking": "મારી બુકિંગની વિગતોનો ઉપયોગ કરો (સિમ્યુલેટેડ)",
+    "ife.touchToStart": "શરૂ કરવા માટે સ્પર્શ",
+    "ife.endSession": "સત્રનો અંત",
+    "ife.endConfirm": "તમારા સત્ર સમાપ્ત અને આ સ્ક્રીન પર બધું સાફ?",
+    "ife.endDetail": "તમારી ભાષા, સેટિંગ્સ અને વિનંતીઓ દૂર કરવામાં આવશે. આ સ્ક્રીન પર કંઈપણ રાખવામાં આવશે.",
+    "ife.endYes": "અંત અને સ્પષ્ટ",
+    "ife.stillThere": "તમે હજુ પણ ત્યાં છો?",
+    "ife.stillThereHint": "તમારી ગોપનીયતા માટે આ સ્ક્રીન {seconds} સેકન્ડમાં પોતાને સાફ કરશે.",
+    "ife.keepGoing": "હું હજુ પણ અહીં છું",
+    "ife.accessibility": "ડિસ્પ્લે & અવાજ",
+    "ife.readAloud": "મારા હેડફોનોમાં મોટેથી જવાબો વાંચો",
+    "ife.noPersonal": "આ એક શેર કરેલી સ્ક્રીન છે. કોઈ નામ અથવા વ્યક્તિગત વિગતો બતાવવામાં અથવા સંગ્રહિત નથી.",
+    "ife.privateSent": "ક્રૂના સભ્યને તમારી સીટ પર આવવા માટે કહેવામાં આવ્યું છે.",
+    "care.myBack": "મારી પીઠ",
+    "care.notRated": "નંબર પર ટેપ કરો, અથવા તેને છોડી દો.",
+    "onboard.bookingFound": "અમે તમારી બુકિંગ શોધી",
+    "onboard.bookingNotFound": "આ બેઠક માટે કોઈ બુકિંગ મળી નથી.",
+    "onboard.scanHint": "તમારા સીટ પર",
+    "onboard.seatFromQr": "સીટ {seat}, તમારી સીટ પર",
+    "onboard.useThis": "હા, ચાલુ રાખો"
   },
   "templates": [
     "{k}"
   ],
   "phrases": {
     "water": [
+      "પાણી",
       "પીવાનું પાણી"
     ],
     "hot_water": [
       "ગરમ પાણી"
     ],
-    "tea": [],
-    "coffee": [],
+    "tea": [
+      "ચા",
+      "ચાઇ"
+    ],
+    "coffee": [
+      "કોફી"
+    ],
     "juice": [
+      "રસ",
       "નારંગીનો રસ"
     ],
-    "milk": [],
+    "milk": [
+      "દૂધ"
+    ],
     "soft_drink": [
-      "ઠંડા પીણું"
+      "ઠંડા પીણું",
+      "કોક"
     ],
     "ice": [
       "બરફ",
@@ -201,7 +277,10 @@ export const GU: LocalePack = {
     "blanket": [
       "ધાબળો"
     ],
-    "pillow": [],
+    "pillow": [
+      "પિચ",
+      "કૂચ"
+    ],
     "too_cold": [
       "ઠંડી લાગે છે",
       "ખૂબ ઠંડી"
@@ -219,7 +298,8 @@ export const GU: LocalePack = {
       "ઊંઘ માસ્ક"
     ],
     "tissues": [
-      "પેશી / ભીનું ટુવાલ"
+      "પેશી / ભીનું ટુવાલ",
+      "પેશી"
     ],
     "seat_help": [
       "બેઠક મદદ",
@@ -234,6 +314,7 @@ export const GU: LocalePack = {
       "ચાર્જ"
     ],
     "meal": [
+      "ખાવું",
       "ભોજન"
     ],
     "snack": [
@@ -256,6 +337,7 @@ export const GU: LocalePack = {
       "બાથરૂમ"
     ],
     "medicine": [
+      "દવા",
       "ટેબ્લેટ"
     ],
     "unwell": [
@@ -263,7 +345,8 @@ export const GU: LocalePack = {
       "અસ્વસ્થતા"
     ],
     "bag_help": [
-      "સામાન મદદ"
+      "સામાન મદદ",
+      "બેગ"
     ],
     "call_crew": [
       "કૃપા કરીને મારી સીટ પર આવો",
@@ -311,7 +394,8 @@ export const GU: LocalePack = {
       "ખાનગી રીતે"
     ],
     "anxious": [
-      "હું ભયભીત છું"
+      "હું ભયભીત છું",
+      "ચિંતા"
     ],
     "bothered": [
       "કોઈ મને હેરાન કરી રહ્યું છે",

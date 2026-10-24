@@ -2473,6 +2473,10 @@ svg {
   flex-direction: column;
   gap: 6px;
 }
+/* The panel scrolls; its buttons keep their full height instead of shrinking under their own text. */
+.crew2-ann > * {
+  flex-shrink: 0;
+}
 .crew2-annbtn.safety {
   border-left: 4px solid var(--c-primary);
   border-left-width: 1px;

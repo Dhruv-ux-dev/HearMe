@@ -146,7 +146,8 @@ async function draft(code: string, translate: (text: string, from?: string) => P
  */
 function cleanVocabulary(drafts: Draft[]): void {
   // Too short to be safe: Assamese "ক'ক" (Coke) reads as "ক ক", which sits inside Bengali "এক কাপ".
-  const tooShort = (w: string) => /['’ʼ]/u.test(w) || (w.match(/\p{L}/gu) ?? []).length < 3;
+  // Vowel signs count: Gujarati "ચા" (tea) is one letter and one sign, and is a fine keyword.
+  const tooShort = (w: string) => /['’ʼ]/u.test(w) || (w.match(/[\p{L}\p{M}]/gu) ?? []).length < 2;
   for (const d of drafts) {
     for (const [id, words] of Object.entries(d.phrases)) {
       d.phrases[id] = words.filter((w) => {
@@ -274,6 +275,34 @@ if (mode === 'draft') {
     assemble();
     console.log(`${code}: ${n} translations in ${Math.round((Date.now() - t0) / 1000)} s; ui ${Object.keys(d.ui).length}/${PASSENGER_PATH_KEYS.length}, replies ${Object.keys(d.replies).length}/${REPLIES.length}, dropped ${d.dropped.length}`);
   }
+} else if (mode === 'more') {
+  // The rest of the screen text (settings, flight, history…) for drafts that hold only the passenger path.
+  const nllb = await createNllb(inferenceThreads());
+  for (const code of codes) {
+    const file = join(DRAFT_DIR, `${code}.json`);
+    const d = JSON.parse(readFileSync(file, 'utf8')) as Draft;
+    const script = DRAFTABLE[code]!.nllb.split('_')[1]!;
+    const own = new RegExp(`\\p{Script=${script}}`, 'u');
+    let n = 0;
+    for (const key of Object.keys(STRINGS) as (keyof typeof STRINGS)[]) {
+      if (isReservedKey(key) || d.ui[key]) continue;
+      const en = STRINGS[key].en;
+      const tokens = [...new Set(en.match(/\{\w+\}|HearMe/g) ?? [])];
+      let src = en;
+      tokens.forEach((t, i) => (src = src.split(t).join(String(7101 + i))));
+      let out = asciiDigits((await nllb.translate(src, 'en', code, Math.min(120, 16 + Math.ceil(src.length * 1.2)))).trim());
+      n++;
+      if (tokens.some((_, i) => !out.includes(String(7101 + i))) || !own.test(out) || out.length > en.length * 4 + 20) {
+        d.dropped.push(`${key}: unusable`);
+        continue;
+      }
+      tokens.forEach((t, i) => (out = out.split(String(7101 + i)).join(t)));
+      d.ui[key] = out;
+    }
+    writeFileSync(file, JSON.stringify(d, null, 2));
+    console.log(`${code}: ${n} more screen strings, ui now ${Object.keys(d.ui).length}`);
+  }
+  assemble();
 } else if (mode === 'relabel') {
   const nllb = await createNllb(inferenceThreads());
   for (const code of codes) {

@@ -91,7 +91,7 @@ export function CrewConsole() {
 const LANG_JA: Record<LangCode, string> = {
   hi: 'ヒンディー語', en: '英語', ja: '日本語', th: 'タイ語', id: 'インドネシア語', vi: 'ベトナム語',
   bn: 'ベンガル語', ta: 'タミル語', pa: 'パンジャブ語', mr: 'マラーティー語',
-  as: 'アッサム語', gu: 'グジャラート語', kn: 'カンナダ語', mai: 'マイティリー語', ml: 'マラヤーラム語', ne: 'ネパール語', or: 'オディア語', te: 'テルグ語', ur: 'ウルドゥー語',
+  gu: 'グジャラート語', kn: 'カンナダ語', ml: 'マラヤーラム語', or: 'オディア語', te: 'テルグ語',
 };
 const tagJa = (tag: ProfileTag) => t('ja', `tag.${tag}`);
 const tagEn = (tag: ProfileTag) => t('en', `tag.${tag}`);
